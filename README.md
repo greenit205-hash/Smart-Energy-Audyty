@@ -2,7 +2,7 @@
 
 Aplikacja dla audytora energetycznego: inwentaryzacja w terenie, szkicownik z automatycznym liczeniem powierzchni, raporty i eksport na Dysk Google.
 
-Działa w przeglądarce na tablecie (PWA — instaluje się jako ikona i **działa bez internetu**). Nie wymaga serwera: całość to jeden plik `index.html` plus backend w Google Apps Script.
+Działa w przeglądarce na tablecie (PWA — instaluje się jako ikona i **działa bez internetu**). Nie wymaga serwera: całość to jeden plik `index.html` plus backend w Google Apps Script. 
 
 ---
 
