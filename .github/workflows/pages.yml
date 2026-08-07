@@ -1,0 +1,41 @@
+name: Publikacja aplikacji na GitHub Pages
+
+# Pomija stary mechanizm "pages-build-deployment" (ten z Jekyllem) i wgrywa
+# pliki takie, jakie sa. Uzyj, jesli publikacja z zakladki Pages sie wyklada
+# albo w nieskonczonosc wisi w kolejce.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # pozwala uruchomic recznie z zakladki Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie plikow z repozytorium
+        uses: actions/checkout@v4
+
+      - name: Konfiguracja Pages
+        uses: actions/configure-pages@v5
+
+      - name: Spakowanie calego repozytorium jako strona statyczna
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Publikacja
+        id: deployment
+        uses: actions/deploy-pages@v4
