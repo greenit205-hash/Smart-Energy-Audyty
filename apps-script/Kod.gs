@@ -141,7 +141,7 @@ function doPost(e) {
     let cardUrl = '';
     if (data.cardHtml) {
       try {
-        const html = String(data.cardHtml).replace(/\{\{SKETCH_(\d+)\}\}/g, function (m, idx) {
+        const html = String(data.cardHtml).replace(/\[\[SKETCH_(\d+)\]\]/g, function (m, idx) {
           const im = (data.sketchImages || [])[Number(idx)];
           return im ? im.dataUrl : '';
         });
@@ -276,6 +276,19 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp) {
 
     const rooms = (sk.objects && sk.objects.rooms) || [];
     if (rooms.length) {
+      // Zestawienie dlugosci scian - policzone w aplikacji, tu tylko wypisane
+      const wt = (data.wallTables && data.wallTables[idx]) ? data.wallTables[idx] : null;
+      if (wt && wt.length) {
+        const wRows = [['Ozn.', 'Pom.', 'Polozenie', 'Dlugosc [m]', 'Zrodlo']];
+        wt.forEach(function (r) {
+          wRows.push([str(r.label), str(r.roomNum), str(r.position),
+                      (r.value !== null && r.value !== undefined) ? Number(r.value).toFixed(2) : '-',
+                      str(r.source)]);
+        });
+        body.appendParagraph('Sciany - zestawienie dlugosci (oznaczenia 1a, 1b... sa na rysunku powyzej)').setFontSize(10).setForegroundColor('#6c757d');
+        styledTable(body, wRows);
+      }
+
       if (isSect) {
         // Przekroj / elewacja - obszary pomocnicze, poza bilansem powierzchni budynku
         const rows = [['Nr', 'Opis', 'Powierzchnia [m2]']];

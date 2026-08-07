@@ -98,6 +98,12 @@ Adres zapisuje się na urządzeniu — robisz to raz na każdym tablecie.
 - **🚀 Wyślij na Dysk** — tworzy folder klienta (patrz niżej). Wymaga internetu.
 - **💾 Pobierz Kopię Zapasową** — cała baza w jednym pliku JSON.
 
+> Pod każdym szkicem w raportach jest też **zestawienie długości ścian**: oznaczenie, pomieszczenie, położenie, długość i informacja, czy była zmierzona, czy wyliczona. Dzięki temu sprawdzisz wymiar, którego nie widać na rysunku, bez otwierania aplikacji. Liczba wymiarów **na samym szkicu się nie zmienia**.
+
+> **Jak rozpoznać ścianę.** Każda dostaje oznaczenie złożone z numeru pomieszczenia i litery: `1a`, `1b`, `1c`… Te same etykiety są naniesione **na rysunku w raporcie** — drobne, szare, odsunięte do wnętrza pomieszczenia. Dodatkowo w tabeli jest kolumna **Położenie** (górna, dolna, lewa, prawa, skos), więc ścianę znajdziesz nawet bez wpatrywania się w etykiety.
+>
+> Podczas pracy w aplikacji oznaczenia są **ukryte**, żeby nie zaśmiecać szkicu. Włącza je przycisk **🔤 Ozn. ścian** — przydaje się, gdy chcesz coś skonfrontować z tabelą.
+
 > W raportach **tabela pomieszczeń stoi obok szkicu**, a nie pod nim — rysunek i zestawienie widzisz naraz. Nad każdym szkicem podana jest jego wysokość kondygnacji.
 
 ### Co powstaje w folderze klienta na Dysku
@@ -123,7 +129,7 @@ Zakładki u góry to kolejne rysunki (parter, piętro, przekrój). **➕ Dodaj**
 | Narzędzie | Do czego |
 |---|---|
 | 🖱️ **Wybierz** | przesuwanie narożników ścian |
-| 📏 **Ściana** | rysowanie ścian; linie prawie proste same się prostują, końce przyciągają się do istniejących |
+| 📏 **Ściana** | rysowanie ścian; linie prawie proste same się prostują, końce przyciągają się do istniejących. Podczas ciągnięcia widać **przybliżoną długość** (np. `~4.00 m`) — jak w programach CAD |
 | ✍️ **Wymiaruj** | wpisanie wartości z dalmierza dla ściany |
 | 🫥 **Ukryj** | schowanie pojedynczej, zbędnej miarki |
 | 🚪 **Otwór** | okna i drzwi |
@@ -150,6 +156,26 @@ Gdy rzut jest gotowy:
 4. Jeśli brakuje pomiarów, **od razu otwiera się prowadzony pomiar** (patrz niżej).
 
 Ponowne kliknięcie w opisane pomieszczenie pozwala poprawić numer lub typ. Kliknięcie w miejscu, które nie jest zamknięte ścianami, tworzy zwykły znacznik ręczny — jak dotąd.
+
+### Podgląd długości podczas rysowania
+
+Gdy ciągniesz ścianę, na jej środku widać przybliżoną długość odczytaną z rysunku, poprzedzoną tyldą: `~4.00 m`. Pomaga to złapać proporcje, żeby szkic z grubsza odpowiadał rzeczywistości.
+
+**To wyłącznie pomoc przy szkicowaniu.** Wartość znika po puszczeniu palca, nigdzie się nie zapisuje i nie ma żadnego wpływu na wymiarowanie, powierzchnie ani raporty. Prawdziwe wymiary nadal wpisujesz z dalmierza — tylda przypomina, że to tylko oszacowanie z rysunku.
+
+### 🔍 Kontrola pomiarów
+
+Pod szkicem jest panel, który po każdym wpisanym pomiarze sprawdza dane pod kątem sprzeczności. Wszystko liczone lokalnie, **działa bez internetu**.
+
+Trzy poziomy:
+
+- **⛔ Sprzeczności** — dwie liczby wykluczają się nawzajem: suma odcinków inna niż długość całej ściany, otwór szerszy od ściany, powtórzony numer pomieszczenia, suma pomieszczeń większa od obrysu budynku, ręczny pomiar skosu sprzeczny z wyliczonym, pomieszczenia nachodzące na siebie.
+- **⚠️ Do sprawdzenia** — możliwe, ale rzadkie: pomiar mocno odbiegający od proporcji rysunku (łapie zgubiony przecinek albo zero), wartości poza zakresem (ściana <0,3 m lub >30 m, wysokość kondygnacji poza 1,8–5 m, otwór poza 30–400 cm), okna zajmujące ponad połowę ścian pomieszczenia, powierzchnia ponad 3× większa od pozostałych, pomieszczenie bez żadnego otworu, wyższa kondygnacja większa od parteru o ponad 20%.
+- **ℹ️ Braki** — niedokończona robota: brak kompletu pomiarów, brak współczynnika U przy otworze, rzut bez opisanych pomieszczeń, brak wysokości kondygnacji.
+
+Przy każdej uwadze jest 🔎 — przenosi widok na sporne miejsce, także na inną zakładkę.
+
+**Uwagi nie blokują pracy.** Przy zapisie raportu dostajesz podsumowanie i decydujesz sam — czasem budynek naprawdę jest nietypowy. Blokują tylko te rzeczy, które blokowały dotąd: brak wysokości kondygnacji i nieopisane przegrody.
 
 ### 🎯 Prowadzony pomiar — najszybsza droga
 

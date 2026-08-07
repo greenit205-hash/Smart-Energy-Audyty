@@ -260,6 +260,7 @@
               <button type="button" id="btnToggleDims" class="btn btn-info btn-sm fw-bold text-white" onclick="toggleDimensions()">👁️ Wymiary</button>
             </div>
             <div class="btn-group ms-1 mt-2 mt-md-0">
+              <button type="button" id="btnWallLabels" class="btn btn-outline-secondary btn-sm fw-bold" onclick="toggleWallLabels()">🔤 Ozn. ścian</button>
               <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="startGuidedMeasure()">🎯 Pomiar</button>
               <button type="button" class="btn btn-outline-primary btn-sm fw-bold" onclick="openWallListDialog()">📐 Ściany</button>
               <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="openDiagDialog()">🩺 Diagnostyka</button>
@@ -274,6 +275,7 @@
           <input type="hidden" name="sketchData" id="sketchData">
         </div>
       </div>
+      <div id="checkPanel" class="px-3 pt-3"></div>
       <div id="tablesPerSketchContainer" class="p-3"></div>
     </div>
     <div class="card border-success mb-4 audytor-only">
@@ -501,9 +503,8 @@
   // Adres wdrozenia backendu. Wartosc ponizej to tylko domyslna -
   // wlasciwy adres ustawia sie w aplikacji (pulpit -> Polaczenie z Dyskiem Google)
   // i zapisuje na urzadzeniu, wiec podmiana wdrozenia nie wymaga edycji kodu.
-  // Celowo puste w repozytorium: adres wdrozenia jest sekretem (kto go zna, moze
-  // zapisywac dane na Twoim Dysku). Ustawia sie go w aplikacji:
-  // Pulpit -> Polaczenie z Dyskiem Google -> Adres wdrozenia.
+  // Celowo puste w repozytorium: adres wdrozenia jest sekretem.
+  // Ustawia sie go w aplikacji: Pulpit -> Polaczenie z Dyskiem Google.
   const DEFAULT_API_URL = "";
 
   // ================= PRACA NA DWÓCH TABLETACH =================
@@ -1153,6 +1154,15 @@
     payload.sketchImages = buildSketchImages(auditToSync);
     payload.logo = LOGO_DATA_URL;
     payload.cardHtml = buildObjectCardHtml(auditToSync, null, true);
+    // zestawienie ścian liczy aplikacja - Apps Script tylko je wypisuje
+    try {
+      const sks = JSON.parse(auditToSync.sketchesJSON || '[]');
+      payload.wallTables = sks.map(sk => wallTableRows(sk).map(r => ({
+        label: r.label, roomNum: r.roomNum, position: r.position, typeLabel: r.typeLabel,
+        value: r.value !== null ? Number(r.value.toFixed(2)) : null,
+        source: wallSourceLabel(r.source, r.missing)
+      })));
+    } catch (e) { payload.wallTables = []; }
     // Ten sam identyfikator w obu próbach wysyłki - dzięki temu ewentualne
     // ponowienie "w ciemno" NIE utworzy drugiego folderu klienta na Dysku.
     payload.exportId = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
@@ -1305,6 +1315,17 @@
         h += roomTable;
       }
       const ops = sk.objects.openings || [];
+      const wr = wallTableRows(sk);
+      if (wr.length) {
+        h += `<h4 style="margin:10pt 0 4pt;color:#6c757d;font-size:11pt">Ściany — zestawienie długości</h4>`;
+        h += `<p class="sub">Oznaczenia (1a, 1b…) są naniesione na rysunku powyżej.</p>`;
+        h += `<table><tr><th>Ozn.</th><th>Pom.</th><th>Położenie</th><th>Długość [m]</th><th>Źródło</th></tr>`;
+        wr.forEach(r => {
+          h += `<tr><td><b>${esc(r.label)}</b></td><td>${esc(r.roomNum)}</td><td>${esc(r.position)}</td><td>${r.value !== null ? r.value.toFixed(2) : '—'}</td><td>${wallSourceLabel(r.source, r.missing)}</td></tr>`;
+        });
+        h += `</table>`;
+      }
+
       if (ops.length) {
         const gr = groupOpenings(ops);
         h += `<table><tr><th>ID</th><th>Szt.</th><th>Szerokość [cm]</th><th>Wysokość [cm]</th><th>Pow. szt. [m²]</th><th>Pow. razem [m²]</th><th>U [W/m²K]</th></tr>`;
@@ -1383,7 +1404,7 @@
 
   function buildObjectCardHtml(audit, images, usePlaceholders) {
     const st = auditStats(audit);
-    const imgSrc = (i) => usePlaceholders ? ('{{SKETCH_' + i + '}}') : ((images && images[i]) ? images[i].dataUrl : null);
+    const imgSrc = (i) => usePlaceholders ? ('[[SKETCH_' + i + ']]') : ((images && images[i]) ? images[i].dataUrl : null);
 
     let sketchBlocks = '';
     st.sketches.forEach((sk, i) => {
@@ -1416,6 +1437,15 @@
           <div class="sketch-col">${src ? `<div class="sketch"><img src="${src}"></div>` : '<p class="muted">Brak rysunku</p>'}</div>
           ${roomTable ? `<div class="rooms-col">${roomTable}</div>` : ''}
         </div>
+        ${(() => {
+          const wr = wallTableRows(sk);
+          if (!wr.length) return '';
+          let html = '<h4>Ściany — zestawienie długości</h4><p class="muted" style="font-size:.78rem;margin:0 0 6px">Oznaczenia (1a, 1b…) są naniesione na rysunku powyżej.</p><table><thead><tr><th>Ozn.</th><th>Pom.</th><th>Położenie</th><th class="num">Długość [m]</th><th>Źródło</th></tr></thead><tbody>';
+          wr.forEach(r => {
+            html += `<tr><td><b>${esc(r.label)}</b></td><td>${esc(r.roomNum)}</td><td>${esc(r.position)}</td><td class="num">${r.value !== null ? r.value.toFixed(2) : '—'}</td><td>${wallSourceLabel(r.source, r.missing)}</td></tr>`;
+          });
+          return html + '</tbody></table>';
+        })()}
         ${ops.length ? `<h4>Otwory</h4><table><thead><tr><th>ID</th><th class="num">Szt.</th><th class="num">Szer. [cm]</th><th class="num">Wys. [cm]</th><th class="num">Pow. szt. [m²]</th><th class="num">Pow. razem [m²]</th><th class="num">U</th></tr></thead><tbody>${opRows}</tbody>
           <tfoot><tr><th colspan="5" class="num">RAZEM</th><th class="num">${opGroups.reduce((t,g)=>t+g.totalArea,0).toFixed(2)}</th><th></th></tr></tfoot></table>
           ${(() => { const g = summarizeOpenings(ops); return g.length > 1 ? `<table><thead><tr><th>Kategoria</th><th class="num">Szt.</th><th class="num">Łączna pow. [m²]</th></tr></thead><tbody>${g.map(x => `<tr><td>${x.name}</td><td class="num">${x.count}</td><td class="num"><b>${x.area.toFixed(2)}</b></td></tr>`).join('')}</tbody></table>` : ''; })()}` : ''}
@@ -1995,11 +2025,31 @@ ${sketchBlocks}
   }
 
   // ================= LISTA ŚCIAN WG POMIESZCZEŃ =================
+  // Oznaczenie ściany: numer pomieszczenia + litera, np. 1a, 1b, 1c.
+  // Ta sama etykieta pojawia się w tabeli i na rysunku w raporcie.
+  function wallLetter(i) {
+    const abc = 'abcdefghijklmnopqrstuvwxyz';
+    return i < abc.length ? abc[i] : (abc[Math.floor(i / abc.length) - 1] + abc[i % abc.length]);
+  }
+
+  // Słowny opis położenia względem środka pomieszczenia - pomaga znaleźć ścianę
+  // nawet bez patrzenia na etykietę.
+  function wallPositionLabel(sp, centroid) {
+    const mx = (sp.p1.x + sp.p2.x) / 2, my = (sp.p1.y + sp.p2.y) / 2;
+    const dx = mx - centroid.x, dy = my - centroid.y;
+    if (sp.type === 'H') return dy < 0 ? 'górna' : 'dolna';
+    if (sp.type === 'V') return dx < 0 ? 'lewa' : 'prawa';
+    const pion = dy < 0 ? 'górny' : 'dolny';
+    const poziom = dx < 0 ? 'lewy' : 'prawy';
+    return 'skos ' + pion + '-' + poziom;
+  }
+
   function buildWallInventory() {
     const rows = [];
     (objects.rooms || []).forEach(room => {
       if (room.manual) return;
       const edges = room._spans && room._spans.length ? room._spans : buildSpans(room.polygon);
+      const c = room.centroid || getVisualCenter(room.polygon);
       edges.forEach((e, i) => {
         const cd = objects.customDims ? objects.customDims[e.key] : null;
         const manual = cd && cd.val;
@@ -2008,6 +2058,8 @@ ${sketchBlocks}
         const preferAuto = e.type === 'D' && autoVal !== undefined;
         rows.push({
           roomNum: room.num, idx: i + 1, key: e.key,
+          label: String(room.num) + wallLetter(i),
+          position: wallPositionLabel(e, c),
           typeLabel: e.type === 'D' ? 'skos' : (e.type === 'H' ? 'pozioma' : 'pionowa'),
           value: preferAuto ? autoVal : (manual ? parseFloat(cd.val) : autoVal),
           source: preferAuto ? 'auto' : (manual ? 'manual' : (autoVal !== undefined ? 'auto' : 'missing')),
@@ -2195,6 +2247,7 @@ ${sketchBlocks}
     recalculateRooms();
     renderTablesPerSketch();
     renderGuided();
+    renderChecks();
   }
 
   function closeGuided() {
@@ -2213,6 +2266,30 @@ ${sketchBlocks}
       if (Math.hypot(pos.x - c.x, pos.y - c.y) < 22 / zoomLevel) return i;
     }
     return -1;
+  }
+
+  // Zestawienie ścian danego szkicu na potrzeby raportu.
+  // Korzysta z tego samego wyliczenia co panel 📐 Ściany w aplikacji.
+  function wallTableRows(sk) {
+    const saved = objects;
+    try {
+      objects = sk.objects;
+      if (!objects.customDims) objects.customDims = {};
+      recalculateRooms();
+      return buildWallInventory().map(r => ({
+        roomNum: r.roomNum, idx: r.idx, label: r.label, position: r.position, typeLabel: r.typeLabel,
+        value: (r.value !== undefined && r.value !== null) ? Number(r.value) : null,
+        source: r.source, missing: !!r.missing
+      }));
+    } catch (e) { return []; }
+    finally { objects = saved; }
+  }
+
+  function wallSourceLabel(src, missing) {
+    if (missing) return 'do pomiaru';
+    if (src === 'manual') return 'zmierzone';
+    if (src === 'auto') return 'obliczone';
+    return '—';
   }
 
   function openWallListDialog() { renderWallList(); document.getElementById('wallListOverlay').style.display = 'flex'; }
@@ -2234,7 +2311,7 @@ ${sketchBlocks}
         const color = r.missing ? '#dc3545' : (r.source === 'manual' ? '#198754' : (r.source === 'auto' ? '#fd7e14' : '#6c757d'));
         const valTxt = (r.value !== undefined && r.value !== null) ? r.value.toFixed(2) + ' m' : '—';
         html += `<div class="d-flex justify-content-between align-items-center border-bottom py-1">
-          <span class="small">Ściana ${r.idx} <span class="text-muted">(${r.typeLabel})</span></span>
+          <span class="small"><b>${r.label}</b> <span class="text-muted">${r.position}</span></span>
           <span class="small fw-bold" style="color:${color};">${valTxt}</span>
           <span>
             <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="locateOnCanvas(${r.midX},${r.midY})" title="Pokaż na szkicu">🔎</button>
@@ -2510,6 +2587,301 @@ ${sketchBlocks}
     return Object.values(map).sort((a, b) => order.indexOf(a.pref) - order.indexOf(b.pref));
   }
 
+  // ================= KONTROLA POMIARÓW =================
+  // Wszystko liczone lokalnie, bez internetu. Reguły dzielą się na:
+  //   error – dwie liczby wykluczają się nawzajem (na pewno coś jest źle)
+  //   warn  – możliwe, ale rzadkie; warto rzucić okiem
+  //   info  – niedokończona robota, nie błąd
+  const CHECK_TOL = 0.02;          // 2 cm - tyle tolerujemy przy porównywaniu pomiarów
+  const CHECK_WALL_MIN = 0.3, CHECK_WALL_MAX = 30;      // m
+  const CHECK_H_MIN = 1.8,  CHECK_H_MAX = 5;            // m - wysokość kondygnacji
+  const CHECK_OP_MIN = 30,  CHECK_OP_MAX = 400;         // cm - otwory
+  const CHECK_SCALE_FACTOR = 5;    // pomiar odbiegający tyle razy od reszty szkicu
+  const CHECK_FLOOR_GROWTH = 1.2;  // piętro większe od parteru o ponad 20%
+  const CHECK_AREA_OUTLIER = 3;    // powierzchnia > 3x mediana
+  const CHECK_WINDOW_SHARE = 0.5;  // okna zajmują ponad połowę ściany
+
+  function manualDimVal(key) {
+    const cd = objects.customDims ? objects.customDims[key] : null;
+    if (!cd || !cd.val) return null;
+    const v = parseFloat(cd.val);
+    return (v > 0) ? v : null;
+  }
+
+  function resolvedLen(key) {
+    const m = manualDimVal(key);
+    if (m !== null) return m;
+    if (objects._realLen && objects._realLen[key] !== undefined) return objects._realLen[key];
+    return null;
+  }
+
+  function medianOf(arr) {
+    if (!arr.length) return null;
+    const a = arr.slice().sort((x, y) => x - y);
+    const mid = Math.floor(a.length / 2);
+    return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+  }
+
+  // Zbiera uwagi dla JEDNEGO szkicu (zakłada, że `objects` wskazuje na ten szkic)
+  function checkOneSketch(sketch, sketchIndex, allSketches) {
+    const out = [];
+    const add = (level, text, pos) => out.push({ level, text, sketchIndex, sketchName: sketch.name, pos: pos || null });
+    const isSect = isSectionSketch(sketch);
+    const rooms = objects.rooms || [];
+    const skH = sketchHeightNum(sketch);
+
+    // --- 2. suma odcinków a długość całej ściany ---
+    (objects.lines || []).forEach(line => {
+      const segs = getSegmentsForLine(line);
+      if (segs.length < 2) return;
+      const wholeKey = getSegKey(line.x1, line.y1, line.x2, line.y2);
+      const whole = manualDimVal(wholeKey);
+      if (whole === null) return;
+      let sum = 0, all = true;
+      segs.forEach(sg => { const v = manualDimVal(getSegKey(sg.x1, sg.y1, sg.x2, sg.y2)); if (v === null) all = false; else sum += v; });
+      if (all && Math.abs(sum - whole) > CHECK_TOL) {
+        add('error', `Ściana zmierzona sprzecznie: całość ${whole.toFixed(2)} m, a odcinki dają ${sum.toFixed(2)} m (różnica ${Math.abs(sum - whole).toFixed(2)} m).`,
+            { x: (line.x1 + line.x2) / 2, y: (line.y1 + line.y2) / 2 });
+      }
+    });
+
+    // --- 1. ten sam ciąg ściany w dwóch pomieszczeniach ---
+    rooms.forEach(room => {
+      (room._spans || []).forEach(sp => {
+        if (!sp.parts || sp.parts.length < 2) return;
+        const spanVal = manualDimVal(sp.key);
+        if (spanVal === null) return;
+        let sum = 0, all = true;
+        sp.parts.forEach(pt => { const v = manualDimVal(pt.key); if (v === null) all = false; else sum += v; });
+        if (all && Math.abs(sum - spanVal) > CHECK_TOL) {
+          add('error', `Pom. ${room.num}: ściana wpisana jako ${spanVal.toFixed(2)} m, a jej odcinki dają ${sum.toFixed(2)} m.`,
+              { x: (sp.p1.x + sp.p2.x) / 2, y: (sp.p1.y + sp.p2.y) / 2 });
+        }
+      });
+    });
+
+    // --- 6. ręczny pomiar skosu inny niż wyliczony ---
+    if (objects._overridden) {
+      Object.keys(objects._overridden).forEach(k => {
+        const manual = objects._overridden[k];
+        const auto = objects._realLen ? objects._realLen[k] : null;
+        if (auto === null || auto === undefined) return;
+        if (Math.abs(manual - auto) > CHECK_TOL) {
+          add('error', `Skos: wpisano ${manual.toFixed(2)} m, a z pozostałych ścian wychodzi ${auto.toFixed(2)} m. Do pola powierzchni brana jest wartość wyliczona.`);
+        }
+      });
+    }
+
+    // --- 4. powtórzony numer pomieszczenia ---
+    const seen = {};
+    rooms.forEach(r => {
+      const n = String(r.num);
+      if (seen[n]) add('error', `Numer ${n} użyty dwa razy na tym szkicu.`, r.centroid);
+      seen[n] = true;
+    });
+
+    // --- 5. suma pomieszczeń większa niż obrys budynku ---
+    if (!isSect && rooms.length > 1) {
+      const outer = findPlanarFaces().filter(f => polygonSignedArea(f) < -200)
+        .sort((a, b) => Math.abs(polygonSignedArea(b)) - Math.abs(polygonSignedArea(a)))[0];
+      if (outer) {
+        const geoOuter = computeRoomGeometry(outer.slice().reverse(), objects.customDims || {});
+        if (geoOuter.solved) {
+          let sum = 0;
+          rooms.forEach(r => { const a = parseFloat(r.area); if (!isNaN(a)) sum += a; });
+          if (sum > geoOuter.area * 1.02) {
+            add('error', `Suma pomieszczeń (${sum.toFixed(2)} m²) przekracza obrys budynku (${geoOuter.area.toFixed(2)} m²).`);
+          }
+        }
+      }
+    }
+
+    // --- 7. pomiar odbiegający od reszty szkicu ---
+    const ratios = [];
+    (objects.lines || []).forEach(line => {
+      getSegmentsForLine(line).forEach(sg => {
+        const key = getSegKey(sg.x1, sg.y1, sg.x2, sg.y2);
+        const v = manualDimVal(key);
+        if (v === null) return;
+        const px = Math.hypot(sg.x2 - sg.x1, sg.y2 - sg.y1) / PIXELS_PER_METER;
+        if (px > 0.05) ratios.push({ key, v, r: v / px, mid: { x: (sg.x1 + sg.x2) / 2, y: (sg.y1 + sg.y2) / 2 } });
+      });
+    });
+    const med = medianOf(ratios.map(x => x.r));
+    if (med && ratios.length >= 3) {
+      ratios.forEach(x => {
+        if (x.r > med * CHECK_SCALE_FACTOR || x.r < med / CHECK_SCALE_FACTOR) {
+          add('warn', `Pomiar ${x.v.toFixed(2)} m mocno odbiega od proporcji rysunku — sprawdź, czy nie zgubił się przecinek albo zero.`, x.mid);
+        }
+      });
+    }
+
+    // --- 8. wartości poza rozsądnym zakresem ---
+    Object.keys(objects.customDims || {}).forEach(k => {
+      const v = manualDimVal(k);
+      if (v === null) return;
+      if (v < CHECK_WALL_MIN) add('warn', `Ściana ${v.toFixed(2)} m — mniej niż ${CHECK_WALL_MIN} m.`);
+      else if (v > CHECK_WALL_MAX) add('warn', `Ściana ${v.toFixed(2)} m — więcej niż ${CHECK_WALL_MAX} m.`);
+    });
+    if (!isSect && skH !== null && skH > 0 && (skH < CHECK_H_MIN || skH > CHECK_H_MAX)) {
+      add('warn', `Wysokość kondygnacji ${skH.toFixed(2)} m wygląda nietypowo.`);
+    }
+    (objects.openings || []).forEach(op => {
+      const w = Number(op.width), h = Number(op.height);
+      if (w < CHECK_OP_MIN || w > CHECK_OP_MAX || h < CHECK_OP_MIN || h > CHECK_OP_MAX) {
+        add('warn', `Otwór ${op.id}: ${w} × ${h} cm — wymiary poza typowym zakresem.`, { x: op.x, y: op.y });
+      }
+      if (!op.uValue) add('info', `Otwór ${op.id} bez współczynnika U.`, { x: op.x, y: op.y });
+    });
+
+    // --- 3. otwór szerszy niż ściana, w której siedzi ---
+    (objects.openings || []).forEach(op => {
+      let best = null, bestD = 40;
+      (objects.lines || []).forEach(line => {
+        getSegmentsForLine(line).forEach(sg => {
+          const pt = getClosestPointOnSegment({ x: op.x, y: op.y }, { x: sg.x1, y: sg.y1 }, { x: sg.x2, y: sg.y2 });
+          const d = Math.hypot(op.x - pt.x, op.y - pt.y);
+          if (d < bestD) { bestD = d; best = sg; }
+        });
+      });
+      if (!best) return;
+      const wallLen = resolvedLen(getSegKey(best.x1, best.y1, best.x2, best.y2));
+      if (wallLen !== null && Number(op.width) / 100 > wallLen + CHECK_TOL) {
+        add('error', `Otwór ${op.id} (${op.width} cm) jest szerszy niż ściana, w której siedzi (${wallLen.toFixed(2)} m).`, { x: op.x, y: op.y });
+      }
+    });
+
+    // --- 9. okna zajmują ponad połowę ściany pomieszczenia ---
+    if (!isSect && skH !== null && skH > 0) {
+      rooms.forEach(room => {
+        if (room.manual) return;
+        let perim = 0;
+        (room._spans || []).forEach(sp => { const L = resolvedLen(sp.key); if (L !== null) perim += L; });
+        if (perim <= 0) return;
+        let openArea = 0;
+        (objects.openings || []).forEach(op => {
+          const near = (room._spans || []).some(sp => {
+            const pt = getClosestPointOnSegment({ x: op.x, y: op.y }, sp.p1, sp.p2);
+            return Math.hypot(op.x - pt.x, op.y - pt.y) < 40;
+          });
+          if (near) openArea += (Number(op.width) * Number(op.height)) / 10000;
+        });
+        const wallArea = perim * skH;
+        if (wallArea > 0 && openArea > wallArea * CHECK_WINDOW_SHARE) {
+          add('warn', `Pom. ${room.num}: otwory zajmują ${(openArea / wallArea * 100).toFixed(0)}% powierzchni ścian.`, room.centroid);
+        }
+      });
+    }
+
+    // --- 11. powierzchnia mocno odstająca od reszty ---
+    const areas = rooms.map(r => parseFloat(r.area)).filter(a => !isNaN(a));
+    const medA = medianOf(areas);
+    if (medA && areas.length >= 3) {
+      rooms.forEach(r => {
+        const a = parseFloat(r.area);
+        if (!isNaN(a) && a > medA * CHECK_AREA_OUTLIER) {
+          add('warn', `Pom. ${r.num}: ${a.toFixed(2)} m² — dużo więcej niż pozostałe na tym szkicu.`, r.centroid);
+        }
+      });
+    }
+
+    // --- 12. pomieszczenie bez żadnego otworu ---
+    if (!isSect) {
+      rooms.forEach(room => {
+        if (room.manual) return;
+        const has = (objects.openings || []).some(op => (room._spans || []).some(sp => {
+          const pt = getClosestPointOnSegment({ x: op.x, y: op.y }, sp.p1, sp.p2);
+          return Math.hypot(op.x - pt.x, op.y - pt.y) < 40;
+        }));
+        if (!has) add('warn', `Pom. ${room.num} nie ma żadnego okna ani drzwi.`, room.centroid);
+      });
+    }
+
+    // --- 13/16/18. braki ---
+    rooms.forEach(r => { if (r.needsDim) add('info', `Pom. ${r.num}: brak kompletu pomiarów — powierzchnia nie została policzona.`, r.centroid); });
+    findOverlappingRooms().forEach(pr => add('error', `Pomieszczenia ${pr[0]} i ${pr[1]} zajmują ten sam obszar — suma powierzchni będzie zawyżona.`));
+    if (!isSect && (objects.lines || []).length > 0 && rooms.length === 0) {
+      add('info', 'Na tym rzucie nie opisano jeszcze żadnego pomieszczenia (🏠 Pomieszcz.).');
+    }
+    if (!isSect && skH === null) add('info', 'Brak wysokości kondygnacji — bez niej nie policzymy kubatury.');
+
+    return out;
+  }
+
+  function runAuditChecks() {
+    const saved = objects;
+    let all = [];
+    const floorAreas = [];
+    sketches.forEach((sk, i) => {
+      objects = sk.objects;
+      if (!objects.customDims) objects.customDims = {};
+      all = all.concat(checkOneSketch(sk, i, sketches));
+      if (!isSectionSketch(sk)) {
+        let sum = 0;
+        (objects.rooms || []).forEach(r => { const a = parseFloat(r.area); if (!isNaN(a)) sum += a; });
+        floorAreas.push({ i, name: sk.name, sum });
+      }
+    });
+    objects = saved;
+
+    // --- 10. wyższa kondygnacja większa od parteru ---
+    if (floorAreas.length >= 2 && floorAreas[0].sum > 0) {
+      const parter = floorAreas[0];
+      floorAreas.slice(1).forEach(f => {
+        if (f.sum > parter.sum * CHECK_FLOOR_GROWTH) {
+          all.push({ level: 'warn', sketchIndex: f.i, sketchName: f.name,
+            text: `„${f.name}" (${f.sum.toFixed(2)} m²) jest większy od „${parter.name}" (${parter.sum.toFixed(2)} m²) o ponad ${Math.round((CHECK_FLOOR_GROWTH - 1) * 100)}%.` });
+        }
+      });
+    }
+    return all;
+  }
+
+  function renderChecks() {
+    const box = document.getElementById('checkPanel');
+    if (!box) return;
+    let issues = [];
+    try { issues = runAuditChecks(); } catch (e) { console.warn('kontrola:', e); box.innerHTML = ''; return; }
+
+    const err = issues.filter(i => i.level === 'error');
+    const warn = issues.filter(i => i.level === 'warn');
+    const info = issues.filter(i => i.level === 'info');
+
+    if (!issues.length) {
+      box.innerHTML = '<div class="alert alert-success py-2 mb-0 small fw-bold">✅ Kontrola pomiarów: nie znaleziono sprzeczności.</div>';
+      return;
+    }
+
+    const row = (it, idx) => {
+      const color = it.level === 'error' ? '#dc3545' : (it.level === 'warn' ? '#fd7e14' : '#0d6efd');
+      const icon  = it.level === 'error' ? '⛔' : (it.level === 'warn' ? '⚠️' : 'ℹ️');
+      const btn = it.pos ? `<button class="btn btn-sm btn-outline-secondary py-0 px-1 ms-2" onclick="focusIssue(${it.sketchIndex}, ${it.pos.x}, ${it.pos.y})">🔎</button>` : '';
+      return `<div class="d-flex justify-content-between align-items-start border-bottom py-1">
+        <span class="small" style="color:${color};">${icon} <b>${it.sketchName}:</b> ${it.text}</span>${btn}</div>`;
+    };
+
+    box.innerHTML = `
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+          <span class="fw-bold">🔍 Kontrola pomiarów</span>
+          <span class="small">
+            ${err.length ? `<span class="badge bg-danger">${err.length} sprzeczności</span> ` : ''}
+            ${warn.length ? `<span class="badge bg-warning text-dark">${warn.length} do sprawdzenia</span> ` : ''}
+            ${info.length ? `<span class="badge bg-primary">${info.length} braki</span>` : ''}
+          </span>
+        </div>
+        <div class="card-body py-2" style="max-height: 260px; overflow-y: auto;">
+          ${err.map(row).join('')}${warn.map(row).join('')}${info.map(row).join('')}
+          <div class="small text-muted mt-2">Uwagi nie blokują pracy — decydujesz sam. Czasem budynek naprawdę jest nietypowy.</div>
+        </div>
+      </div>`;
+  }
+
+  function focusIssue(sketchIndex, x, y) {
+    if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
+    locateOnCanvas(x, y, 0);
+  }
+
   function renderTablesPerSketch() {
       // Tabela ma zawsze pokazywac aktualny stan - przeliczamy kazdy szkic,
       // nie tylko biezacy, zeby powierzchnia pojawiala sie od razu po
@@ -2523,6 +2895,7 @@ ${sketchBlocks}
       objects = savedObjects;
 
       let container = document.getElementById('tablesPerSketchContainer'); container.innerHTML = '';
+      setTimeout(renderChecks, 0);
       sketches.forEach((sketch) => {
           let hasRooms = sketch.objects.rooms && sketch.objects.rooms.length > 0;
           let hasOpenings = sketch.objects.openings && sketch.objects.openings.length > 0;
@@ -2816,6 +3189,14 @@ ${sketchBlocks}
   // do sciany, az znajdzie wolne miejsce. Jesli miejsca nie ma - etykieta jest
   // pomijana (linia i strzalki zostaja), zeby nie robic nieczytelnej kaszy.
   let dimLabelRects = [];
+  let showWallLabels = false;   // na ekranie domyślnie wyłączone - w raporcie zawsze widoczne
+
+  function toggleWallLabels() {
+    showWallLabels = !showWallLabels;
+    const b = document.getElementById('btnWallLabels');
+    if (b) b.className = showWallLabels ? 'btn btn-secondary btn-sm fw-bold text-white' : 'btn btn-outline-secondary btn-sm fw-bold';
+    renderCanvas();
+  }
 
   function rectsOverlap(a, b) {
     return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
@@ -3121,6 +3502,33 @@ ${sketchBlocks}
       ctx.beginPath(); guideLines.forEach(l => { ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); }); ctx.stroke(); ctx.restore();
     }
 
+    // OZNACZENIA ŚCIAN (1a, 1b, ...) — w raporcie zawsze, na ekranie tylko po
+    // włączeniu 🔤 Ozn. ścian. Etykiety są drobne i odsunięte do wnętrza
+    // pomieszczenia, żeby nie zaśmiecać rysunku podczas pracy.
+    if ((currentMode === 'export' || showWallLabels) && objects.rooms) {
+      objects.rooms.forEach(room => {
+        if (room.manual || !room._spans) return;
+        const c = room.centroid || getVisualCenter(room.polygon);
+        room._spans.forEach((sp, i) => {
+          const mx = (sp.p1.x + sp.p2.x) / 2, my = (sp.p1.y + sp.p2.y) / 2;
+          const vx = c.x - mx, vy = c.y - my, vl = Math.hypot(vx, vy) || 1;
+          const lx = mx + (vx / vl) * 16, ly = my + (vy / vl) * 16;
+          const txt = String(room.num) + wallLetter(i);
+          ctx.save();
+          ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const w = ctx.measureText(txt).width + 8;
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - w/2, ly - 8, w, 16, 4); ctx.fill(); }
+          else ctx.fillRect(lx - w/2, ly - 8, w, 16);
+          ctx.strokeStyle = 'rgba(108,117,125,0.5)'; ctx.lineWidth = 1;
+          if (ctx.roundRect) ctx.stroke();
+          ctx.fillStyle = '#6c757d'; ctx.fillText(txt, lx, ly);
+          reserveLabelRect(lx, ly, w + 4, 20);
+          ctx.restore();
+        });
+      });
+    }
+
     // MIARKI POMOCNICZE - wygladem przypominaja wymiary, ale sa tylko podpisem.
     // Rysujemy je zawsze, niezaleznie od przelacznika 👁️ (to swiadome notatki audytora).
     if (objects.noteLines) {
@@ -3172,6 +3580,28 @@ ${sketchBlocks}
       }
       else if (currentMode === 'line' || (currentMode === 'select' && draggingNode)) {
         ctx.beginPath(); ctx.strokeStyle = COL_GOLD; ctx.lineWidth = 4; ctx.moveTo(startPos.x, startPos.y); ctx.lineTo(currentPos.x, currentPos.y); ctx.stroke();
+
+        // PODGLĄD DŁUGOŚCI — wyłącznie pomoc przy szkicowaniu, jak w programach CAD.
+        // Liczony z rysunku, więc NIE jest pomiarem: nie trafia nigdzie poza ekran,
+        // nie zapisuje się i nie wpływa na wymiarowanie ani na pole powierzchni.
+        const pdx = currentPos.x - startPos.x, pdy = currentPos.y - startPos.y;
+        const plen = Math.hypot(pdx, pdy);
+        if (plen > 6) {
+          const mx = (startPos.x + currentPos.x) / 2, my = (startPos.y + currentPos.y) / 2;
+          const nxp = plen ? -pdy / plen : 0, nyp = plen ? pdx / plen : 0;
+          const sc = Math.max(1, 1 / zoomLevel);
+          const txt = '~' + (plen / PIXELS_PER_METER).toFixed(2) + ' m';
+          ctx.save();
+          ctx.font = 'bold ' + Math.round(13 * sc) + 'px Arial';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          const w = ctx.measureText(txt).width + 12 * sc, h = 20 * sc;
+          const lx = mx + nxp * 22 * sc, ly = my + nyp * 22 * sc;
+          ctx.fillStyle = 'rgba(44,62,80,0.92)';
+          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - w/2, ly - h/2, w, h, 6 * sc); ctx.fill(); }
+          else ctx.fillRect(lx - w/2, ly - h/2, w, h);
+          ctx.fillStyle = '#fff'; ctx.fillText(txt, lx, ly);
+          ctx.restore();
+        }
       }
     }
 
