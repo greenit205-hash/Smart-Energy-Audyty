@@ -97,6 +97,9 @@ Adres zapisuje się na urządzeniu — robisz to raz na każdym tablecie.
 - **🖼️ Karta obiektu** — jednostronicowe podsumowanie `.html` z kafelkami i tabelami. Do wysłania mailem lub druku.
 - **🚀 Wyślij na Dysk** — tworzy folder klienta (patrz niżej). Wymaga internetu.
 - **💾 Pobierz Kopię Zapasową** — cała baza w jednym pliku JSON.
+- **📂 Wczytaj Kopię** — dokłada raporty z takiego pliku do tych, które już są na urządzeniu.
+
+> **Przenosiny na nowy adres aplikacji.** Pamięć przeglądarki jest przypisana do adresu, więc instalacja spod nowego adresu (np. z Netlify na GitHub Pages) startuje z **pustą listą raportów** — stare nie znikają, po prostu zostają przy starej ikonie. Żeby je przenieść: w starej wersji **💾 Pobierz Kopię Zapasową**, w nowej **📂 Wczytaj Kopię**. Przechodzą razem ze szkicami, pomiarami i podpisami. Ponowne wczytanie tej samej kopii niczego nie zdubluje.
 
 > Pod każdym szkicem w raportach jest też **zestawienie długości ścian**: oznaczenie, pomieszczenie, położenie, długość i informacja, czy była zmierzona, czy wyliczona. Dzięki temu sprawdzisz wymiar, którego nie widać na rysunku, bez otwierania aplikacji. Liczba wymiarów **na samym szkicu się nie zmienia**.
 
@@ -157,11 +160,23 @@ Gdy rzut jest gotowy:
 
 Ponowne kliknięcie w opisane pomieszczenie pozwala poprawić numer lub typ. Kliknięcie w miejscu, które nie jest zamknięte ścianami, tworzy zwykły znacznik ręczny — jak dotąd.
 
+### Poprawianie pomieszczeń
+
+W tabeli pod szkicem każde pomieszczenie ma przyciski **✏️** i **🗑️**. Edycja otwiera to samo okno co przy zakładaniu — możesz zmienić numer, typ, ogrzewanie i klimatyzację. Jeśli pomieszczenie leży na innej zakładce, program sam ją otworzy.
+
+Usunięcie kasuje wyłącznie opis i powierzchnię — **ściany zostają na rysunku**. To samo osiągniesz, klikając w pomieszczenie narzędziem 🏠 Pomieszcz.
+
 ### Podgląd długości podczas rysowania
 
 Gdy ciągniesz ścianę, na jej środku widać przybliżoną długość odczytaną z rysunku, poprzedzoną tyldą: `~4.00 m`. Pomaga to złapać proporcje, żeby szkic z grubsza odpowiadał rzeczywistości.
 
 **To wyłącznie pomoc przy szkicowaniu.** Wartość znika po puszczeniu palca, nigdzie się nie zapisuje i nie ma żadnego wpływu na wymiarowanie, powierzchnie ani raporty. Prawdziwe wymiary nadal wpisujesz z dalmierza — tylda przypomina, że to tylko oszacowanie z rysunku.
+
+### Odległość od narożnika
+
+Najedź na **już narysowaną** ścianę (w trybie 📏 Ściana, 🖱️ Wybierz albo ✍️ Wymiaruj), a program pokaże, jak daleko jesteś od **bliższego narożnika** — z przerywaną linią od tego narożnika do kursora. Po przekroczeniu połowy ściany punkt odniesienia sam przeskakuje na drugi koniec, tak jak przy przykładaniu taśmy.
+
+Jeśli ściana ma już wpisany wymiar, odczyt jest do niego przeskalowany — przy ścianie zmierzonej na 8 m połowa pokaże 4 m, niezależnie od tego, jak długa jest kreska na rysunku. Podpowiedź nie trafia do raportu i niczego nie zapisuje.
 
 ### 🔍 Kontrola pomiarów
 
@@ -176,6 +191,35 @@ Trzy poziomy:
 Przy każdej uwadze jest 🔎 — przenosi widok na sporne miejsce, także na inną zakładkę.
 
 **Uwagi nie blokują pracy.** Przy zapisie raportu dostajesz podsumowanie i decydujesz sam — czasem budynek naprawdę jest nietypowy. Blokują tylko te rzeczy, które blokowały dotąd: brak wysokości kondygnacji i nieopisane przegrody.
+
+### 📡 Dalmierz Leica DISTO (X3 i X4)
+
+Pomiar z dalmierza wpada prosto do aplikacji — nie musisz przepisywać liczb.
+
+**Zanim zaczniesz.** Bluetooth działa **wyłącznie pod adresem https** (Netlify albo GitHub Pages) w **Chrome na Androidzie lub ChromeOS**. Z pliku otwartego z pamięci tabletu nie zadziała — to ograniczenie przeglądarki, nie aplikacji. Na tablecie musi być włączony Bluetooth i lokalizacja (Android tego wymaga do wyszukiwania urządzeń).
+
+**Połączenie:**
+
+1. W dalmierzu włącz Bluetooth (menu ustawień urządzenia, tryb dla aplikacji DISTO Plan).
+2. W aplikacji: **📡 Dalmierz** → **Połącz**.
+3. Z listy wybierz swój dalmierz (nazwa zaczyna się od `DISTO`) → **Sparuj**.
+4. Zielony pasek oznacza, że połączenie działa. Przycisk 📡 w pasku narzędzi też robi się zielony.
+
+**Jak to działa w terenie.** Pomiar trafia do tego pola, które masz akurat otwarte:
+
+| Otwarte okno | Co się dzieje |
+|---|---|
+| 🎯 Prowadzony pomiar | wartość zapisuje się i program **sam przechodzi do następnej ściany** |
+| ✍️ Wymiaruj (okno wymiaru) | wpisuje się do pola pomiaru |
+| 🚪 Otwór | pierwszy strzał → szerokość, drugi → wysokość (**przeliczane na centymetry**) |
+| 📐 Miarka | wpisuje się jako opis miarki |
+| nic otwartego | wyskakuje powiadomienie z wartością, żeby nie przepadła |
+
+Dzięki temu prostokątny pokój to **dwa naciśnięcia przycisku na dalmierzu** — bez dotykania tabletu.
+
+Automatyczne przechodzenie można wyłączyć w panelu dalmierza, jeśli wolisz najpierw zobaczyć wartość i zatwierdzić ją ręcznie.
+
+**Gdy coś nie działa:** rozwiń **Podgląd połączenia** w panelu — widać tam, co program odebrał z urządzenia. Jeśli dalmierz łączy się, ale pomiary nie wpadają, program automatycznie przeszukuje wszystkie kanały urządzenia; wtedy zrób jeden pomiar i sprawdź, czy pojawił się w podglądzie.
 
 ### 🎯 Prowadzony pomiar — najszybsza droga
 

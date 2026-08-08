@@ -75,6 +75,8 @@
     <div class="card-header bg-white text-dark border-bottom-0 pt-4 pb-0 d-flex justify-content-between">
       <h5 class="fw-bold mb-0">Zapisane projekty na urządzeniu</h5>
       <button class="btn btn-sm btn-outline-secondary fw-bold" onclick="downloadBackup()">💾 Pobierz Kopię Zapasową</button>
+      <button class="btn btn-sm btn-outline-primary fw-bold" onclick="document.getElementById('backupFileInput').click()">📂 Wczytaj Kopię</button>
+      <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="importBackup(this)">
     </div>
     <div class="card-body" id="savedAuditsList"></div>
   </div>
@@ -230,6 +232,7 @@
               <button type="button" id="btnModeHideDim" class="btn btn-outline-warning btn-sm fw-bold text-dark" onclick="setMode('hide_dim')">🫥 Ukryj</button>
               <button type="button" id="btnModeOpening" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('opening')">🚪 Otwór</button>
               <button type="button" id="btnModeEnvTag" class="btn btn-outline-dark btn-sm fw-bold" onclick="setMode('envtag')">🏷️ Przegroda</button>
+              <button type="button" class="btn btn-outline-dark btn-sm fw-bold" onclick="openEnvListDialog()">📋 Lista przegród</button>
               <button type="button" id="btnModeRoomTag" class="btn btn-outline-success btn-sm fw-bold" onclick="setMode('roomtag')">🏠 Pomieszcz.</button>
               <div class="btn-group" role="group">
                   <button type="button" id="btnModeDraw" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('draw')">✏️ Ołówek</button>
@@ -261,6 +264,7 @@
             </div>
             <div class="btn-group ms-1 mt-2 mt-md-0">
               <button type="button" id="btnWallLabels" class="btn btn-outline-secondary btn-sm fw-bold" onclick="toggleWallLabels()">🔤 Ozn. ścian</button>
+              <button type="button" id="btnDisto" class="btn btn-outline-secondary btn-sm fw-bold" onclick="openDistoDialog()">📡 Dalmierz</button>
               <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="startGuidedMeasure()">🎯 Pomiar</button>
               <button type="button" class="btn btn-outline-primary btn-sm fw-bold" onclick="openWallListDialog()">📐 Ściany</button>
               <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" onclick="openDiagDialog()">🩺 Diagnostyka</button>
@@ -307,6 +311,7 @@
     <div class="d-flex justify-content-between align-items-center mb-1">
       <span class="fw-bold text-primary small">🎯 Pomiar — <span id="guidedRoomLabel"></span></span>
       <span>
+        <button type="button" class="btn btn-sm py-0 px-2 btn-outline-secondary" id="guidedDistoBtn" onclick="openDistoDialog()" title="Dalmierz">📡</button>
         <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="toggleGuidedCollapse()" id="guidedCollapseBtn">Zwiń</button>
         <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="closeGuided()">Zamknij</button>
       </span>
@@ -350,6 +355,36 @@
   </div>
 </div>
 
+<div id="distoOverlay" class="modal-overlay">
+  <div class="card shadow p-3" style="width: 380px; max-height: 88vh; overflow-y: auto;">
+    <h6 class="fw-bold mb-1 text-primary">📡 Dalmierz Leica DISTO</h6>
+    <p class="text-muted small mb-2">Obsługiwane modele X3 i X4. Pomiar z dalmierza wpada prosto do pola, które masz otwarte.</p>
+    <div id="distoStatus" class="alert alert-secondary py-2 mb-2 text-center fw-bold small">Nie połączono</div>
+
+    <div class="d-flex gap-2 mb-2">
+      <button type="button" class="btn btn-primary btn-sm fw-bold flex-fill" onclick="distoConnect()">Połącz</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm fw-bold flex-fill" onclick="distoDisconnect()">Rozłącz</button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center border-top border-bottom py-2 mb-2">
+      <span class="small fw-bold text-muted">Ostatni pomiar</span>
+      <span class="fw-bold fs-5 text-success" id="distoLastValue">—</span>
+    </div>
+
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="distoAutoChk" checked onchange="setDistoAuto(this.checked)">
+      <label class="form-check-label small fw-bold" for="distoAutoChk">W prowadzonym pomiarze zapisuj i przechodź dalej automatycznie</label>
+    </div>
+
+    <details class="mb-2">
+      <summary class="small fw-bold text-muted">Podgląd połączenia</summary>
+      <div id="distoLog" class="mt-1" style="max-height:160px; overflow-y:auto;"></div>
+    </details>
+
+    <button type="button" class="btn btn-secondary btn-sm w-100" onclick="closeDistoDialog()">Zamknij</button>
+  </div>
+</div>
+
 <div id="wallListOverlay" class="modal-overlay">
   <div class="card shadow p-3" style="width: 380px; max-height: 82vh; overflow-y: auto;">
     <h6 class="fw-bold mb-1 text-primary">📐 Ściany wg pomieszczeń</h6>
@@ -365,6 +400,15 @@
     <p class="text-muted small mb-2">Szuka nakładających się ścian, mikroskopijnych odcinków i luźnych końców - typowych przyczyn tego, że pomieszczenie „nie chce się domknąć”.</p>
     <div id="diagBody"></div>
     <button type="button" class="btn btn-secondary btn-sm w-100 mt-2" onclick="closeDiagDialog()">Zamknij</button>
+  </div>
+</div>
+
+<div id="envListOverlay" class="modal-overlay">
+  <div class="card shadow p-3" style="width: 400px; max-height: 85vh; overflow-y: auto;">
+    <h6 class="fw-bold mb-1 text-dark">🏷️ Oznaczone przegrody</h6>
+    <p class="text-muted small mb-2">Lista wszystkich oznaczeń ze wszystkich szkiców. Stąd usuniesz je bez szukania na rysunku.</p>
+    <div id="envListBody"></div>
+    <button type="button" class="btn btn-secondary btn-sm w-100 mt-2" onclick="closeEnvListDialog()">Zamknij</button>
   </div>
 </div>
 
@@ -443,8 +487,11 @@
     <select id="roomTypeSelect" class="form-select form-select-sm mb-2" required>
       <option value="">Wybierz typ...</option>
       <option value="Pokój">Pokój</option>
+      <option value="Salon">Salon</option>
       <option value="Kuchnia">Kuchnia</option>
       <option value="Łazienka">Łazienka</option>
+      <option value="WC">WC</option>
+      <option value="Garderoba">Garderoba</option>
       <option value="Korytarz">Korytarz</option>
       <option value="Wiatrołap">Wiatrołap</option>
       <option value="Pom. techniczne">Pom. techniczne</option>
@@ -735,9 +782,43 @@
     return list;
   }
 
+  // Czy do tego oznaczenia nadal istnieje ściana na rysunku?
+  // Oznaczenia są przypięte do odcinka ściany, więc skasowanie linii zostawia
+  // "wiszące" oznaczenie: niewidoczne na przekroju, ale wciąż liczone w sekcji 3.
+  function envTagKeysOnSketch(sk) {
+    const keys = new Set();
+    const saved = objects;
+    try {
+      objects = sk.objects;
+      (objects.lines || []).forEach(line => {
+        keys.add(getSegKey(line.x1, line.y1, line.x2, line.y2));
+        getSegmentsForLine(line).forEach(sg => keys.add(getSegKey(sg.x1, sg.y1, sg.x2, sg.y2)));
+      });
+    } catch (e) {} finally { objects = saved; }
+    return keys;
+  }
+
+  function envTagOrphans() {
+    const out = [];
+    (typeof sketches !== 'undefined' ? sketches : []).forEach((sk, si) => {
+      const tags = (sk.objects && sk.objects.envTags) || {};
+      const keys = Object.keys(tags);
+      if (!keys.length) return;
+      const alive = envTagKeysOnSketch(sk);
+      keys.forEach(k => {
+        if (!alive.has(k)) out.push({ sketchIdx: si, sketchName: sk.name, key: k, label: tags[k].cat + tags[k].num, cat: tags[k].cat, num: tags[k].num });
+      });
+    });
+    return out;
+  }
+
+  // Bierzemy najniższy wolny numer, żeby po skasowaniu SZ2 kolejna ściana
+  // dostała znowu SZ2, a nie SZ4.
   function nextEnvNumber(cat) {
-    const nums = getAllEnvTags().filter(t => t.cat === cat).map(t => t.num);
-    return nums.length ? Math.max(...nums) + 1 : 1;
+    const used = new Set(getAllEnvTags().filter(t => t.cat === cat).map(t => t.num));
+    let n = 1;
+    while (used.has(n)) n++;
+    return n;
   }
 
   function renderEnvelopeFields() {
@@ -748,7 +829,15 @@
     container.querySelectorAll('[name]').forEach(el => { preserved[el.name] = (el.type === 'checkbox') ? el.checked : el.value; });
 
     const tags = getAllEnvTags();
+    const orphans = envTagOrphans();
     let html = '';
+    if (orphans.length) {
+      html += `<div class="alert alert-warning py-2 small">
+        <b>Uwaga:</b> ${orphans.length === 1 ? 'oznaczenie' : 'oznaczenia'} <b>${orphans.map(o => o.label).join(', ')}</b>
+        ${orphans.length === 1 ? 'nie ma' : 'nie mają'} już swojej ściany na rysunku — ${orphans.length === 1 ? 'została' : 'zostały'} po skasowanych liniach.
+        <button type="button" class="btn btn-sm btn-warning fw-bold ms-2" onclick="removeOrphanEnvTags()">Usuń</button>
+      </div>`;
+    }
     ENV_TAG_CATS.forEach(catId => {
       const section = envelopeConfig.find(s => s.id === catId);
       const catTags = tags.filter(t => t.cat === catId).sort((a, b) => a.num - b.num);
@@ -1580,6 +1669,51 @@ ${sketchBlocks}
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }
 
+  // Wczytanie kopii zapasowej - m.in. przy przenoszeniu raportów na nowy adres
+  // aplikacji (pamięć przeglądarki jest przypisana do adresu, więc instalacja
+  // spod innego adresu startuje z pustą listą).
+  function importBackup(input) {
+    const file = input.files && input.files[0];
+    input.value = '';                       // pozwala wczytać ten sam plik ponownie
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let incoming;
+      try {
+        incoming = JSON.parse(reader.result);
+        if (!Array.isArray(incoming)) throw new Error('zły format');
+      } catch (e) {
+        alert('To nie wygląda na kopię zapasową audytów.\n\nWybierz plik „Kopia_Audytow_….json" pobrany przyciskiem 💾.');
+        return;
+      }
+      if (!incoming.length) { alert('Ta kopia jest pusta.'); return; }
+
+      const current = getLocalAudits();
+      // ten sam raport rozpoznajemy po kliencie, adresie i dacie utworzenia
+      const sig = a => [a.fullName, a.address, a.timestamp].join('|');
+      const have = new Set(current.map(sig));
+      const fresh = incoming.filter(a => !have.has(sig(a)));
+      const dup = incoming.length - fresh.length;
+
+      if (!fresh.length) {
+        alert(`Wszystkie raporty z tej kopii (${incoming.length}) już są na tym urządzeniu — nic nie dodano.`);
+        return;
+      }
+      const msg = `Kopia zawiera ${incoming.length} ${incoming.length === 1 ? 'raport' : 'raportów'}.\n\n` +
+                  `Do dodania: ${fresh.length}` + (dup ? `\nJuż tu są (pominięte): ${dup}` : '') +
+                  `\n\nDotychczasowe raporty na tym urządzeniu (${current.length}) zostaną zachowane. Dodać?`;
+      if (!confirm(msg)) return;
+
+      const merged = current.concat(fresh);
+      if (!saveLocalAudits(merged)) return;
+      renderDashboard();
+      alert(`Dodano ${fresh.length} ${fresh.length === 1 ? 'raport' : 'raportów'}.\n\nSzkice, pomiary i podpisy przeszły razem z nimi.`);
+    };
+    reader.onerror = () => alert('Nie udało się odczytać pliku.');
+    reader.readAsText(file);
+  }
+
   // Funkcje Historii
   function saveStateToHistory() {
     undoStack.push(JSON.stringify(objects));
@@ -1947,12 +2081,20 @@ ${sketchBlocks}
 
   let diagHighlightPos = null, diagHighlightUntil = 0;
 
-  function locateOnCanvas(x, y) {
+  // bottomReserve: ile pikseli u dołu zasłania panel pomiaru - kadrujemy PONAD nim.
+  // Przewijanie strony zostaje nietknięte, żeby przy wpisywaniu kolejnych pomiarów
+  // ekran nie uciekał spod palca.
+  function locateOnCanvas(x, y, bottomReserve) {
+    const pageX = window.scrollX || 0, pageY = window.scrollY || 0;
     const vw = viewport.clientWidth, vh = viewport.clientHeight;
-    panX = vw / 2 - x * zoomLevel; panY = vh / 2 - y * zoomLevel;
+    const reserve = bottomReserve || 0;
+    const visibleH = Math.max(120, vh - reserve);
+    panX = vw / 2 - x * zoomLevel;
+    panY = visibleH / 2 - y * zoomLevel;
     updateCanvasTransform();
     diagHighlightPos = { x, y }; diagHighlightUntil = Date.now() + 2200;
     renderCanvas(); setTimeout(renderCanvas, 2300);
+    if ((window.scrollY || 0) !== pageY || (window.scrollX || 0) !== pageX) window.scrollTo(pageX, pageY);
   }
 
   function openDiagDialog() { renderDiagnostics(); document.getElementById('diagOverlay').style.display = 'flex'; }
@@ -2137,6 +2279,8 @@ ${sketchBlocks}
     const missing = new Set(room._missingKeys || []);
 
     document.getElementById('guidedRoomLabel').innerText = `pom. ${room.num}${room.name ? ' (' + room.name + ')' : ''}`;
+    const dBtn = document.getElementById('guidedDistoBtn');
+    if (dBtn) dBtn.className = 'btn btn-sm py-0 px-2 ' + (distoIsConnected() ? 'btn-success text-white' : 'btn-outline-secondary');
 
     const box = document.getElementById('guidedStatusBox');
     const curBox = document.getElementById('guidedCurrentBox');
@@ -2152,7 +2296,8 @@ ${sketchBlocks}
       curBox.style.display = 'block';
       document.getElementById('guidedPrompt').innerHTML = `<span class="text-primary">▶</span> ${guidedSpanLabel(next, idx)} — <b class="text-primary">niebieska ściana z napisem „MIERZ TĘ ŚCIANĘ"</b>`;
       document.getElementById('guidedInput').value = '';
-      setTimeout(() => { const el = document.getElementById('guidedInput'); if (el) el.focus(); }, 60);
+      document.getElementById('guidedInput').placeholder = distoIsConnected() ? 'naciśnij przycisk na dalmierzu' : 'np. 5.00';
+      setTimeout(() => { const el = document.getElementById('guidedInput'); if (el) el.focus({ preventScroll: true }); }, 60);
       locateOnCanvas((next.p1.x + next.p2.x) / 2, (next.p1.y + next.p2.y) / 2, guidedPanelHeight());
     } else {
       box.className = 'alert alert-success py-2 mb-2 text-center fw-bold';
@@ -2201,7 +2346,7 @@ ${sketchBlocks}
     document.getElementById('guidedInput').value = cur || '';
     locateOnCanvas((sp.p1.x + sp.p2.x) / 2, (sp.p1.y + sp.p2.y) / 2, guidedPanelHeight());
     renderCanvas();
-    setTimeout(() => { const el = document.getElementById('guidedInput'); if (el) el.focus(); }, 60);
+    setTimeout(() => { const el = document.getElementById('guidedInput'); if (el) el.focus({ preventScroll: true }); }, 60);
   }
 
   (function bindGuidedEnter() {
@@ -2292,6 +2437,251 @@ ${sketchBlocks}
     return '—';
   }
 
+  // ================= DALMIERZ LEICA DISTO (X3 / X4) =================
+  // Łączymy się przez Web Bluetooth. Oba modele używają tego samego profilu
+  // BLE, więc obsługa jest wspólna. Gdyby egzemplarz miał inne identyfikatory,
+  // program sam przeszukuje urządzenie i zapamiętuje działającą charakterystykę.
+  //
+  // WYMAGANIA: Chrome na Androidzie lub ChromeOS + adres https (Netlify /
+  // GitHub Pages). Z pliku otwartego z pamięci tabletu Bluetooth nie zadziała.
+
+  const DISTO_SERVICE = '3ab10100-f831-4395-b29d-570977d5bf94';
+  const DISTO_DIST_CHAR = '3ab1010d-f831-4395-b29d-570977d5bf94';   // pomiar odległości (float32, metry)
+  // dodatkowe usługi, do których chcemy mieć dostęp przy przeszukiwaniu
+  const DISTO_EXTRA_SERVICES = [
+    DISTO_SERVICE,
+    '0000180f-0000-1000-8000-00805f9b34fb',   // poziom baterii
+    '0000180a-0000-1000-8000-00805f9b34fb'    // dane urządzenia
+  ];
+
+  let distoDevice = null, distoServer = null, distoChar = null;
+  let distoLastValue = null, distoLastAt = 0;
+  let distoLog = [];
+  let distoAutoAdvance = true;
+
+  function distoSupported() {
+    return (typeof navigator !== 'undefined') && !!navigator.bluetooth;
+  }
+
+  function distoIsConnected() {
+    return !!(distoDevice && distoDevice.gatt && distoDevice.gatt.connected && distoChar);
+  }
+
+  function distoLogAdd(text) {
+    distoLog.unshift(new Date().toLocaleTimeString() + ' — ' + text);
+    if (distoLog.length > 40) distoLog.pop();
+    const el = document.getElementById('distoLog');
+    if (el) el.innerHTML = distoLog.map(l => `<div class="small text-muted">${l}</div>`).join('');
+  }
+
+  function distoSetStatus(text, cls) {
+    const el = document.getElementById('distoStatus');
+    if (el) { el.innerText = text; el.className = 'alert py-2 mb-2 text-center fw-bold small alert-' + cls; }
+    const btn = document.getElementById('btnDisto');
+    if (btn) btn.className = distoIsConnected()
+      ? 'btn btn-success btn-sm fw-bold text-white'
+      : 'btn btn-outline-secondary btn-sm fw-bold';
+  }
+
+  // Odczyt z ramki BLE. Standardowo pierwsze 4 bajty to liczba zmiennoprzecinkowa
+  // w metrach; dla pewności sprawdzamy też inne rozmieszczenia.
+  function distoParseValue(dataView) {
+    const tryVals = [];
+    try { if (dataView.byteLength >= 4) tryVals.push(dataView.getFloat32(0, true)); } catch (e) {}
+    try { if (dataView.byteLength >= 8) tryVals.push(dataView.getFloat64(0, true)); } catch (e) {}
+    try { if (dataView.byteLength >= 4) tryVals.push(dataView.getFloat32(0, false)); } catch (e) {}
+    for (const v of tryVals) {
+      if (typeof v === 'number' && isFinite(v) && v > 0.03 && v < 500) return v;
+    }
+    return null;
+  }
+
+  function distoHandleNotification(event) {
+    const dv = event.target.value;
+    const meters = distoParseValue(dv);
+    if (meters === null) {
+      distoLogAdd('odebrano dane, których nie umiem odczytać (' + (dv ? dv.byteLength : 0) + ' bajtów)');
+      return;
+    }
+    distoLastValue = meters; distoLastAt = Date.now();
+    distoLogAdd('pomiar: ' + meters.toFixed(3) + ' m');
+    const lastEl = document.getElementById('distoLastValue');
+    if (lastEl) lastEl.innerText = meters.toFixed(2) + ' m';
+    distoDeliverMeasurement(meters);
+  }
+
+  async function distoConnect() {
+    if (!distoSupported()) {
+      alert('Ta przeglądarka nie obsługuje Bluetooth.\n\nPotrzebny jest Chrome na Androidzie lub ChromeOS ORAZ adres https — z pliku otwartego z pamięci tabletu połączenie nie zadziała.');
+      return;
+    }
+    try {
+      distoSetStatus('Szukam dalmierza…', 'info');
+      distoDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: 'DISTO' }, { namePrefix: 'Leica' }],
+        optionalServices: DISTO_EXTRA_SERVICES
+      });
+      distoLogAdd('wybrano urządzenie: ' + (distoDevice.name || '(bez nazwy)'));
+      distoDevice.addEventListener('gattserverdisconnected', distoOnDisconnected);
+      await distoOpenGatt();
+    } catch (err) {
+      const m = String(err && err.message || err);
+      if (m.indexOf('cancel') > -1 || m.indexOf('User cancelled') > -1) { distoSetStatus('Nie połączono', 'secondary'); return; }
+      distoLogAdd('błąd: ' + m);
+      distoSetStatus('Nie udało się połączyć', 'danger');
+      alert('Nie udało się połączyć z dalmierzem.\n\n' + m + '\n\nSprawdź: dalmierz włączony, Bluetooth aktywny w jego ustawieniach, tablet ma włączony Bluetooth i lokalizację.');
+    }
+  }
+
+  async function distoOpenGatt() {
+    distoServer = await distoDevice.gatt.connect();
+    distoLogAdd('połączono z urządzeniem');
+
+    // 1. znana charakterystyka
+    try {
+      const svc = await distoServer.getPrimaryService(DISTO_SERVICE);
+      const ch = await svc.getCharacteristic(DISTO_DIST_CHAR);
+      await ch.startNotifications();
+      ch.addEventListener('characteristicvaluechanged', distoHandleNotification);
+      distoChar = ch;
+      distoLogAdd('nasłuch pomiarów włączony (profil standardowy)');
+      distoSetStatus('✅ Dalmierz podłączony — mierz przyciskiem na urządzeniu', 'success');
+      return;
+    } catch (e) {
+      distoLogAdd('standardowy profil niedostępny, przeszukuję urządzenie…');
+    }
+
+    // 2. przeszukanie: subskrybujemy wszystko, co potrafi powiadamiać
+    let found = 0;
+    try {
+      const services = await distoServer.getPrimaryServices();
+      for (const svc of services) {
+        let chars = [];
+        try { chars = await svc.getCharacteristics(); } catch (e) { continue; }
+        for (const ch of chars) {
+          if (!ch.properties || !ch.properties.notify) continue;
+          try {
+            await ch.startNotifications();
+            ch.addEventListener('characteristicvaluechanged', distoHandleNotification);
+            found++;
+            if (!distoChar) distoChar = ch;
+            distoLogAdd('nasłuch: ' + ch.uuid);
+          } catch (e) {}
+        }
+      }
+    } catch (e) { distoLogAdd('przeszukiwanie nieudane: ' + e.message); }
+
+    if (found) {
+      distoSetStatus('✅ Podłączono (tryb przeszukiwania) — zrób pomiar, żeby sprawdzić odczyt', 'success');
+    } else {
+      distoSetStatus('Połączono, ale nie znalazłem kanału pomiarów', 'warning');
+      alert('Połączenie działa, ale dalmierz nie udostępnił kanału z pomiarami.\n\nSprawdź w ustawieniach dalmierza, czy Bluetooth jest w trybie „Smart" / dla aplikacji DISTO Plan, i spróbuj ponownie.');
+    }
+  }
+
+  function distoOnDisconnected() {
+    distoChar = null;
+    distoLogAdd('rozłączono');
+    distoSetStatus('Rozłączono — naciśnij „Połącz", żeby wrócić', 'secondary');
+  }
+
+  async function distoDisconnect() {
+    try { if (distoDevice && distoDevice.gatt && distoDevice.gatt.connected) distoDevice.gatt.disconnect(); } catch (e) {}
+    distoChar = null; distoServer = null;
+    distoSetStatus('Rozłączono', 'secondary');
+  }
+
+  function openDistoDialog() {
+    document.getElementById('distoOverlay').style.display = 'flex';
+    const chk = document.getElementById('distoAutoChk');
+    if (chk) chk.checked = distoAutoAdvance;
+    if (!distoSupported()) distoSetStatus('Ta przeglądarka nie obsługuje Bluetooth (potrzebny Chrome + https)', 'warning');
+    else distoSetStatus(distoIsConnected() ? '✅ Dalmierz podłączony' : 'Nie połączono', distoIsConnected() ? 'success' : 'secondary');
+    distoLogAdd('otwarto panel dalmierza');
+  }
+  function closeDistoDialog() { document.getElementById('distoOverlay').style.display = 'none'; }
+  function setDistoAuto(v) { distoAutoAdvance = !!v; }
+
+  // Gdzie ma trafić odczyt z dalmierza. Kolejność odpowiada temu, co masz
+  // otwarte na ekranie — najpierw prowadzony pomiar, bo to główny tryb pracy.
+  function distoActiveTarget() {
+    const overlayOpen = id => {
+      const el = document.getElementById(id);
+      return el && el.style && el.style.display === 'flex';
+    };
+
+    // 1. okno wpisywania wymiaru ściany (✍️ Wymiaruj)
+    if (overlayOpen('dimEditOverlay')) return { input: 'modalDimInput', kind: 'dim' };
+    // 2. miarka pomocnicza
+    if (overlayOpen('noteEditOverlay')) return { input: 'noteValInput', kind: 'note' };
+    // 3. otwór — najpierw puste pole szerokości, potem wysokości
+    if (overlayOpen('openingOverlay')) {
+      const w = document.getElementById('openingWidth');
+      const h = document.getElementById('openingHeight');
+      if (w && !String(w.value).trim()) return { input: 'openingWidth', kind: 'opening-cm' };
+      if (h && !String(h.value).trim()) return { input: 'openingHeight', kind: 'opening-cm' };
+      return { input: 'openingWidth', kind: 'opening-cm' };
+    }
+    // 4. szczyt dachu — wysokość, potem odległość
+    if (overlayOpen('guidedOverlay')) {
+      const apexBox = document.getElementById('guidedApexBox');
+      if (apexBox && apexBox.style.display === 'block') {
+        const hi = document.getElementById('apexHInput'), di = document.getElementById('apexDInput');
+        if (document.activeElement === hi || document.activeElement === di) {
+          return { input: document.activeElement.id, kind: 'apex' };
+        }
+      }
+      return { input: 'guidedInput', kind: 'guided' };
+    }
+    return null;
+  }
+
+  function distoDeliverMeasurement(meters) {
+    const target = distoActiveTarget();
+    if (!target) {
+      // nic nie czeka na wartość — pokazujemy ją, żeby nie przepadła
+      const el = document.getElementById('distoLastValue');
+      if (el) el.innerText = meters.toFixed(2) + ' m';
+      showDistoToast(meters);
+      return;
+    }
+    const input = document.getElementById(target.input);
+    if (!input) return;
+
+    // otwory podajemy w centymetrach, reszta w metrach
+    input.value = (target.kind === 'opening-cm') ? Math.round(meters * 100) : meters.toFixed(2);
+    flashInput(input);
+    distoLogAdd('wpisano do: ' + target.input);
+
+    // W prowadzonym pomiarze od razu zapisujemy i przechodzimy do następnej
+    // ściany — dzięki temu w terenie wystarczy celować i naciskać przycisk.
+    if (target.kind === 'guided' && distoAutoAdvance) {
+      setTimeout(() => { try { guidedSaveAndNext(); } catch (e) {} }, 250);
+    }
+  }
+
+  function flashInput(el) {
+    if (!el || !el.style) return;
+    const prev = el.style.backgroundColor;
+    el.style.backgroundColor = '#d1e7dd';
+    setTimeout(() => { el.style.backgroundColor = prev || ''; }, 600);
+  }
+
+  function showDistoToast(meters) {
+    let t = document.getElementById('distoToast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'distoToast';
+      t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:4000;' +
+        'background:#212529;color:#fff;padding:10px 18px;border-radius:10px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.3);';
+      document.body.appendChild(t);
+    }
+    t.innerText = '📡 ' + meters.toFixed(2) + ' m — otwórz pole pomiaru, żeby wpisać';
+    t.style.display = 'block';
+    clearTimeout(t._hide);
+    t._hide = setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+
   function openWallListDialog() { renderWallList(); document.getElementById('wallListOverlay').style.display = 'flex'; }
   function closeWallListDialog() { document.getElementById('wallListOverlay').style.display = 'none'; }
 
@@ -2357,9 +2747,109 @@ ${sketchBlocks}
 
   function removeEnvTag() {
     if (!envTagSelectedKey) return;
-    delete objects.envTags[envTagSelectedKey];
-    saveStateToHistory(); renderCanvas(); renderEnvelopeFields();
+    removeEnvTagByKey(currentSketchIndex, envTagSelectedKey);
     closeEnvTagDialog();
+  }
+
+  // Kasuje oznaczenie razem z tym, co zdążyło się przy nim wpisać w sekcji 3.
+  function removeEnvTagByKey(sketchIdx, key) {
+    const sk = sketches[sketchIdx];
+    if (!sk || !sk.objects.envTags || !sk.objects.envTags[key]) return;
+    const t = sk.objects.envTags[key];
+    const label = t.cat + t.num;
+    delete sk.objects.envTags[key];
+
+    // czyścimy pola opisu tej przegrody, żeby po ponownym użyciu numeru
+    // nie wróciły dane sprzed skasowania
+    ['_type', '_desc', '_totalthick', '_insulation', '_insthick', '_uvalue'].forEach(suf => {
+      const el = document.querySelector('[name="' + label + suf + '"]');
+      if (el) { if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = ''; }
+    });
+
+    saveStateToHistory(); renderCanvas(); renderEnvelopeFields(); renderTablesPerSketch();
+    return label;
+  }
+
+  function openEnvListDialog() { renderEnvList(); document.getElementById('envListOverlay').style.display = 'flex'; }
+  function closeEnvListDialog() { document.getElementById('envListOverlay').style.display = 'none'; }
+
+  function envTagMidpoint(sk, key) {
+    const saved = objects;
+    let pos = null;
+    try {
+      objects = sk.objects;
+      (objects.lines || []).forEach(line => {
+        getSegmentsForLine(line).forEach(sg => {
+          if (getSegKey(sg.x1, sg.y1, sg.x2, sg.y2) === key) pos = { x: (sg.x1 + sg.x2) / 2, y: (sg.y1 + sg.y2) / 2 };
+        });
+      });
+    } catch (e) {} finally { objects = saved; }
+    return pos;
+  }
+
+  function renderEnvList() {
+    const body = document.getElementById('envListBody');
+    const tags = getAllEnvTags();
+    if (!tags.length) {
+      body.innerHTML = '<p class="text-muted small mb-0">Nie oznaczono jeszcze żadnej przegrody. Włącz 🏷️ Przegroda i kliknij ścianę na przekroju.</p>';
+      return;
+    }
+    const orphanKeys = new Set(envTagOrphans().map(o => o.sketchIdx + '|' + o.key));
+    const orphanCount = orphanKeys.size;
+
+    let html = '';
+    if (orphanCount) {
+      html += `<div class="alert alert-warning py-2 small mb-2">
+        <b>${orphanCount}</b> ${orphanCount === 1 ? 'oznaczenie nie ma już swojej ściany' : 'oznaczenia nie mają już swojej ściany'} — zostały po skasowanych liniach i niepotrzebnie zajmują miejsce w sekcji 3.
+        <button class="btn btn-sm btn-warning fw-bold w-100 mt-2" onclick="removeOrphanEnvTags()">Usuń wszystkie nieistniejące</button>
+      </div>`;
+    }
+
+    const byCat = {};
+    tags.forEach(t => { (byCat[t.cat] = byCat[t.cat] || []).push(t); });
+    Object.keys(byCat).forEach(cat => {
+      html += `<div class="fw-bold small text-muted mt-2 mb-1">${ENV_TAG_NAMES[cat] || cat}</div>`;
+      byCat[cat].sort((a, b) => a.num - b.num).forEach(t => {
+        const orphan = orphanKeys.has(t.sketchIdx + '|' + t.key);
+        const sk = sketches[t.sketchIdx];
+        html += `<div class="d-flex justify-content-between align-items-center border-bottom py-1">
+          <span class="small">
+            <b style="color:${orphan ? '#dc3545' : '#212529'}">${t.label}</b>
+            <span class="text-muted"> — ${sk ? sk.name : '?'}</span>
+            ${orphan ? '<br><span class="small text-danger">brak ściany na rysunku</span>' : ''}
+          </span>
+          <span class="text-nowrap">
+            ${orphan ? '' : `<button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="locateEnvTag(${t.sketchIdx}, '${t.key}')" title="Pokaż">🔎</button>`}
+            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeEnvTagFromList(${t.sketchIdx}, '${t.key}')" title="Usuń">🗑️</button>
+          </span>
+        </div>`;
+      });
+    });
+    body.innerHTML = html;
+  }
+
+  function locateEnvTag(sketchIdx, key) {
+    if (sketchIdx !== currentSketchIndex) switchSketch(sketchIdx);
+    const pos = envTagMidpoint(sketches[sketchIdx], key);
+    if (pos) { closeEnvListDialog(); locateOnCanvas(pos.x, pos.y, 0); }
+  }
+
+  function removeEnvTagFromList(sketchIdx, key) {
+    const sk = sketches[sketchIdx];
+    const t = sk && sk.objects.envTags ? sk.objects.envTags[key] : null;
+    if (!t) return;
+    if (!confirm(`Usunąć oznaczenie ${t.cat}${t.num}?\n\nZniknie z przekroju i z sekcji 3 razem z wpisanym opisem. Ściana zostaje na rysunku.`)) return;
+    removeEnvTagByKey(sketchIdx, key);
+    renderEnvList();
+  }
+
+  function removeOrphanEnvTags() {
+    const orphans = envTagOrphans();
+    if (!orphans.length) return;
+    if (!confirm(`Usunąć ${orphans.length} ${orphans.length === 1 ? 'oznaczenie' : 'oznaczenia'} bez ściany?\n\n${orphans.map(o => o.label + ' (' + o.sketchName + ')').join(', ')}`)) return;
+    orphans.forEach(o => removeEnvTagByKey(o.sketchIdx, o.key));
+    renderEnvList();
+    alert('Usunięto. Lista w sekcji 3 została odświeżona.');
   }
 
   let dimSourceIsList = false;
@@ -2797,6 +3287,13 @@ ${sketchBlocks}
       });
     }
 
+    // --- oznaczenia przegród bez ściany ---
+    if (sketchIndex === 0) {   // zgłaszamy raz, nie przy każdym szkicu
+      envTagOrphans().forEach(o => {
+        add('error', `Oznaczenie ${o.label} (${o.sketchName}) nie ma już swojej ściany — zostało po skasowanej linii i wciąż zajmuje miejsce w sekcji 3. Usuń je przyciskiem 📋 Lista przegród.`);
+      });
+    }
+
     // --- 13/16/18. braki ---
     rooms.forEach(r => { if (r.needsDim) add('info', `Pom. ${r.num}: brak kompletu pomiarów — powierzchnia nie została policzona.`, r.centroid); });
     findOverlappingRooms().forEach(pr => add('error', `Pomieszczenia ${pr[0]} i ${pr[1]} zajmują ten sam obszar — suma powierzchni będzie zawyżona.`));
@@ -2882,6 +3379,27 @@ ${sketchBlocks}
     locateOnCanvas(x, y, 0);
   }
 
+  // Edycja i usuwanie pomieszczenia wprost z tabeli - bez szukania go na rysunku.
+  // Działa też dla pomieszczeń z innej zakładki: program sam ją otwiera.
+  function editRoomFromTable(sketchIndex, roomIndex) {
+    if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
+    const room = objects.rooms && objects.rooms[roomIndex];
+    if (!room) { alert('Nie znaleziono tego pomieszczenia — odśwież widok i spróbuj ponownie.'); return; }
+    const scr = document.getElementById('editorScreen');
+    if (scr && scr.scrollIntoView) scr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (room.manual) openRoomTagDialog({ x: room.x, y: room.y }, roomIndex);
+    else openRoomFromFaceDialog(roomIndex);
+  }
+
+  function deleteRoomFromTable(sketchIndex, roomIndex) {
+    if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
+    const room = objects.rooms && objects.rooms[roomIndex];
+    if (!room) return;
+    if (!confirm(`Usunąć pomieszczenie ${room.num}${room.name ? ' (' + room.name + ')' : ''}?\n\nŚciany zostaną na rysunku — znika tylko opis i powierzchnia.`)) return;
+    objects.rooms.splice(roomIndex, 1);
+    recalculateRooms(); saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
+  }
+
   function renderTablesPerSketch() {
       // Tabela ma zawsze pokazywac aktualny stan - przeliczamy kazdy szkic,
       // nie tylko biezacy, zeby powierzchnia pojawiala sie od razu po
@@ -2896,7 +3414,7 @@ ${sketchBlocks}
 
       let container = document.getElementById('tablesPerSketchContainer'); container.innerHTML = '';
       setTimeout(renderChecks, 0);
-      sketches.forEach((sketch) => {
+      sketches.forEach((sketch, index) => {
           let hasRooms = sketch.objects.rooms && sketch.objects.rooms.length > 0;
           let hasOpenings = sketch.objects.openings && sketch.objects.openings.length > 0;
           if(!hasRooms && !hasOpenings) return; 
@@ -2910,24 +3428,26 @@ ${sketchBlocks}
                   // Przekroj / elewacja - to NIE sa pomieszczenia, tylko obszary na rysunku.
                   // Nie licza sie do powierzchni uzytkowej ani do kubatury budynku.
                   html += `<h6 class="fw-bold" style="color:#6f42c1;">Obszary z przekroju / elewacji <span class="small fw-normal text-muted">(nie wliczają się do powierzchni budynku)</span></h6>`;
-                  html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Nr</th><th>Opis</th><th>Powierzchnia</th></tr></thead><tbody>`;
+                  html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Nr</th><th>Opis</th><th>Powierzchnia</th><th></th></tr></thead><tbody>`;
                   sketch.objects.rooms.forEach(r => {
                       const aNum = parseFloat(r.area);
                       if (r.area !== "Wymaga pomiaru!" && !isNaN(aNum)) totalArea += aNum;
-                      html += `<tr><td>${r.num}</td><td>${r.name}</td><td class="${r.area === 'Wymaga pomiaru!' ? 'text-danger fw-bold' : ''}">${r.area === 'Wymaga pomiaru!' ? r.area : r.area + ' m²'}</td></tr>`;
+                      const ri2 = sketch.objects.rooms.indexOf(r);
+                      html += `<tr><td>${r.num}</td><td>${r.name}</td><td class="${r.area === 'Wymaga pomiaru!' ? 'text-danger fw-bold' : ''}">${r.area === 'Wymaga pomiaru!' ? r.area : r.area + ' m²'}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editRoomFromTable(${index}, ${ri2})" title="Edytuj">✏️</button> <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteRoomFromTable(${index}, ${ri2})" title="Usuń">🗑️</button></td></tr>`;
                   });
-                  html += `</tbody><tfoot><tr class="fw-bold" style="background:#f3effa;"><td colspan="2" class="text-end">RAZEM:</td><td>${totalArea.toFixed(2)} m²</td></tr></tfoot></table>`;
+                  html += `</tbody><tfoot><tr class="fw-bold" style="background:#f3effa;"><td colspan="2" class="text-end">RAZEM:</td><td>${totalArea.toFixed(2)} m²</td><td></td></tr></tfoot></table>`;
               } else {
                   html += `<h6 class="text-primary fw-bold">Pomieszczenia: <span class="small fw-normal text-muted">wysokość kondygnacji: ${skH !== null ? skH.toFixed(2) + ' m' : '<span class=\'text-danger fw-bold\'>nie podano!</span>'}</span></h6>`;
-                  html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Nr</th><th>Typ</th><th>Ogrzewane</th><th>Klimatyzacja</th><th>Powierzchnia</th><th>Kubatura [m³]</th></tr></thead><tbody>`;
+                  html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Nr</th><th>Typ</th><th>Ogrzewane</th><th>Klimatyzacja</th><th>Powierzchnia</th><th>Kubatura [m³]</th><th></th></tr></thead><tbody>`;
                   sketch.objects.rooms.forEach(r => {
                       let areaStr = r.area; const aNum = parseFloat(areaStr);
                       if (areaStr !== "Wymaga pomiaru!" && !isNaN(aNum)) totalArea += aNum;
                       const vol = (!isNaN(aNum) && skH !== null) ? aNum * skH : null;
                       if (vol !== null) totalVol += vol;
-                      html += `<tr><td>${r.num}</td><td>${r.name}</td><td>${r.heated}</td><td>${r.ac}</td><td class="${areaStr === 'Wymaga pomiaru!' ? 'text-danger fw-bold' : ''}">${areaStr === 'Wymaga pomiaru!' ? areaStr : areaStr + ' m²'}</td><td>${vol !== null ? vol.toFixed(2) : '–'}</td></tr>`;
+                      const ri = sketch.objects.rooms.indexOf(r);
+                      html += `<tr><td>${r.num}</td><td>${r.name}</td><td>${r.heated}</td><td>${r.ac}</td><td class="${areaStr === 'Wymaga pomiaru!' ? 'text-danger fw-bold' : ''}">${areaStr === 'Wymaga pomiaru!' ? areaStr : areaStr + ' m²'}</td><td>${vol !== null ? vol.toFixed(2) : '–'}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editRoomFromTable(${index}, ${ri})" title="Edytuj">✏️</button> <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteRoomFromTable(${index}, ${ri})" title="Usuń">🗑️</button></td></tr>`;
                   });
-                  html += `</tbody><tfoot><tr class="table-info fw-bold"><td colspan="4" class="text-end">SUMA:</td><td>${totalArea.toFixed(2)} m²</td><td>${totalVol.toFixed(2)}</td></tr></tfoot></table>`;
+                  html += `</tbody><tfoot><tr class="table-info fw-bold"><td colspan="4" class="text-end">SUMA:</td><td>${totalArea.toFixed(2)} m²</td><td>${totalVol.toFixed(2)}</td><td></td></tr></tfoot></table>`;
               }
           }
           if(hasOpenings) {
@@ -2970,7 +3490,7 @@ ${sketchBlocks}
     const nl = objects.noteLines[selectedNoteIndex];
     document.getElementById('noteValInput').value = nl ? (nl.val || '') : '';
     document.getElementById('noteEditOverlay').style.display = 'flex';
-    setTimeout(() => { const el = document.getElementById('noteValInput'); if (el) el.focus(); }, 80);
+    setTimeout(() => { const el = document.getElementById('noteValInput'); if (el) el.focus({ preventScroll: true }); }, 80);
   }
 
   function applyNoteValue() {
@@ -3343,6 +3863,43 @@ ${sketchBlocks}
     drawScene();
   }
 
+  // ================= ODLEGŁOŚĆ OD NAROŻNIKA (najazd na ścianę) =================
+  // Najeżdżasz na już narysowaną ścianę, a program pokazuje, jak daleko jesteś
+  // od bliższego jej narożnika. Pomoc przy szkicowaniu — jak podgląd długości
+  // podczas rysowania, nic tu się nie zapisuje.
+  let wallHover = null;
+
+  function updateWallHover(pos) {
+    wallHover = null;
+    if (currentMode !== 'line' && currentMode !== 'select' && currentMode !== 'measure') return;
+
+    const tol = 16 / zoomLevel;
+    let best = null, bestD = tol;
+    (objects.lines || []).forEach(line => {
+      getSegmentsForLine(line).forEach(sg => {
+        const a = { x: sg.x1, y: sg.y1 }, b = { x: sg.x2, y: sg.y2 };
+        const pt = getClosestPointOnSegment(pos, a, b);
+        const d = Math.hypot(pos.x - pt.x, pos.y - pt.y);
+        if (d < bestD) { bestD = d; best = { a, b, pt, key: getSegKey(a.x, a.y, b.x, b.y) }; }
+      });
+    });
+    if (!best) return;
+
+    const total = Math.hypot(best.b.x - best.a.x, best.b.y - best.a.y);
+    if (total < 8) return;
+    const fromA = Math.hypot(best.pt.x - best.a.x, best.pt.y - best.a.y);
+
+    // jeśli ściana ma znany wymiar, skalujemy odczyt do niego - inaczej bierzemy skalę rysunku
+    const known = (typeof resolvedLen === 'function') ? resolvedLen(best.key) : null;
+    const scale = (known !== null && known > 0) ? (known / (total / PIXELS_PER_METER)) : 1;
+    const mA = (fromA / PIXELS_PER_METER) * scale;
+    const mB = ((total - fromA) / PIXELS_PER_METER) * scale;
+
+    // mierzymy od bliższego narożnika - tak jak przy taśmie
+    const nearA = fromA <= total - fromA;
+    wallHover = { pt: best.pt, corner: nearA ? best.a : best.b, dist: nearA ? mA : mB, other: nearA ? mB : mA };
+  }
+
   function drawScene() {
     dimLabelRects = [];
 
@@ -3559,6 +4116,33 @@ ${sketchBlocks}
         }
         ctx.restore();
       });
+    }
+
+    // Odległość od narożnika - rysowana jako ostatnia, żeby była nad wszystkim.
+    // Nigdy w eksporcie: to pomoc na ekranie, nie element raportu.
+    if (!drawing && wallHover && currentMode !== 'export') {
+      const wh = wallHover;
+      const sc = Math.max(1, 1 / zoomLevel);
+      ctx.save();
+      // odcinek od narożnika do kursora
+      ctx.beginPath(); ctx.strokeStyle = '#0d6efd'; ctx.lineWidth = 3; ctx.setLineDash([7, 5]);
+      ctx.moveTo(wh.corner.x, wh.corner.y); ctx.lineTo(wh.pt.x, wh.pt.y); ctx.stroke();
+      ctx.setLineDash([]);
+      // narożnik odniesienia i punkt na ścianie
+      ctx.beginPath(); ctx.arc(wh.corner.x, wh.corner.y, 6, 0, Math.PI * 2); ctx.fillStyle = '#0d6efd'; ctx.fill();
+      ctx.beginPath(); ctx.arc(wh.pt.x, wh.pt.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#0d6efd'; ctx.lineWidth = 2; ctx.stroke();
+      // podpis
+      const txt = '~' + wh.dist.toFixed(2) + ' m';
+      ctx.font = 'bold ' + Math.round(13 * sc) + 'px Arial';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(txt).width + 12 * sc, h = 20 * sc;
+      const lx = wh.pt.x, ly = wh.pt.y - 20 * sc;
+      ctx.fillStyle = '#0d6efd';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - w/2, ly - h/2, w, h, 6 * sc); ctx.fill(); }
+      else ctx.fillRect(lx - w/2, ly - h/2, w, h);
+      ctx.fillStyle = '#fff'; ctx.fillText(txt, lx, ly);
+      ctx.restore();
     }
 
     if (!drawing && hoverPos) {
@@ -4336,6 +4920,7 @@ ${sketchBlocks}
     if (!drawing) {
         hoverPos = null; hoverLine = null;
         if (currentMode === 'line') { let snapInfo = findSnapPoint(rawPos); if (snapInfo.type !== 'none') { hoverPos = snapInfo.pt; if (snapInfo.type === 'line') hoverLine = snapInfo.line; } }
+        updateWallHover(rawPos);
         renderCanvas(); return;
     }
 
@@ -4486,6 +5071,7 @@ ${sketchBlocks}
   }
 
   canvas.addEventListener('pointerdown', startDraw); canvas.addEventListener('pointermove', draw); canvas.addEventListener('pointerup', stopDraw);
+  canvas.addEventListener('pointerleave', () => { if (wallHover) { wallHover = null; renderCanvas(); } });
   canvas.addEventListener('pointercancel', stopDraw); canvas.addEventListener('pointerout', stopDraw); canvas.addEventListener('touchstart', (e) => e.preventDefault(), {passive: false});
 
   window.addEventListener('beforeunload', (e) => {
