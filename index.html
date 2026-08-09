@@ -206,12 +206,14 @@
         <div class="d-flex align-items-center mb-3 flex-wrap">
           <div class="sketch-tabs" id="sketchTabsContainer"></div>
           <button type="button" class="btn btn-sm btn-outline-secondary ms-2 text-nowrap" onclick="renameCurrentSketch()">✏️ Zmień nazwę</button>
+          <button type="button" class="btn btn-sm btn-outline-warning ms-1 text-nowrap" onclick="clearSketchData()">🧹 Wyczyść dane</button>
           <button type="button" class="btn btn-sm btn-outline-danger ms-1 text-nowrap" onclick="deleteCurrentSketch()">🗑️ Usuń szkic</button>
           <span class="ms-3 d-inline-flex align-items-center gap-1">
             <label class="small fw-bold text-muted mb-0 text-nowrap">Rodzaj:</label>
             <select id="sketchKindSelect" class="form-select form-select-sm" style="width:auto;" onchange="setSketchKind(this.value)">
               <option value="rzut">Rzut kondygnacji</option>
               <option value="przekroj">Przekrój / elewacja</option>
+              <option value="skosy">Przekrój poddasza (skosy)</option>
             </select>
           </span>
           <span class="ms-2 d-inline-flex align-items-center gap-1" id="sketchHeightWrap">
@@ -234,6 +236,7 @@
               <button type="button" id="btnModeEnvTag" class="btn btn-outline-dark btn-sm fw-bold" onclick="setMode('envtag')">🏷️ Przegroda</button>
               <button type="button" class="btn btn-outline-dark btn-sm fw-bold" onclick="openEnvListDialog()">📋 Lista przegród</button>
               <button type="button" id="btnModeRoomTag" class="btn btn-outline-success btn-sm fw-bold" onclick="setMode('roomtag')">🏠 Pomieszcz.</button>
+              <button type="button" id="btnModeSlope" class="btn btn-outline-danger btn-sm fw-bold" onclick="setMode('slope')">📐 Skos</button>
               <div class="btn-group" role="group">
                   <button type="button" id="btnModeDraw" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('draw')">✏️ Ołówek</button>
                   <div class="d-flex align-items-center bg-white border px-1" id="penColors" style="display:none !important;">
@@ -355,11 +358,43 @@
   </div>
 </div>
 
+<div id="slopeOverlay" class="modal-overlay">
+  <div class="card shadow p-3" style="width: 380px; max-height: 90vh; overflow-y: auto;">
+    <h6 class="fw-bold mb-1 text-danger">📐 Skos <span id="slopeLabelBadge" class="badge bg-danger"></span></h6>
+    <p class="text-muted small mb-2">Wymiary rzeczywiste z dalmierza — rysunek pozostaje szkicem.</p>
+
+    <div class="fw-bold small text-muted border-bottom pb-1 mb-2">Z rzutu z góry</div>
+    <label class="form-label small mb-0">Długość skosu [m] <span class="text-muted">— wzdłuż ściany</span></label>
+    <input type="number" step="0.01" inputmode="decimal" id="slopeLenInput" class="form-control form-control-sm mb-2" placeholder="np. 4.50">
+    <label class="form-label small mb-0">Szerokość [m] <span class="text-muted">— od ścianki kolankowej do końca skosu</span></label>
+    <input type="number" step="0.01" inputmode="decimal" id="slopeWidthInput" class="form-control form-control-sm mb-3" placeholder="np. 1.80">
+
+    <div class="fw-bold small text-muted border-bottom pb-1 mb-2">Z przekroju skosu</div>
+    <label class="form-label small mb-0">Wysokość ścianki kolankowej [m]</label>
+    <input type="number" step="0.01" inputmode="decimal" id="slopeKneeInput" class="form-control form-control-sm mb-2" placeholder="np. 1.10">
+    <label class="form-label small mb-0">Wysokość kondygnacji [m]</label>
+    <input type="number" step="0.01" inputmode="decimal" id="slopeFloorInput" class="form-control form-control-sm mb-2" placeholder="np. 2.50">
+    <label class="form-label small mb-0">Długość połaci [m] <span class="text-muted">— skośna, po dachu</span></label>
+    <input type="number" step="0.01" inputmode="decimal" id="slopeSlantInput" class="form-control form-control-sm mb-2" placeholder="np. 2.10">
+
+    <div class="alert alert-secondary py-2 small mb-2" id="slopeSummary">—</div>
+
+    <div class="d-flex justify-content-between">
+      <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSlope()">Usuń skos</button>
+      <span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSlopeDialog()">Anuluj</button>
+        <button type="button" class="btn btn-success btn-sm fw-bold" onclick="saveSlope()">Zapisz</button>
+      </span>
+    </div>
+  </div>
+</div>
+
 <div id="distoOverlay" class="modal-overlay">
   <div class="card shadow p-3" style="width: 380px; max-height: 88vh; overflow-y: auto;">
     <h6 class="fw-bold mb-1 text-primary">📡 Dalmierz Leica DISTO</h6>
     <p class="text-muted small mb-2">Obsługiwane modele X3 i X4. Pomiar z dalmierza wpada prosto do pola, które masz otwarte.</p>
     <div id="distoStatus" class="alert alert-secondary py-2 mb-2 text-center fw-bold small">Nie połączono</div>
+    <div id="distoFileHint" class="alert alert-info py-2 small" style="display:none; white-space:pre-line;"></div>
 
     <div class="d-flex gap-2 mb-2">
       <button type="button" class="btn btn-primary btn-sm fw-bold flex-fill" onclick="distoConnect()">Połącz</button>
@@ -376,9 +411,15 @@
       <label class="form-check-label small fw-bold" for="distoAutoChk">W prowadzonym pomiarze zapisuj i przechodź dalej automatycznie</label>
     </div>
 
-    <details class="mb-2">
+    <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
+      <div class="small fw-bold text-muted">Ostatnia ramka z urządzenia</div>
+      <div id="distoRaw" class="small text-break" style="font-family:monospace;">—</div>
+    </div>
+
+    <details class="mb-2" open>
       <summary class="small fw-bold text-muted">Podgląd połączenia</summary>
-      <div id="distoLog" class="mt-1" style="max-height:160px; overflow-y:auto;"></div>
+      <div id="distoLog" class="mt-1" style="max-height:200px; overflow-y:auto;"></div>
+      <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-1" onclick="copyDistoLog()">Skopiuj podgląd</button>
     </details>
 
     <button type="button" class="btn btn-secondary btn-sm w-100" onclick="closeDistoDialog()">Zamknij</button>
@@ -551,7 +592,6 @@
   // wlasciwy adres ustawia sie w aplikacji (pulpit -> Polaczenie z Dyskiem Google)
   // i zapisuje na urzadzeniu, wiec podmiana wdrozenia nie wymaga edycji kodu.
   // Celowo puste w repozytorium: adres wdrozenia jest sekretem.
-  // Ustawia sie go w aplikacji: Pulpit -> Polaczenie z Dyskiem Google.
   const DEFAULT_API_URL = "";
 
   // ================= PRACA NA DWÓCH TABLETACH =================
@@ -936,7 +976,7 @@
     globalOpeningsMemory = {};
     let t = document.getElementById('editorTitle'); if(t) t.innerText = "Tworzenie: Nowy Raport";
     currentSketchIndex = 0; panX = -750; panY = -750; zoomLevel = 1;
-    sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {} }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
+    sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
     objects = sketches[0].objects;
     undoStack = []; saveStateToHistory(); deselectObjects(); renderTabs(); updateCanvasTransform(); renderCanvas();
     renderEnvelopeFields();
@@ -961,7 +1001,7 @@
     if(audit.sketchesJSON) { 
         sketches = JSON.parse(audit.sketchesJSON); currentSketchIndex = 0; objects = sketches[0].objects;
         // starsze raporty nie mialy jeszcze miarek/oznaczen - uzupelniamy, zeby nic sie nie wywrocilo
-        sketches.forEach(sk => { if (!sk.objects.noteLines) sk.objects.noteLines = []; if (!sk.objects.envTags) sk.objects.envTags = {}; if (!sk.objects.apexDims) sk.objects.apexDims = {}; if (!sk.objects.customDims) sk.objects.customDims = {}; });
+        sketches.forEach(sk => { if (!sk.objects.noteLines) sk.objects.noteLines = []; if (!sk.objects.envTags) sk.objects.envTags = {}; if (!sk.objects.apexDims) sk.objects.apexDims = {}; if (!sk.objects.hatches) sk.objects.hatches = []; if (!sk.objects.slopes) sk.objects.slopes = []; if (!sk.objects.customDims) sk.objects.customDims = {}; });
         sketches.forEach(sk => { (sk.objects.openings || []).forEach(op => { globalOpeningsMemory[op.id] = { w: op.width, h: op.height, u: op.uValue }; }); if (!sk.objects.envTags) sk.objects.envTags = {}; });
         if(!objects.customDims) objects.customDims = {};
     }
@@ -1513,6 +1553,16 @@
       let opRows = opGroups.map(g => `<tr><td>${esc(g.id)}</td><td class="num"><b>${g.count}</b></td><td class="num">${esc(g.width)}</td><td class="num">${esc(g.height)}</td><td class="num">${g.unitArea.toFixed(2)}</td><td class="num"><b>${g.totalArea.toFixed(2)}</b></td><td class="num">${esc(g.uValue || '–')}</td></tr>`).join('');
       const isSect = (sk.kind === 'przekroj');
       const sectRows = rooms.map(r => `<tr><td>${esc(r.num)}</td><td>${esc(r.name)}</td><td class="num">${esc(r.area)}</td></tr>`).join('');
+      const hatchRows = (sk.objects.hatches || []).map(h => `<tr><td>${esc(h.label || 'Skos')}</td></tr>`).join('');
+      const slopeList = sk.objects.slopes || [];
+      let slopePlan = 0, slopeRoof = 0;
+      const slopeRows = slopeList.map(sl => {
+        const len = parseFloat(sl.length), w = parseFloat(sl.width), slant = parseFloat(sl.slant);
+        const pl = (len > 0 && w > 0) ? len * w : null;
+        const rf = (len > 0 && slant > 0) ? len * slant : null;
+        if (pl) slopePlan += pl; if (rf) slopeRoof += rf;
+        return `<tr><td><b>${esc(sl.label)}</b></td><td class="num">${esc(sl.length) || '—'}</td><td class="num">${esc(sl.width) || '—'}</td><td class="num">${esc(sl.knee) || '—'}</td><td class="num">${esc(sl.floorH) || '—'}</td><td class="num">${esc(sl.slant) || '—'}</td><td class="num">${pl !== null ? pl.toFixed(2) : '—'}</td><td class="num">${rf !== null ? rf.toFixed(2) : '—'}</td></tr>`;
+      }).join('');
       const roomTable = !rooms.length ? '' : (isSect
         ? `<table><thead><tr><th>Nr</th><th>Opis</th><th class="num">Pow. [m²]</th></tr></thead><tbody>${sectRows}</tbody>
            <tfoot><tr><th colspan="2" class="num">RAZEM</th><th class="num">${roomAreaTotal.toFixed(2)}</th></tr></tfoot></table>
@@ -1526,6 +1576,9 @@
           <div class="sketch-col">${src ? `<div class="sketch"><img src="${src}"></div>` : '<p class="muted">Brak rysunku</p>'}</div>
           ${roomTable ? `<div class="rooms-col">${roomTable}</div>` : ''}
         </div>
+        ${slopeRows ? `<h4>Skosy poddasza</h4><table><thead><tr><th>Ozn.</th><th class="num">Dł. [m]</th><th class="num">Szer. [m]</th><th class="num">Ścianka kol. [m]</th><th class="num">Wys. kondygn. [m]</th><th class="num">Połać [m]</th><th class="num">Rzut [m²]</th><th class="num">Pow. połaci [m²]</th></tr></thead><tbody>${slopeRows}</tbody>
+          <tfoot><tr><th colspan="6" class="num">RAZEM</th><th class="num">${slopePlan.toFixed(2)}</th><th class="num">${slopeRoof.toFixed(2)}</th></tr></tfoot></table>` : ''}
+        ${hatchRows ? `<h4>Obszary pod skosem</h4><p class="muted" style="font-size:.78rem;margin:0 0 6px">Oznaczone kreskowaniem na rysunku; nie wliczają się do powierzchni.</p><table><thead><tr><th>Opis</th></tr></thead><tbody>${hatchRows}</tbody></table>` : ''}
         ${(() => {
           const wr = wallTableRows(sk);
           if (!wr.length) return '';
@@ -2402,6 +2455,167 @@ ${sketchBlocks}
   }
 
   // Klikniecie w numer pomieszczenia w trybie ✍️ Wymiaruj otwiera prowadzony pomiar
+  // ================= SKOSY (obszary kreskowane) =================
+  // Zaznaczenie fragmentu poddasza pod skosem: klikasz w środku zamkniętego
+  // obszaru, a program wypełnia go ukośnym kreskowaniem. To oznaczenie
+  // graficzne — nie zmienia powierzchni ani wymiarów, zastępuje rysowanie
+  // kresek ołówkiem. Trafia też na rysunek w raporcie.
+  function findHatchAt(pos) {
+    const list = objects.hatches || [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (pointInPolygon(pos, list[i].polygon)) return i;
+    }
+    return -1;
+  }
+
+  function handleHatchClick(rawPos) {
+    const hit = findHatchAt(rawPos);
+    if (hit !== -1) {
+      const h = objects.hatches[hit];
+      const label = prompt('Opis obszaru pod skosem (puste = usuń zaznaczenie):', h.label || 'Skos');
+      if (label === null) return;
+      if (!label.trim()) objects.hatches.splice(hit, 1);
+      else h.label = label.trim();
+      saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
+      return;
+    }
+
+    const face = findEnclosingFace(rawPos);
+    if (!face) {
+      alert('Kliknij wewnątrz obszaru zamkniętego ścianami.\n\nJeśli skos nie jest domknięty, dorysuj linię 📏 Ściana w miejscu, gdzie kończy się część pod skosem — potem kliknij tutaj ponownie.');
+      return;
+    }
+    if (!objects.hatches) objects.hatches = [];
+    const label = prompt('Opis obszaru pod skosem:', 'Skos');
+    if (label === null) return;
+    objects.hatches.push({ id: Date.now(), polygon: face, label: (label.trim() || 'Skos') });
+    saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
+  }
+
+  function hatchAreaM2(h) {
+    const saved = objects;
+    try {
+      const geo = computeRoomGeometry(h.polygon, objects.customDims || {});
+      return geo.solved ? geo.area : null;
+    } catch (e) { return null; } finally { objects = saved; }
+  }
+
+  // ================= SKOSY PODDASZA =================
+  // Rysujesz linię wzdłuż skosu na rzucie z góry, a program pyta o wymiary
+  // rzeczywiste: długość i szerokość (od ścianki kolankowej do końca skosu)
+  // oraz dane z przekroju: wysokość ścianki kolankowej, wysokość kondygnacji
+  // i długość połaci. Rysunek pozostaje szkicem — liczą się wpisane wartości.
+  let editingSlopeIndex = -1;
+
+  function isAtticSketch(sk) { return sk && sk.kind === 'skosy'; }
+
+  function nextSlopeLabel() {
+    const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const used = new Set((objects.slopes || []).map(s2 => s2.label));
+    for (const c of abc) if (!used.has(c)) return c;
+    return 'A' + ((objects.slopes || []).length + 1);
+  }
+
+  function slopeAreas(sl) {
+    const len = parseFloat(sl.length), w = parseFloat(sl.width), slant = parseFloat(sl.slant);
+    return {
+      plan: (len > 0 && w > 0) ? len * w : null,          // rzut poziomy skosu
+      roof: (len > 0 && slant > 0) ? len * slant : null   // powierzchnia połaci
+    };
+  }
+
+  function updateSlopeSummary() {
+    const box = document.getElementById('slopeSummary');
+    if (!box) return;
+    const tmp = {
+      length: document.getElementById('slopeLenInput').value,
+      width: document.getElementById('slopeWidthInput').value,
+      slant: document.getElementById('slopeSlantInput').value
+    };
+    const a = slopeAreas(tmp);
+    const knee = parseFloat(document.getElementById('slopeKneeInput').value);
+    const fl = parseFloat(document.getElementById('slopeFloorInput').value);
+    const parts = [];
+    if (a.plan !== null) parts.push('rzut skosu: <b>' + a.plan.toFixed(2) + ' m²</b>');
+    if (a.roof !== null) parts.push('połać: <b>' + a.roof.toFixed(2) + ' m²</b>');
+    if (knee > 0 && fl > 0) parts.push('od ' + knee.toFixed(2) + ' m do ' + fl.toFixed(2) + ' m');
+    box.innerHTML = parts.length ? parts.join(' · ') : 'Uzupełnij wymiary, żeby zobaczyć powierzchnie.';
+  }
+
+  function openSlopeDialog(index) {
+    editingSlopeIndex = index;
+    const sl = objects.slopes[index];
+    document.getElementById('slopeLabelBadge').innerText = sl.label;
+    document.getElementById('slopeLenInput').value = sl.length || '';
+    document.getElementById('slopeWidthInput').value = sl.width || '';
+    document.getElementById('slopeKneeInput').value = sl.knee || '';
+    document.getElementById('slopeFloorInput').value = sl.floorH || sketchHeightNum(sketches[currentSketchIndex]) || '';
+    document.getElementById('slopeSlantInput').value = sl.slant || '';
+    updateSlopeSummary();
+    ['slopeLenInput','slopeWidthInput','slopeKneeInput','slopeFloorInput','slopeSlantInput'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.addEventListener) el.addEventListener('input', updateSlopeSummary);
+    });
+    document.getElementById('slopeOverlay').style.display = 'flex';
+    setTimeout(() => { const el = document.getElementById('slopeLenInput'); if (el) el.focus({ preventScroll: true }); }, 60);
+  }
+
+  function closeSlopeDialog() {
+    document.getElementById('slopeOverlay').style.display = 'none';
+    editingSlopeIndex = -1;
+  }
+
+  function saveSlope() {
+    if (editingSlopeIndex < 0) return;
+    const sl = objects.slopes[editingSlopeIndex];
+    const g = id => String(document.getElementById(id).value).trim().replace(',', '.');
+    const len = g('slopeLenInput'), w = g('slopeWidthInput');
+    if (!(parseFloat(len) > 0)) { alert('Podaj długość skosu (wzdłuż ściany).'); return; }
+    if (!(parseFloat(w) > 0)) { alert('Podaj szerokość skosu — od ścianki kolankowej do końca skosu.'); return; }
+    sl.length = parseFloat(len).toFixed(2);
+    sl.width = parseFloat(w).toFixed(2);
+    sl.knee = g('slopeKneeInput') ? parseFloat(g('slopeKneeInput')).toFixed(2) : '';
+    sl.floorH = g('slopeFloorInput') ? parseFloat(g('slopeFloorInput')).toFixed(2) : '';
+    sl.slant = g('slopeSlantInput') ? parseFloat(g('slopeSlantInput')).toFixed(2) : '';
+    closeSlopeDialog();
+    saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
+  }
+
+  function deleteSlope() {
+    if (editingSlopeIndex < 0) return;
+    const sl = objects.slopes[editingSlopeIndex];
+    if (!confirm('Usunąć skos ' + sl.label + '?')) return;
+    objects.slopes.splice(editingSlopeIndex, 1);
+    closeSlopeDialog();
+    saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
+  }
+
+  function findSlopeAt(pos) {
+    const list = objects.slopes || [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      const sl = list[i];
+      const pt = getClosestPointOnSegment(pos, { x: sl.x1, y: sl.y1 }, { x: sl.x2, y: sl.y2 });
+      if (Math.hypot(pos.x - pt.x, pos.y - pt.y) < 18 / zoomLevel) return i;
+    }
+    return -1;
+  }
+
+  // Czyszczenie skopiowanego szkicu: zostaje sam rysunek ścian.
+  function clearSketchData() {
+    if (!confirm('Usunąć z tego szkicu wszystkie dane opisowe?\n\nZostaną same ściany. Znikną: pomieszczenia, otwory, wymiary, oznaczenia przegród, miarki i skosy.\n\nPozostałe szkice pozostaną nietknięte.')) return;
+    objects.rooms = [];
+    objects.openings = [];
+    objects.customDims = {};
+    objects.envTags = {};
+    objects.noteLines = [];
+    objects.labels = [];
+    objects.apexDims = {};
+    objects.hatches = [];
+    objects.slopes = [];
+    recalculateRooms(); saveStateToHistory(); renderTablesPerSketch(); renderEnvelopeFields(); renderCanvas();
+    alert('Gotowe — został sam rysunek ścian.');
+  }
+
   function findRoomCircleAt(pos) {
     if (!objects.rooms) return -1;
     for (let i = objects.rooms.length - 1; i >= 0; i--) {
@@ -2446,12 +2660,18 @@ ${sketchBlocks}
   // GitHub Pages). Z pliku otwartego z pamięci tabletu Bluetooth nie zadziała.
 
   const DISTO_SERVICE = '3ab10100-f831-4395-b29d-570977d5bf94';
-  const DISTO_DIST_CHAR = '3ab1010d-f831-4395-b29d-570977d5bf94';   // pomiar odległości (float32, metry)
-  // dodatkowe usługi, do których chcemy mieć dostęp przy przeszukiwaniu
+  // Protokół DISTO nie jest oficjalnie opublikowany i bywa różny między
+  // wersjami oprogramowania, dlatego NIE polegamy na jednej charakterystyce:
+  // nasłuchujemy wszystkiego, co urządzenie potrafi wysyłać samo z siebie.
   const DISTO_EXTRA_SERVICES = [
     DISTO_SERVICE,
+    '3ab10100-f831-4395-b29d-570977d5bf94',
     '0000180f-0000-1000-8000-00805f9b34fb',   // poziom baterii
-    '0000180a-0000-1000-8000-00805f9b34fb'    // dane urządzenia
+    '0000180a-0000-1000-8000-00805f9b34fb',   // dane urządzenia
+    '0000fff0-0000-1000-8000-00805f9b34fb',   // częsty profil producentów
+    '0000ffe0-0000-1000-8000-00805f9b34fb',
+    '6e400001-b5a3-f393-e0a9-e50e24dcca9e',   // Nordic UART
+    '0000fefb-0000-1000-8000-00805f9b34fb'
   ];
 
   let distoDevice = null, distoServer = null, distoChar = null;
@@ -2461,6 +2681,27 @@ ${sketchBlocks}
 
   function distoSupported() {
     return (typeof navigator !== 'undefined') && !!navigator.bluetooth;
+  }
+
+  // Bluetooth wymaga tzw. bezpiecznego kontekstu. Plik otwarty z pamięci
+  // tabletu (file:// albo content://) go NIE spełnia — i nie da się tego obejść
+  // po stronie aplikacji. Rozwiązanie: zainstalować aplikację z adresu https
+  // JEDEN RAZ; potem działa w pełni offline, razem z dalmierzem.
+  function distoRunningFromFile() {
+    try {
+      const p = String(location.protocol || '');
+      return p === 'file:' || p === 'content:' || p === 'blob:';
+    } catch (e) { return false; }
+  }
+
+  function distoContextHint() {
+    if (distoSupported()) return '';
+    if (distoRunningFromFile()) {
+      return 'Aplikacja działa z pliku zapisanego w tablecie — w tym trybie przeglądarka blokuje Bluetooth.\n\n' +
+             'ROZWIĄZANIE (raz na tablet): otwórz aplikację pod jej adresem internetowym, a potem menu ⋮ → „Zainstaluj aplikację".\n\n' +
+             'Po instalacji aplikacja działa BEZ INTERNETU — razem z dalmierzem. Adres jest potrzebny tylko przy instalacji i przy aktualizacjach.';
+    }
+    return 'Ta przeglądarka nie obsługuje Bluetooth. Potrzebny jest Chrome na Androidzie lub ChromeOS.';
   }
 
   function distoIsConnected() {
@@ -2485,24 +2726,63 @@ ${sketchBlocks}
 
   // Odczyt z ramki BLE. Standardowo pierwsze 4 bajty to liczba zmiennoprzecinkowa
   // w metrach; dla pewności sprawdzamy też inne rozmieszczenia.
+  function distoHex(dv) {
+    if (!dv) return '';
+    const out = [];
+    for (let i = 0; i < dv.byteLength; i++) out.push(dv.getUint8(i).toString(16).padStart(2, '0'));
+    return out.join(' ');
+  }
+
+  // Szukamy sensownej odległości w CAŁEJ ramce, nie tylko na jej początku:
+  // różne wersje DISTO wysyłają liczbę z różnym przesunięciem, czasem razem
+  // z kątem nachylenia albo jako tekst.
   function distoParseValue(dataView) {
-    const tryVals = [];
-    try { if (dataView.byteLength >= 4) tryVals.push(dataView.getFloat32(0, true)); } catch (e) {}
-    try { if (dataView.byteLength >= 8) tryVals.push(dataView.getFloat64(0, true)); } catch (e) {}
-    try { if (dataView.byteLength >= 4) tryVals.push(dataView.getFloat32(0, false)); } catch (e) {}
-    for (const v of tryVals) {
-      if (typeof v === 'number' && isFinite(v) && v > 0.03 && v < 500) return v;
+    if (!dataView || !dataView.byteLength) return null;
+    const sane = v => (typeof v === 'number' && isFinite(v) && v >= 0.04 && v <= 500);
+
+    // Kolejność ma znaczenie: najpierw układy typowe (wartość na początku ramki),
+    // dopiero potem szukanie po całej ramce - inaczej przypadkowe bajty mogłyby
+    // udać poprawny pomiar.
+    const at = (fn, off, le) => { try { const v = dataView[fn](off, le); return sane(v) ? v : null; } catch (e) { return null; } };
+    let v;
+    if ((v = at('getFloat32', 0, true))  !== null) return v;
+    if (dataView.byteLength >= 8 && (v = at('getFloat64', 0, true)) !== null) return v;
+    if ((v = at('getFloat32', 0, false)) !== null) return v;
+    for (let off = 1; off + 4 <= dataView.byteLength; off++) {
+      if ((v = at('getFloat32', off, true)) !== null) return v;
     }
+    for (let off = 1; off + 4 <= dataView.byteLength; off++) {
+      if ((v = at('getFloat32', off, false)) !== null) return v;
+    }
+    for (let off = 1; off + 8 <= dataView.byteLength; off++) {
+      if ((v = at('getFloat64', off, true)) !== null) return v;
+      if ((v = at('getFloat64', off, false)) !== null) return v;
+    }
+    // wartość przesłana jako tekst, np. "4.237"
+    try {
+      let txt = '';
+      for (let i = 0; i < dataView.byteLength; i++) {
+        const c = dataView.getUint8(i);
+        txt += (c >= 32 && c < 127) ? String.fromCharCode(c) : ' ';
+      }
+      const m = txt.match(/-?\d+[.,]\d+/);
+      if (m) { const v = parseFloat(m[0].replace(',', '.')); if (sane(v)) return v; }
+    } catch (e) {}
     return null;
   }
 
   function distoHandleNotification(event) {
     const dv = event.target.value;
+    const src = (event.target.uuid || '').slice(0, 8);
+    const raw = distoHex(dv);
+    const rawEl = document.getElementById('distoRaw');
+    if (rawEl) rawEl.innerText = src + ': ' + raw;
     const meters = distoParseValue(dv);
     if (meters === null) {
-      distoLogAdd('odebrano dane, których nie umiem odczytać (' + (dv ? dv.byteLength : 0) + ' bajtów)');
+      distoLogAdd('ramka bez odczytu [' + src + '] ' + raw);
       return;
     }
+    distoLogAdd('[' + src + '] ' + raw);
     distoLastValue = meters; distoLastAt = Date.now();
     distoLogAdd('pomiar: ' + meters.toFixed(3) + ' m');
     const lastEl = document.getElementById('distoLastValue');
@@ -2511,10 +2791,7 @@ ${sketchBlocks}
   }
 
   async function distoConnect() {
-    if (!distoSupported()) {
-      alert('Ta przeglądarka nie obsługuje Bluetooth.\n\nPotrzebny jest Chrome na Androidzie lub ChromeOS ORAZ adres https — z pliku otwartego z pamięci tabletu połączenie nie zadziała.');
-      return;
-    }
+    if (!distoSupported()) { alert(distoContextHint()); return; }
     try {
       distoSetStatus('Szukam dalmierza…', 'info');
       distoDevice = await navigator.bluetooth.requestDevice({
@@ -2533,49 +2810,48 @@ ${sketchBlocks}
     }
   }
 
+  // Nasłuchujemy KAŻDEGO kanału, który potrafi sam wysyłać dane (notify lub
+  // indicate) — w każdej dostępnej usłudze. Wcześniej program pilnował jednej
+  // charakterystyki i jeśli akurat ta milczała, pomiary nigdy nie docierały.
   async function distoOpenGatt() {
     distoServer = await distoDevice.gatt.connect();
     distoLogAdd('połączono z urządzeniem');
 
-    // 1. znana charakterystyka
+    let services = [];
     try {
-      const svc = await distoServer.getPrimaryService(DISTO_SERVICE);
-      const ch = await svc.getCharacteristic(DISTO_DIST_CHAR);
-      await ch.startNotifications();
-      ch.addEventListener('characteristicvaluechanged', distoHandleNotification);
-      distoChar = ch;
-      distoLogAdd('nasłuch pomiarów włączony (profil standardowy)');
-      distoSetStatus('✅ Dalmierz podłączony — mierz przyciskiem na urządzeniu', 'success');
-      return;
+      services = await distoServer.getPrimaryServices();
     } catch (e) {
-      distoLogAdd('standardowy profil niedostępny, przeszukuję urządzenie…');
+      distoLogAdd('nie mogę wylistować usług: ' + e.message);
+      try { services = [await distoServer.getPrimaryService(DISTO_SERVICE)]; } catch (e2) { services = []; }
     }
+    distoLogAdd('znaleziono usług: ' + services.length);
 
-    // 2. przeszukanie: subskrybujemy wszystko, co potrafi powiadamiać
     let found = 0;
-    try {
-      const services = await distoServer.getPrimaryServices();
-      for (const svc of services) {
-        let chars = [];
-        try { chars = await svc.getCharacteristics(); } catch (e) { continue; }
-        for (const ch of chars) {
-          if (!ch.properties || !ch.properties.notify) continue;
-          try {
-            await ch.startNotifications();
-            ch.addEventListener('characteristicvaluechanged', distoHandleNotification);
-            found++;
-            if (!distoChar) distoChar = ch;
-            distoLogAdd('nasłuch: ' + ch.uuid);
-          } catch (e) {}
+    for (const svc of services) {
+      let chars = [];
+      try { chars = await svc.getCharacteristics(); } catch (e) { continue; }
+      for (const ch of chars) {
+        const pr = ch.properties || {};
+        const kinds = [pr.notify ? 'notify' : '', pr.indicate ? 'indicate' : '', pr.read ? 'read' : ''].filter(Boolean).join('/');
+        distoLogAdd('kanał ' + ch.uuid.slice(0, 8) + ' [' + (kinds || 'brak') + ']');
+        if (!pr.notify && !pr.indicate) continue;
+        try {
+          await ch.startNotifications();
+          ch.addEventListener('characteristicvaluechanged', distoHandleNotification);
+          found++;
+          if (!distoChar) distoChar = ch;
+        } catch (e) {
+          distoLogAdd('  nie udało się włączyć nasłuchu: ' + e.message);
         }
       }
-    } catch (e) { distoLogAdd('przeszukiwanie nieudane: ' + e.message); }
+    }
 
     if (found) {
-      distoSetStatus('✅ Podłączono (tryb przeszukiwania) — zrób pomiar, żeby sprawdzić odczyt', 'success');
+      distoLogAdd('nasłuch włączony na ' + found + ' kanałach');
+      distoSetStatus('✅ Podłączono — zrób pomiar dalmierzem', 'success');
     } else {
-      distoSetStatus('Połączono, ale nie znalazłem kanału pomiarów', 'warning');
-      alert('Połączenie działa, ale dalmierz nie udostępnił kanału z pomiarami.\n\nSprawdź w ustawieniach dalmierza, czy Bluetooth jest w trybie „Smart" / dla aplikacji DISTO Plan, i spróbuj ponownie.');
+      distoSetStatus('Połączono, ale żaden kanał nie wysyła danych', 'warning');
+      alert('Połączenie działa, ale dalmierz nie udostępnił kanału z pomiarami.\n\nW ustawieniach dalmierza włącz Bluetooth w trybie dla aplikacji (DISTO Plan / Bluetooth Smart) i połącz ponownie.\n\nJeśli to nie pomoże, otwórz „Podgląd połączenia" i wyślij mi zrzut — będzie tam lista kanałów urządzenia.');
     }
   }
 
@@ -2595,12 +2871,27 @@ ${sketchBlocks}
     document.getElementById('distoOverlay').style.display = 'flex';
     const chk = document.getElementById('distoAutoChk');
     if (chk) chk.checked = distoAutoAdvance;
-    if (!distoSupported()) distoSetStatus('Ta przeglądarka nie obsługuje Bluetooth (potrzebny Chrome + https)', 'warning');
-    else distoSetStatus(distoIsConnected() ? '✅ Dalmierz podłączony' : 'Nie połączono', distoIsConnected() ? 'success' : 'secondary');
+    if (!distoSupported()) {
+      distoSetStatus(distoRunningFromFile() ? 'Aplikacja działa z pliku — Bluetooth zablokowany przez przeglądarkę' : 'Ta przeglądarka nie obsługuje Bluetooth', 'warning');
+      const box = document.getElementById('distoFileHint');
+      if (box) { box.style.display = 'block'; box.innerText = distoContextHint(); }
+    } else {
+      const box = document.getElementById('distoFileHint');
+      if (box) box.style.display = 'none';
+      distoSetStatus(distoIsConnected() ? '✅ Dalmierz podłączony' : 'Nie połączono', distoIsConnected() ? 'success' : 'secondary');
+    }
     distoLogAdd('otwarto panel dalmierza');
   }
   function closeDistoDialog() { document.getElementById('distoOverlay').style.display = 'none'; }
   function setDistoAuto(v) { distoAutoAdvance = !!v; }
+
+  function copyDistoLog() {
+    const txt = ['Dalmierz: ' + (distoDevice && distoDevice.name || '?')].concat(distoLog).join('\n');
+    try {
+      if (navigator.clipboard) { navigator.clipboard.writeText(txt); alert('Skopiowano — możesz to wkleić w wiadomości.'); return; }
+    } catch (e) {}
+    alert(txt);
+  }
 
   // Gdzie ma trafić odczyt z dalmierza. Kolejność odpowiada temu, co masz
   // otwarte na ekranie — najpierw prowadzony pomiar, bo to główny tryb pracy.
@@ -2902,7 +3193,9 @@ ${sketchBlocks}
   // Rzut kondygnacji liczy sie do powierzchni i kubatury budynku.
   // Przekroj/elewacja to osobna kategoria - te obszary trafiaja do wlasnej tabeli
   // i NIE sa doliczane do powierzchni pomieszczen.
-  function isSectionSketch(sk) { return sk && sk.kind === 'przekroj'; }
+  // Przekrój/elewacja ORAZ przekrój poddasza są poza bilansem powierzchni
+  // budynku - to rysunki pomocnicze, nie kondygnacje.
+  function isSectionSketch(sk) { return sk && (sk.kind === 'przekroj' || sk.kind === 'skosy'); }
 
   function setSketchKind(val) {
     if (sketches[currentSketchIndex]) sketches[currentSketchIndex].kind = val;
@@ -2933,7 +3226,7 @@ ${sketchBlocks}
 
   function switchSketch(index) {
     if (sketches[currentSketchIndex]) { sketches[currentSketchIndex].panX = panX; sketches[currentSketchIndex].panY = panY; sketches[currentSketchIndex].zoomLevel = zoomLevel; sketches[currentSketchIndex].showDimensions = showDimensions; }
-    currentSketchIndex = index; objects = sketches[index].objects; if(!objects.customDims) objects.customDims = {}; if(!objects.noteLines) objects.noteLines = []; if(!objects.envTags) objects.envTags = {}; if(!objects.apexDims) objects.apexDims = {}; if(!objects.envTags) objects.envTags = {};
+    currentSketchIndex = index; objects = sketches[index].objects; if(!objects.customDims) objects.customDims = {}; if(!objects.noteLines) objects.noteLines = []; if(!objects.envTags) objects.envTags = {}; if(!objects.apexDims) objects.apexDims = {}; if(!objects.hatches) objects.hatches = []; if(!objects.slopes) objects.slopes = []; if(!objects.envTags) objects.envTags = {};
     panX = sketches[index].panX; panY = sketches[index].panY; zoomLevel = sketches[index].zoomLevel;
     showDimensions = (sketches[index].showDimensions !== undefined) ? sketches[index].showDimensions : true;
     syncDimsToggleButton(); syncSketchHeightInput();
@@ -3032,18 +3325,39 @@ ${sketchBlocks}
 
   function addNewSketch() {
     let name = prompt("Podaj nazwę dla nowego szkicu:", "Nowy Szkic"); if(!name) return;
-    sketches.push({ id: Date.now(), name: name, objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {} }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true });
+    sketches.push({ id: Date.now(), name: name, objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true });
     switchSketch(sketches.length - 1);
+  }
+
+  // Po nazwaniu kopii program sam dobiera rodzaj szkicu - nazwa ze słowem
+  // "skos" albo "poddasze" włącza przekrój poddasza.
+  function autoKindFromName(sk) {
+    const n = String(sk.name || '').toLowerCase();
+    if (n.indexOf('skos') > -1 || n.indexOf('poddasz') > -1) sk.kind = 'skosy';
+    else if (n.indexOf('przekr') > -1 || n.indexOf('elewac') > -1) sk.kind = 'przekroj';
   }
 
   function duplicateCurrentSketch() {
       if (!confirm("Czy na pewno chcesz skopiować bieżący szkic ze wszystkimi danymi?")) return;
       let clonedSketch = JSON.parse(JSON.stringify(sketches[currentSketchIndex]));
-      clonedSketch.id = Date.now(); clonedSketch.name = sketches[currentSketchIndex].name + " (Kopia)";
+      clonedSketch.id = Date.now();
+      const nazwa = prompt('Nazwa kopii:', sketches[currentSketchIndex].name + ' — skosy');
+      clonedSketch.name = (nazwa && nazwa.trim()) ? nazwa.trim() : sketches[currentSketchIndex].name + ' (Kopia)';
+      autoKindFromName(clonedSketch);
       sketches.push(clonedSketch); switchSketch(sketches.length - 1);
+      if (clonedSketch.kind === 'skosy') {
+        setTimeout(() => alert('Rodzaj ustawiony na „Przekrój poddasza (skosy)".\n\nPrzyciskiem 🧹 Wyczyść dane usuniesz skopiowane opisy i zostawisz sam rysunek, a potem narzędziem 📐 Skos rysujesz skosy.'), 150);
+      }
   }
 
-  function renameCurrentSketch() { let n = prompt("Podaj nową nazwę dla bieżącego szkicu:", sketches[currentSketchIndex].name); if(n) { sketches[currentSketchIndex].name = n; renderTabs(); renderTablesPerSketch(); } }
+  function renameCurrentSketch() {
+    let n = prompt("Podaj nową nazwę dla bieżącego szkicu:", sketches[currentSketchIndex].name);
+    if (n) {
+      sketches[currentSketchIndex].name = n;
+      autoKindFromName(sketches[currentSketchIndex]);
+      syncSketchHeightInput(); renderTabs(); renderTablesPerSketch();
+    }
+  }
 
   // Grupuje otwory wg kategorii: ile sztuk i jaka laczna powierzchnia.
   // Liczy KAZDE wystapienie na szkicu - to samo okno wstawione 3 razy liczy sie 3 razy.
@@ -3449,6 +3763,33 @@ ${sketchBlocks}
                   });
                   html += `</tbody><tfoot><tr class="table-info fw-bold"><td colspan="4" class="text-end">SUMA:</td><td>${totalArea.toFixed(2)} m²</td><td>${totalVol.toFixed(2)}</td><td></td></tr></tfoot></table>`;
               }
+
+              // skosy poddasza
+              const sls = sketch.objects.slopes || [];
+              if (sls.length) {
+                let planSum = 0, roofSum = 0;
+                html += `<h6 class="fw-bold text-danger">Skosy poddasza</h6>`;
+                html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Ozn.</th><th>Dł. [m]</th><th>Szer. [m]</th><th>Ścianka kol. [m]</th><th>Wys. kondygn. [m]</th><th>Połać [m]</th><th>Rzut [m²]</th><th>Pow. połaci [m²]</th></tr></thead><tbody>`;
+                sls.forEach(sl => {
+                  const a = slopeAreas(sl);
+                  if (a.plan) planSum += a.plan;
+                  if (a.roof) roofSum += a.roof;
+                  html += `<tr><td class="fw-bold">${sl.label}</td><td>${sl.length || '—'}</td><td>${sl.width || '—'}</td><td>${sl.knee || '—'}</td><td>${sl.floorH || '—'}</td><td>${sl.slant || '—'}</td><td>${a.plan !== null ? a.plan.toFixed(2) : '—'}</td><td>${a.roof !== null ? a.roof.toFixed(2) : '—'}</td></tr>`;
+                });
+                html += `</tbody><tfoot><tr class="fw-bold" style="background:#fdeaea;"><td colspan="6" class="text-end">RAZEM:</td><td>${planSum.toFixed(2)}</td><td>${roofSum.toFixed(2)}</td></tr></tfoot></table>`;
+              }
+
+              // obszary pod skosem - oznaczenie graficzne, poza bilansem powierzchni
+              const hs = sketch.objects.hatches || [];
+              if (hs.length) {
+                html += `<h6 class="fw-bold text-secondary">Obszary pod skosem <span class="small fw-normal text-muted">(oznaczenie na rysunku, nie wliczają się do powierzchni)</span></h6>`;
+                html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Opis</th><th>Powierzchnia</th></tr></thead><tbody>`;
+                hs.forEach(h => {
+                  const a = hatchAreaM2(h);
+                  html += `<tr><td>${h.label || 'Skos'}</td><td>${a !== null ? a.toFixed(2) + ' m²' : '—'}</td></tr>`;
+                });
+                html += `</tbody></table>`;
+              }
           }
           if(hasOpenings) {
               html += `<h6 class="text-primary fw-bold mt-2">Otwory budowlane:</h6><table class="table table-sm table-bordered"><thead><tr class="table-light"><th>ID</th><th>Szt.</th><th>Szer (cm)</th><th>Wys (cm)</th><th>Pow. szt. (m²)</th><th>Pow. razem (m²)</th><th>Wsp. U</th></tr></thead><tbody>`;
@@ -3542,6 +3883,7 @@ ${sketchBlocks}
     opening:  ['btnModeOpening',  'btn-outline-primary', 'btn-primary'],
     envtag:   ['btnModeEnvTag',   'btn-outline-dark',    'btn-dark'],
     roomtag:  ['btnModeRoomTag',  'btn-outline-success', 'btn-success'],
+    slope:    ['btnModeSlope',    'btn-outline-danger', 'btn-danger'],
     draw:     ['btnModeDraw',     'btn-outline-primary', 'btn-primary'],
     noteline: ['btnModeNote',     'btn-outline-info',    'btn-info'],
     erase:    ['btnModeErase',    'btn-outline-danger',  'btn-danger'],
@@ -3903,6 +4245,80 @@ ${sketchBlocks}
   function drawScene() {
     dimLabelRects = [];
 
+    // SKOSY PODDASZA - linia wzdłuż skosu z oznaczeniem i wymiarami
+    (objects.slopes || []).forEach(sl => {
+      const dx = sl.x2 - sl.x1, dy = sl.y2 - sl.y1, len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      ctx.save();
+      ctx.beginPath(); ctx.strokeStyle = sl.color || '#dc3545'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.moveTo(sl.x1, sl.y1); ctx.lineTo(sl.x2, sl.y2); ctx.stroke();
+      // kreski na końcach
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(sl.x1 + nx*10, sl.y1 + ny*10); ctx.lineTo(sl.x1 - nx*10, sl.y1 - ny*10);
+      ctx.moveTo(sl.x2 + nx*10, sl.y2 + ny*10); ctx.lineTo(sl.x2 - nx*10, sl.y2 - ny*10);
+      ctx.stroke();
+
+      const mx = (sl.x1 + sl.x2)/2, my = (sl.y1 + sl.y2)/2;
+      const txt = sl.label + (sl.length ? '  ' + sl.length + ' × ' + (sl.width || '?') + ' m' : '  (brak wymiarów)');
+      ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(txt).width + 14;
+      const lx = mx + nx * 20, ly = my + ny * 20;
+      ctx.fillStyle = sl.color || '#dc3545';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(lx - w/2, ly - 11, w, 22, 6); ctx.fill(); }
+      else ctx.fillRect(lx - w/2, ly - 11, w, 22);
+      ctx.fillStyle = '#fff'; ctx.fillText(txt, lx, ly);
+      reserveLabelRect(lx, ly, w + 6, 26);
+      ctx.restore();
+    });
+
+    // OBSZARY POD SKOSEM - ukośne kreskowanie, jak na rysunkach budowlanych
+    (objects.hatches || []).forEach(h => {
+      if (!h.polygon || h.polygon.length < 3) return;
+      const xs = h.polygon.map(p => p.x), ys = h.polygon.map(p => p.y);
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(h.polygon[0].x, h.polygon[0].y);
+      for (let i = 1; i < h.polygon.length; i++) ctx.lineTo(h.polygon[i].x, h.polygon[i].y);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.strokeStyle = 'rgba(108,117,125,0.55)';
+      ctx.lineWidth = 1.4;
+      const step = 14;
+      ctx.beginPath();
+      for (let d = minX - (maxY - minY); d <= maxX; d += step) {
+        ctx.moveTo(d, maxY);
+        ctx.lineTo(d + (maxY - minY), minY);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // obrys obszaru
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(h.polygon[0].x, h.polygon[0].y);
+      for (let i = 1; i < h.polygon.length; i++) ctx.lineTo(h.polygon[i].x, h.polygon[i].y);
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(108,117,125,0.8)';
+      ctx.setLineDash([8, 5]); ctx.lineWidth = 2; ctx.stroke();
+      ctx.setLineDash([]);
+
+      // podpis na środku
+      const c = getVisualCenter(h.polygon);
+      const txt = h.label || 'Skos';
+      ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(txt).width + 12;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(c.x - w/2, c.y - 10, w, 20);
+      ctx.fillStyle = '#495057'; ctx.fillText(txt, c.x, c.y);
+      reserveLabelRect(c.x, c.y, w + 6, 24);
+      ctx.restore();
+    });
+
     if(objects.rooms) {
       objects.rooms.forEach((room) => {
         if (room.manual) {
@@ -4158,6 +4574,10 @@ ${sketchBlocks}
         ctx.beginPath(); ctx.strokeStyle = currentPenColor; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.moveTo(currentStroke[0].x, currentStroke[0].y);
         for(let i=1; i<currentStroke.length; i++) ctx.lineTo(currentStroke[i].x, currentStroke[i].y); ctx.stroke();
       } 
+      else if (currentMode === 'slope') {
+        ctx.save(); ctx.beginPath(); ctx.strokeStyle = currentNoteColor; ctx.lineWidth = 4; ctx.setLineDash([10, 6]);
+        ctx.moveTo(startPos.x, startPos.y); ctx.lineTo(currentPos.x, currentPos.y); ctx.stroke(); ctx.restore();
+      }
       else if (currentMode === 'noteline') {
         ctx.save(); ctx.beginPath(); ctx.strokeStyle = currentNoteColor; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
         ctx.moveTo(startPos.x, startPos.y); ctx.lineTo(currentPos.x, currentPos.y); ctx.stroke(); ctx.restore();
@@ -4862,6 +5282,10 @@ ${sketchBlocks}
     if (currentMode === 'erase') {
         let clickedLineIndex = -1; let minD = 20 / zoomLevel; 
         objects.lines.forEach((line, index) => { let pt = getClosestPointOnSegment(rawPos, {x: line.x1, y: line.y1}, {x: line.x2, y: line.y2}); if (Math.hypot(rawPos.x - pt.x, rawPos.y - pt.y) < minD) { minD = Math.hypot(rawPos.x - pt.x, rawPos.y - pt.y); clickedLineIndex = index; } });
+        let slopeHit = findSlopeAt(rawPos);
+        if (slopeHit !== -1) { objects.slopes.splice(slopeHit, 1); saveStateToHistory(); renderTablesPerSketch(); renderCanvas(); return; }
+        let hatchHit = findHatchAt(rawPos);
+        if (hatchHit !== -1) { objects.hatches.splice(hatchHit, 1); saveStateToHistory(); renderTablesPerSketch(); renderCanvas(); return; }
         let roomHit = findRoomTagAt(rawPos);
         if (roomHit !== -1) { objects.rooms.splice(roomHit, 1); renderTablesPerSketch(); saveStateToHistory(); renderCanvas(); return; }
         let noteHit = findNoteAt(rawPos);
@@ -4877,6 +5301,12 @@ ${sketchBlocks}
         renderCanvas(); return;
     }
     
+    if (currentMode === 'slope') {
+      const hit = findSlopeAt(rawPos);
+      if (hit !== -1) { openSlopeDialog(hit); return; }
+      // brak trafienia = zaczynamy rysować nowy skos (obsługa w startDraw)
+    }
+
     if (currentMode === 'roomtag') {
       // 1. klikniecie w istniejacy znacznik reczny - edycja
       const hit = findRoomTagAt(rawPos);
@@ -4907,7 +5337,7 @@ ${sketchBlocks}
 
     drawing = true; guideLines = [];
     if(currentMode === 'line') { let snapInfo = findSnapPoint(rawPos); startPos = { x: snapTo1cm(snapInfo.pt.x), y: snapTo1cm(snapInfo.pt.y) }; currentPos = { x: startPos.x, y: startPos.y }; renderCanvas(); } 
-    else if (currentMode === 'noteline') { startPos = { x: rawPos.x, y: rawPos.y }; currentPos = { x: startPos.x, y: startPos.y }; renderCanvas(); }
+    else if (currentMode === 'noteline' || currentMode === 'slope') { startPos = { x: rawPos.x, y: rawPos.y }; currentPos = { x: startPos.x, y: startPos.y }; renderCanvas(); }
     else if (currentMode === 'draw') { startPos = rawPos; currentStroke = [startPos]; }
   }
 
@@ -4983,6 +5413,18 @@ ${sketchBlocks}
               // duzego obrysu na mniejsze pokoje nie zostawia starego, zbyt duzego pokoju.
               hintRoomTagOnce();
           }
+      }
+      renderCanvas();
+    }
+    else if (currentMode === 'slope') {
+      if (!objects.slopes) objects.slopes = [];
+      const sl = { id: Date.now(), label: nextSlopeLabel(), color: currentNoteColor,
+                   x1: startPos.x, y1: startPos.y, x2: currentPos.x, y2: currentPos.y,
+                   length: '', width: '', knee: '', floorH: '', slant: '' };
+      if (Math.hypot(sl.x2 - sl.x1, sl.y2 - sl.y1) > 10) {
+        objects.slopes.push(sl);
+        saveStateToHistory();
+        openSlopeDialog(objects.slopes.length - 1);
       }
       renderCanvas();
     }
@@ -5067,7 +5509,7 @@ ${sketchBlocks}
 
   function clearCanvas() {
     if(!confirm("Czy na pewno chcesz wyczyścić cały bieżący szkic?")) return;
-    objects = { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {} }; sketches[currentSketchIndex].objects = objects; undoStack = []; saveStateToHistory(); resetView(); renderCanvas(); renderTablesPerSketch();
+    objects = { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }; sketches[currentSketchIndex].objects = objects; undoStack = []; saveStateToHistory(); resetView(); renderCanvas(); renderTablesPerSketch();
   }
 
   canvas.addEventListener('pointerdown', startDraw); canvas.addEventListener('pointermove', draw); canvas.addEventListener('pointerup', stopDraw);
@@ -5080,7 +5522,7 @@ ${sketchBlocks}
 
   window.onload = () => {
     if (!sketches.length) {
-      sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {} }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
+      sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
       objects = sketches[0].objects;
     }
     fillTemplateOptions();

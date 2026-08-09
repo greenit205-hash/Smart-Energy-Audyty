@@ -137,7 +137,8 @@ Zakładki u góry to kolejne rysunki (parter, piętro, przekrój). **➕ Dodaj**
 | 🫥 **Ukryj** | schowanie pojedynczej, zbędnej miarki |
 | 🚪 **Otwór** | okna i drzwi |
 | 🏷️ **Przegroda** | oznaczanie przegród na przekroju |
-| 🏠 **Pomieszcz.** | ręczne oznaczenie pomieszczenia (numer, nazwa, wysokość) |
+| 🏠 **Pomieszcz.** | oznaczenie pomieszczenia (numer, nazwa) |
+| 📐 **Skos** | rysowanie skosów poddasza z wymiarami |
 | ✏️ **Ołówek** | rysowanie odręczne |
 | 📐 **Miarka** | prosta linia z ręcznym opisem (patrz niżej) |
 | 🧽 **Usuń** | kasowanie ścian, otworów, miarek |
@@ -192,11 +193,63 @@ Przy każdej uwadze jest 🔎 — przenosi widok na sporne miejsce, także na in
 
 **Uwagi nie blokują pracy.** Przy zapisie raportu dostajesz podsumowanie i decydujesz sam — czasem budynek naprawdę jest nietypowy. Blokują tylko te rzeczy, które blokowały dotąd: brak wysokości kondygnacji i nieopisane przegrody.
 
+### 📐 Skosy poddasza
+
+Osobny rodzaj szkicu do inwentaryzacji poddasza ze skosami.
+
+**Przebieg pracy:**
+
+1. Zmierz pokoje na poddaszu normalnie, w rodzaju **Rzut kondygnacji**.
+2. **📄 Kopiuj** — program pyta o nazwę i proponuje „… — skosy". Nazwa ze słowem *skos* albo *poddasze* **automatycznie przestawia Rodzaj na „Przekrój poddasza (skosy)"**.
+3. **🧹 Wyczyść dane** — usuwa skopiowane opisy i zostawia sam rysunek ścian. (Przycisk działa przy każdym rodzaju szkicu, nie tylko tutaj.)
+4. Włącz **📐 Skos** i przeciągnij linię wzdłuż skosu — jak przy rysowaniu ściany. Kolor wybierasz z palety obok narzędzia.
+5. Program od razu pyta o wymiary. Kolejne skosy dostają oznaczenia **A, B, C…**
+
+**O co pyta program:**
+
+| Wymiar | Skąd |
+|---|---|
+| **Długość skosu** | z rzutu — wzdłuż ściany |
+| **Szerokość** | z rzutu — od ścianki kolankowej do końca skosu |
+| **Wysokość ścianki kolankowej** | z przekroju |
+| **Wysokość kondygnacji** | z przekroju (podpowiadana ze szkicu) |
+| **Długość połaci** | z przekroju — skośna, po dachu |
+
+Program liczy z tego **powierzchnię rzutu skosu** (długość × szerokość) i **powierzchnię połaci** (długość × połać). Obie trafiają do tabeli pod szkicem i do raportów.
+
+**To wymiary rzeczywiste** — rysunek pozostaje szkicem, tak samo jak przy ścianach. Kliknięcie w narysowany skos pozwala poprawić dane albo go usunąć; gumka 🧽 też działa.
+
+> Szkic tego rodzaju **nie wchodzi do bilansu powierzchni budynku** — kondygnację masz już policzoną na rzucie.
+
+### ▨ Obszary pod skosem (kreskowanie)
+
+Na poddaszu zwykle część powierzchni jest pod skosem. Zamiast rysować ukośne kreski ołówkiem:
+
+1. Skopiuj szkic rzutu (**📄 Kopiuj**) i nazwij kopię np. „Poddasze — skosy".
+2. Dorysuj linię 📏 Ściana tam, gdzie kończy się część pod skosem.
+3. Włącz **▨ Skos** i kliknij **wewnątrz** obszaru — program wypełni go kreskowaniem i poprosi o opis.
+
+Ponowne kliknięcie w zakreskowany obszar pozwala zmienić opis; pusty opis go usuwa. Gumka 🧽 też działa.
+
+**To oznaczenie graficzne.** Kreskowanie trafia na rysunek w raporcie i na listę „Obszary pod skosem", ale **nie zmienia powierzchni pomieszczeń** ani wymiarów — dokładnie jak wcześniej kreski ołówkiem, tylko czytelniej.
+
+> Jeśli kliknięcie nic nie daje, obszar nie jest domknięty ścianami — dorysuj brakującą linię i spróbuj ponownie.
+
 ### 📡 Dalmierz Leica DISTO (X3 i X4)
 
 Pomiar z dalmierza wpada prosto do aplikacji — nie musisz przepisywać liczb.
 
-**Zanim zaczniesz.** Bluetooth działa **wyłącznie pod adresem https** (Netlify albo GitHub Pages) w **Chrome na Androidzie lub ChromeOS**. Z pliku otwartego z pamięci tabletu nie zadziała — to ograniczenie przeglądarki, nie aplikacji. Na tablecie musi być włączony Bluetooth i lokalizacja (Android tego wymaga do wyszukiwania urządzeń).
+**Zanim zaczniesz — ważne.** Przeglądarki blokują Bluetooth stronom otwartym z pliku (`file://`, `content://`). Nie da się tego obejść po stronie aplikacji: to zabezpieczenie przeglądarki, identyczne w każdej.
+
+**Ale praca offline z dalmierzem jest jak najbardziej możliwa** — trzeba tylko raz zainstalować aplikację zamiast otwierać pobrany plik:
+
+1. Otwórz aplikację pod jej **adresem internetowym** (Netlify albo GitHub Pages).
+2. Menu ⋮ → **Zainstaluj aplikację**.
+3. Od tej pory uruchamiasz ją **z ikony na pulpicie**.
+
+Tak zainstalowana aplikacja **działa bez internetu w całości**: szkicownik, pomiary, raporty **i dalmierz**. Internet jest potrzebny tylko przy instalacji, aktualizacjach i wysyłce na Dysk. Plik pobrany do Pobranych zostaw sobie najwyżej jako kopię awaryjną — do pracy z dalmierzem się nie nadaje.
+
+Na Androidzie musi być jeszcze włączony Bluetooth i lokalizacja (system wymaga jej do wyszukiwania urządzeń).
 
 **Połączenie:**
 
@@ -219,7 +272,12 @@ Dzięki temu prostokątny pokój to **dwa naciśnięcia przycisku na dalmierzu**
 
 Automatyczne przechodzenie można wyłączyć w panelu dalmierza, jeśli wolisz najpierw zobaczyć wartość i zatwierdzić ją ręcznie.
 
-**Gdy coś nie działa:** rozwiń **Podgląd połączenia** w panelu — widać tam, co program odebrał z urządzenia. Jeśli dalmierz łączy się, ale pomiary nie wpadają, program automatycznie przeszukuje wszystkie kanały urządzenia; wtedy zrób jeden pomiar i sprawdź, czy pojawił się w podglądzie.
+**Gdy pomiary nie docierają.** Program nasłuchuje **wszystkich** kanałów urządzenia, więc samo połączenie zwykle wystarcza. Jeśli mimo to nic nie wpada:
+
+1. Otwórz panel **📡 Dalmierz** i zrób jeden pomiar.
+2. Popatrz na **Ostatnia ramka z urządzenia** — jeśli pojawiają się tam liczby, dane docierają i problem jest tylko w odczycie.
+3. Jeśli ramka pozostaje pusta, sprawdź w ustawieniach dalmierza tryb Bluetooth: musi być ustawiony dla aplikacji (**DISTO Plan / Bluetooth Smart**), a nie tryb klawiatury czy transferu do komputera.
+4. Przyciskiem **Skopiuj podgląd** wyślij mi listę kanałów — dopasuję odczyt do Twojego egzemplarza.
 
 ### 🎯 Prowadzony pomiar — najszybsza droga
 
