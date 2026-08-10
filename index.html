@@ -5379,7 +5379,7 @@ ${sketchBlocks}
       }
       currentPos = { x: snapTo1cm(targetPos.x), y: snapTo1cm(targetPos.y) }; renderCanvas();
     }
-    else if (currentMode === 'noteline') {
+    else if (currentMode === 'noteline' || currentMode === 'slope') {
       let t = { x: rawPos.x, y: rawPos.y };
       let dx = t.x - startPos.x, dy = t.y - startPos.y;
       let angle = Math.atan2(dy, dx) * 180 / Math.PI;
