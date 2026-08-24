@@ -1283,9 +1283,13 @@
     payload.sketchImages = buildSketchImages(auditToSync);
     payload.logo = LOGO_DATA_URL;
     payload.cardHtml = buildObjectCardHtml(auditToSync, null, true);
-    // zestawienie ścian liczy aplikacja - Apps Script tylko je wypisuje
+    // zestawienie ścian i przegród liczy aplikacja - Apps Script tylko je wypisuje
     try {
       const sks = JSON.parse(auditToSync.sketchesJSON || '[]');
+      payload.envTables = sks.map(sk => envelopesForSketch(sk, auditToSync).map(v => ({
+        id: v.id, catName: v.catName, type: v.type, desc: v.desc,
+        thick: v.thick, ins: v.ins, insThick: v.insThick, u: v.u
+      })));
       payload.wallTables = sks.map(sk => wallTableRows(sk).map(r => ({
         label: r.label, roomNum: r.roomNum, position: r.position, typeLabel: r.typeLabel,
         value: r.value !== null ? Number(r.value.toFixed(2)) : null,
@@ -1333,6 +1337,33 @@
 
   // ================= RAPORT DO EDYCJI (zapis w pamieci tabletu) =================
   function esc(v) { return (v === undefined || v === null ? '' : String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Przegrody oznaczone na danym szkicu wraz z opisem wpisanym w sekcji 3.
+  // Dzięki temu obok rysunku przekroju widać, co oznacza SZ1, SZ2 itd.
+  function envelopesForSketch(sk, audit) {
+    const tags = (sk.objects && sk.objects.envTags) || {};
+    const out = [];
+    Object.keys(tags).forEach(k => {
+      const t = tags[k];
+      const id = t.cat + t.num;
+      const type = audit[id + '_type'];
+      out.push({
+        id: id,
+        cat: t.cat,
+        catName: ENV_TAG_NAMES[t.cat] || t.cat,
+        num: t.num,
+        type: (type && String(type).indexOf('Wybierz') !== 0) ? type : '',
+        desc: audit[id + '_desc'] || '',
+        thick: audit[id + '_totalthick'] || '',
+        ins: (audit[id + '_insulation'] && String(audit[id + '_insulation']).indexOf('Wybierz') !== 0) ? audit[id + '_insulation'] : '',
+        insThick: audit[id + '_insthick'] || '',
+        u: audit[id + '_uvalue'] || ''
+      });
+    });
+    const order = ['SZ', 'S', 'PG', 'D'];
+    out.sort((a, b) => (order.indexOf(a.cat) - order.indexOf(b.cat)) || (a.num - b.num));
+    return out;
+  }
 
   function rowsFromEnvelopes(audit) {
     // Oznaczeń na przekroju może być dowolnie dużo (SZ6, S12...), więc skanujemy
@@ -1432,17 +1463,33 @@
         roomTable += `<tr><th colspan="3" style="text-align:right">RAZEM</th><th>${total.toFixed(2)}</th><th>${volTotal.toFixed(2)}</th></tr></table>`;
       }
 
-      // szkic i tabela pomieszczen obok siebie
-      if (im && roomTable) {
+      // przegrody oznaczone na tym szkicu - opis obok rysunku
+      const envsDoc = envelopesForSketch(sk, audit);
+      let envTable = '';
+      if (envsDoc.length) {
+        envTable = `<table><tr><th>Ozn.</th><th>Rodzaj</th><th>Budowa</th><th>U [W/m²K]</th></tr>`;
+        envsDoc.forEach(v => {
+          const budowa = [v.type, v.thick ? 'gr. ' + v.thick + ' cm' : '',
+                          v.ins ? 'ocieplenie: ' + v.ins + (v.insThick ? ' ' + v.insThick + ' cm' : '') : '',
+                          v.desc].filter(Boolean).join('<br>');
+          envTable += `<tr><td><b>${esc(v.id)}</b></td><td>${esc(v.catName)}</td><td>${budowa || '—'}</td><td>${esc(v.u) || '—'}</td></tr>`;
+        });
+        envTable += `</table>`;
+      }
+      const sideTable = envTable + (envTable && roomTable ? '<p></p>' : '') + roomTable;
+
+      // szkic i tabele obok siebie
+      if (im && sideTable) {
         h += `<table class="layout"><tr>
-          <td style="width:55%;border:none;vertical-align:top"><img src="${im.dataUrl}" style="max-width:100%;border:1px solid #999"></td>
-          <td style="width:45%;border:none;vertical-align:top;padding-left:10pt">${roomTable}</td>
+          <td style="width:52%;border:none;vertical-align:top"><img src="${im.dataUrl}" style="max-width:100%;border:1px solid #999"></td>
+          <td style="width:48%;border:none;vertical-align:top;padding-left:10pt">${envTable ? '<p class="sub"><b>Przegrody oznaczone na rysunku</b></p>' : ''}${sideTable}</td>
         </tr></table>`;
       } else if (im) {
         h += `<p><img src="${im.dataUrl}" style="max-width:640px;border:1px solid #999"></p>`;
-      } else if (roomTable) {
-        h += roomTable;
+      } else if (sideTable) {
+        h += sideTable;
       }
+
       const ops = sk.objects.openings || [];
       const wr = wallTableRows(sk);
       if (wr.length) {
@@ -1574,7 +1621,22 @@
         <h3>${esc(sk.name)} <span class="muted" style="font-size:.8rem;font-weight:400;">${isSect ? 'przekrój / elewacja' : 'wysokość kondygnacji: ' + (skH !== null ? skH.toFixed(2) + ' m' : '—')}</span></h3>
         <div class="sketch-row">
           <div class="sketch-col">${src ? `<div class="sketch"><img src="${src}"></div>` : '<p class="muted">Brak rysunku</p>'}</div>
-          ${roomTable ? `<div class="rooms-col">${roomTable}</div>` : ''}
+          ${(() => {
+            const envs = envelopesForSketch(sk, audit);
+            const side = [];
+            if (envs.length) {
+              let e = '<h4 style="margin-top:0">Przegrody oznaczone na rysunku</h4><table><thead><tr><th>Ozn.</th><th>Rodzaj</th><th>Budowa</th><th class="num">U</th></tr></thead><tbody>';
+              envs.forEach(v => {
+                const budowa = [v.type, v.thick ? 'gr. ' + v.thick + ' cm' : '',
+                                v.ins ? 'ocieplenie: ' + v.ins + (v.insThick ? ' ' + v.insThick + ' cm' : '') : '',
+                                v.desc].filter(Boolean).join('<br>');
+                e += `<tr><td><b>${esc(v.id)}</b></td><td>${esc(v.catName)}</td><td>${budowa || '<span class="muted">nie opisano</span>'}</td><td class="num">${esc(v.u) || '—'}</td></tr>`;
+              });
+              side.push(e + '</tbody></table>');
+            }
+            if (roomTable) side.push(roomTable);
+            return side.length ? `<div class="rooms-col">${side.join('')}</div>` : '';
+          })()}
         </div>
         ${slopeRows ? `<h4>Skosy poddasza</h4><table><thead><tr><th>Ozn.</th><th class="num">Dł. [m]</th><th class="num">Szer. [m]</th><th class="num">Ścianka kol. [m]</th><th class="num">Wys. kondygn. [m]</th><th class="num">Połać [m]</th><th class="num">Rzut [m²]</th><th class="num">Pow. połaci [m²]</th></tr></thead><tbody>${slopeRows}</tbody>
           <tfoot><tr><th colspan="6" class="num">RAZEM</th><th class="num">${slopePlan.toFixed(2)}</th><th class="num">${slopeRoof.toFixed(2)}</th></tr></tfoot></table>` : ''}
@@ -4734,10 +4796,35 @@ ${sketchBlocks}
   // Rysunek traktujemy jak graf plaski i wyszukujemy najmniejsze oczko (sciane
   // po scianie), w ktorego wnetrzu znalazl sie klikniety punkt.
 
-  const FACE_TOL = 2.5; // px - z taka dokladnoscia laczymy konce scian w jeden wezel
+  const FACE_TOL = 3.5; // px - z taka dokladnoscia laczymy konce scian w jeden wezel
 
+  // UWAGA: samo zaokraglanie do siatki (Math.round(x / FACE_TOL)) NIE dziala.
+  // Dwa konce ścian oddalone o ulamek piksela trafialy do roznych komorek, jesli
+  // wypadly po dwoch stronach granicy - i wezel sie rozdwajal. Przy prostokacie
+  // zwykle uchodzilo to plazem, ale przy 5+ scianach wystarczyl jeden taki
+  // przypadek, zeby obrys sie nie domknal.
+  // Dlatego scalamy po RZECZYWISTEJ ODLEGLOSCI: kazdy nowy punkt szuka istniejacego
+  // wezla w promieniu FACE_TOL i dolacza do niego.
   function faceNodeKey(x, y) {
     return Math.round(x / FACE_TOL) + '_' + Math.round(y / FACE_TOL);
+  }
+
+  // Zwraca klucz wezla dla punktu, scalajac go z pobliskim juz istniejacym.
+  function resolveNodeKey(nodes, x, y) {
+    const cx = Math.round(x / FACE_TOL), cy = Math.round(y / FACE_TOL);
+    let best = null, bestD = FACE_TOL;
+    // przeszukujemy komorke i wszystkie sasiednie - punkt tuz za granica
+    // komorki jest tak samo dobrym kandydatem jak ten w srodku
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const k = (cx + dx) + '_' + (cy + dy);
+        const n = nodes[k];
+        if (!n) continue;
+        const d = Math.hypot(n.x - x, n.y - y);
+        if (d <= bestD) { bestD = d; best = k; }
+      }
+    }
+    return best || (cx + '_' + cy);
   }
 
   // Punkt przeciecia dwoch odcinkow (takze gdy krzyzuja sie w srodku, bez wspolnego konca).
@@ -4756,8 +4843,41 @@ ${sketchBlocks}
 
   // Dzieli kazda sciane we WSZYSTKICH miejscach, gdzie styka sie z inna scianą:
   // na skrzyzowaniach (X), na stykach czolowych (T) i we wspolnych rogach.
-  function splitLineAtAllCrossings(line) {
-    const a = { x: line.x1, y: line.y1 }, b = { x: line.x2, y: line.y2 };
+  // Kilkupikselowa szczelina miedzy koncami scian to najczestszy powod, dla
+  // ktorego obrys sie nie domyka. Traktujemy takie konce jak stykajace sie:
+  // dociagamy je do wspolnego punktu WYLACZNIE na potrzeby rozpoznania
+  // pomieszczenia - sam rysunek zostaje nietkniety.
+  const GAP_TOL = 12; // px
+
+  function weldEndpoints() {
+    const pts = [];
+    (objects.lines || []).forEach(line => {
+      pts.push({ x: line.x1, y: line.y1 });
+      pts.push({ x: line.x2, y: line.y2 });
+    });
+    const clusters = [];
+    pts.forEach(p => {
+      let hit = null;
+      for (const c of clusters) {
+        if (Math.hypot(c.x - p.x, c.y - p.y) <= GAP_TOL) { hit = c; break; }
+      }
+      if (hit) { hit.pts.push(p); hit.x = hit.pts.reduce((a, q) => a + q.x, 0) / hit.pts.length;
+                 hit.y = hit.pts.reduce((a, q) => a + q.y, 0) / hit.pts.length; }
+      else clusters.push({ x: p.x, y: p.y, pts: [p] });
+    });
+    const snap = (x, y) => {
+      for (const c of clusters) {
+        if (c.pts.length > 1 && Math.hypot(c.x - x, c.y - y) <= GAP_TOL) return { x: c.x, y: c.y };
+      }
+      return { x, y };
+    };
+    return snap;
+  }
+
+  function splitLineAtAllCrossings(line, snap) {
+    const sn = snap || ((x, y) => ({ x, y }));
+    const a0 = sn(line.x1, line.y1), b0 = sn(line.x2, line.y2);
+    const a = { x: a0.x, y: a0.y }, b = { x: b0.x, y: b0.y };
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     if (len < 3) return [];
     const pts = [{ x: a.x, y: a.y, d: 0 }, { x: b.x, y: b.y, d: len }];
@@ -4769,7 +4889,8 @@ ${sketchBlocks}
 
     (objects.lines || []).forEach(other => {
       if (other === line) return;
-      const c = { x: other.x1, y: other.y1 }, d2 = { x: other.x2, y: other.y2 };
+      const c0 = sn(other.x1, other.y1), d0 = sn(other.x2, other.y2);
+      const c = { x: c0.x, y: c0.y }, d2 = { x: d0.x, y: d0.y };
       const hit = segmentIntersection(a, b, c, d2);
       if (hit) push(hit);
       // styki czolowe: koniec innej sciany opierajacy sie o te sciane
@@ -4793,12 +4914,13 @@ ${sketchBlocks}
   function buildPlanarGraph() {
     const nodes = {};   // key -> { x, y, nbrs: [key] }
     const addNode = (x, y) => {
-      const k = faceNodeKey(x, y);
+      const k = resolveNodeKey(nodes, x, y);
       if (!nodes[k]) nodes[k] = { key: k, x, y, nbrs: [] };
       return nodes[k];
     };
+    const snap = weldEndpoints();
     (objects.lines || []).forEach(line => {
-      splitLineAtAllCrossings(line).forEach(seg => {
+      splitLineAtAllCrossings(line, snap).forEach(seg => {
         if (Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) < 3) return;
         const a = addNode(seg.x1, seg.y1), b = addNode(seg.x2, seg.y2);
         if (a.key === b.key) return;

@@ -101,6 +101,8 @@ Adres zapisuje się na urządzeniu — robisz to raz na każdym tablecie.
 
 > **Przenosiny na nowy adres aplikacji.** Pamięć przeglądarki jest przypisana do adresu, więc instalacja spod nowego adresu (np. z Netlify na GitHub Pages) startuje z **pustą listą raportów** — stare nie znikają, po prostu zostają przy starej ikonie. Żeby je przenieść: w starej wersji **💾 Pobierz Kopię Zapasową**, w nowej **📂 Wczytaj Kopię**. Przechodzą razem ze szkicami, pomiarami i podpisami. Ponowne wczytanie tej samej kopii niczego nie zdubluje.
 
+> **Przegrody obok rysunku.** Jeśli na szkicu oznaczyłeś przegrody (SZ1, D1…), w raporcie **obok tego rysunku** pojawia się tabela z ich opisem: oznaczenie, rodzaj, budowa (materiał, grubość, ocieplenie, uwagi) i współczynnik U. Czytając raport nie trzeba wracać do sekcji 3, żeby sprawdzić, co oznacza SZ1. Oznaczenie bez opisu jest wypisane z adnotacją „nie opisano".
+
 > Pod każdym szkicem w raportach jest też **zestawienie długości ścian**: oznaczenie, pomieszczenie, położenie, długość i informacja, czy była zmierzona, czy wyliczona. Dzięki temu sprawdzisz wymiar, którego nie widać na rysunku, bez otwierania aplikacji. Liczba wymiarów **na samym szkicu się nie zmienia**.
 
 > **Jak rozpoznać ścianę.** Każda dostaje oznaczenie złożone z numeru pomieszczenia i litery: `1a`, `1b`, `1c`… Te same etykiety są naniesione **na rysunku w raporcie** — drobne, szare, odsunięte do wnętrza pomieszczenia. Dodatkowo w tabeli jest kolumna **Położenie** (górna, dolna, lewa, prawa, skos), więc ścianę znajdziesz nawet bez wpatrywania się w etykiety.
@@ -232,6 +234,8 @@ Na poddaszu zwykle część powierzchni jest pod skosem. Zamiast rysować ukośn
 Ponowne kliknięcie w zakreskowany obszar pozwala zmienić opis; pusty opis go usuwa. Gumka 🧽 też działa.
 
 **To oznaczenie graficzne.** Kreskowanie trafia na rysunek w raporcie i na listę „Obszary pod skosem", ale **nie zmienia powierzchni pomieszczeń** ani wymiarów — dokładnie jak wcześniej kreski ołówkiem, tylko czytelniej.
+
+> **Drobne szczeliny nie przeszkadzają.** Program traktuje końce ścian oddalone o kilka pikseli jak stykające się, więc pomieszczenie rozpozna się nawet wtedy, gdy przy rysowaniu palcem róg nie trafił idealnie. Sam rysunek zostaje bez zmian.
 
 > Jeśli kliknięcie nic nie daje, obszar nie jest domknięty ścianami — dorysuj brakującą linię i spróbuj ponownie.
 

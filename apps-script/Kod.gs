@@ -276,6 +276,21 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp) {
 
     const rooms = (sk.objects && sk.objects.rooms) || [];
     if (rooms.length) {
+      // Przegrody oznaczone na tym szkicu - opis tuz pod rysunkiem, zeby
+      // czytajac raport nie trzeba bylo szukac, co oznacza SZ1 czy D2.
+      const et = (data.envTables && data.envTables[idx]) ? data.envTables[idx] : null;
+      if (et && et.length) {
+        const eRows = [['Ozn.', 'Rodzaj', 'Budowa', 'U [W/m2K]']];
+        et.forEach(function (v) {
+          const budowa = [v.type, v.thick ? 'gr. ' + v.thick + ' cm' : '',
+                          v.ins ? 'ocieplenie: ' + v.ins + (v.insThick ? ' ' + v.insThick + ' cm' : '') : '',
+                          v.desc].filter(function (x) { return x; }).join('; ');
+          eRows.push([str(v.id), str(v.catName), budowa || '-', str(v.u) || '-']);
+        });
+        body.appendParagraph('Przegrody oznaczone na rysunku').setFontSize(10).setForegroundColor('#6c757d');
+        styledTable(body, eRows);
+      }
+
       // Zestawienie dlugosci scian - policzone w aplikacji, tu tylko wypisane
       const wt = (data.wallTables && data.wallTables[idx]) ? data.wallTables[idx] : null;
       if (wt && wt.length) {
