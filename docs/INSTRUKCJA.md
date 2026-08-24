@@ -381,6 +381,26 @@ Lista przegród do wypełnienia **buduje się z przekroju**, nie z gotowego zest
 3. Wybierz rodzaj: **SZ** (ściana zewnętrzna), **S** (strop), **PG** (podłoga na gruncie), **D** (dach). Numer nadaje się sam — pierwszy dach to D1, kolejny D2.
 4. W sekcji 3 pojawiają się do wypełnienia wyłącznie oznaczone przegrody.
 
+### 🧱 Warstwy przegrody — U liczone automatycznie
+
+Przy każdej przegrodzie jest przycisk **🧱 Warstwy**. Składasz przegrodę z materiałów, a program sam liczy współczynnik U.
+
+1. Wybierz materiał z listy (ponad 50 pozycji: izolacje, konstrukcja, wykończenia, pustki powietrzne).
+2. **Wpisz grubość w centymetrach** — sam, materiał jej nie narzuca.
+3. **Dodaj**. Kolejność od wewnątrz na zewnątrz, strzałkami ▲▼ przestawiasz.
+
+U pojawia się na bieżąco pod listą. Po **Zapisz i przepisz U** wartość trafia do pola przegrody i do raportów.
+
+Liczone tak jak w programach do audytu: opór warstwy = grubość ÷ λ, a opory przejmowania ciepła dobierane po rodzaju przegrody (inne dla ściany, inne dla podłogi). Pustki powietrzne mają stały opór, więc ich grubość nie wpływa na wynik.
+
+**📋 Kopiuj z innej** — większość ścian różni się tylko grubością ocieplenia, więc kopiujesz układ i poprawiasz jedną liczbę.
+
+> Warstwy są **opcjonalne**. Przegroda bez nich działa jak dotąd: opis budowy z listy i U wpisane ręcznie. Ręcznie wpisane U ma pierwszeństwo nad policzonym.
+
+### Konkretne urządzenie grzewcze
+
+W sekcji 2, pod polami wyboru, są pola **Konkretne urządzenie** — osobno dla ogrzewania i osobno dla c.w.u., z tej samej listy 28 pozycji. Po wybraniu **sprawność wpisuje się sama** (przy pompach ciepła COP); można ją nadpisać. Obok pole na rok montażu i moc.
+
 **Bez uzupełnienia budowy każdej oznaczonej przegrody zapis raportu jest blokowany** — komunikat wymienia brakujące symbole.
 
 Pole **Opis** przydaje się przy „Inna budowa" — trafia do wszystkich raportów.
@@ -429,6 +449,18 @@ W sekcji 1 każdy raport ma **Kod zlecenia** (6 znaków, np. `A7K2QD`). Przy now
 4. Audytor kończy opisy i wysyła komplet na Dysk (**🚀 Wyślij na Dysk**) — raport zawiera pracę obu osób.
 
 **Zabezpieczenia:** te same szkice nie dołączą się dwa razy; jeśli obie osoby nazwały szkic tak samo, ten od pomocnika dostaje dopisek „(pomocnik)". Paczki wymiany lądują w folderze **WYMIANA (tablety)** na Dysku i są usuwane po scaleniu.
+
+## Układ raportu
+
+1. Dane ogólne i budynek
+2. Instalacje
+3. **Przegrody budowlane** — przekrój z opisem warstw obok (materiały z grubościami, suma, U)
+4. **Preferencje inwestora** — wyróżnione zieloną ramką, łatwe do znalezienia przy przewijaniu
+5. **Szkice** — rzut z tabelą pomieszczeń obok, tabela otworów pod rysunkiem
+6. Podsumowanie powierzchni
+7. Ściany — zestawienie długości, z podziałem na szkice
+8. Uwagi audytora
+9. Potwierdzenie i podpisy
 
 # CZĘŚĆ III — GDY COŚ NIE DZIAŁA
 

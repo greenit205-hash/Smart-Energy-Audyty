@@ -282,9 +282,16 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp) {
       if (et && et.length) {
         const eRows = [['Ozn.', 'Rodzaj', 'Budowa', 'U [W/m2K]']];
         et.forEach(function (v) {
-          const budowa = [v.type, v.thick ? 'gr. ' + v.thick + ' cm' : '',
-                          v.ins ? 'ocieplenie: ' + v.ins + (v.insThick ? ' ' + v.insThick + ' cm' : '') : '',
-                          v.desc].filter(function (x) { return x; }).join('; ');
+          var budowa;
+          if (v.warstwy && v.warstwy.length) {
+            // opis warstwowy - kazda warstwa w osobnej linii, na koncu suma grubosci
+            budowa = v.warstwy.map(function (w) { return w.mat + ' - ' + w.gr + ' cm'; }).join('\n');
+            if (v.gruboscWarstw) budowa += '\nRAZEM ' + Number(v.gruboscWarstw).toFixed(1) + ' cm';
+          } else {
+            budowa = [v.type, v.thick ? 'gr. ' + v.thick + ' cm' : '',
+                      v.ins ? 'ocieplenie: ' + v.ins + (v.insThick ? ' ' + v.insThick + ' cm' : '') : '',
+                      v.desc].filter(function (x) { return x; }).join('; ');
+          }
           eRows.push([str(v.id), str(v.catName), budowa || '-', str(v.u) || '-']);
         });
         body.appendParagraph('Przegrody oznaczone na rysunku').setFontSize(10).setForegroundColor('#6c757d');
