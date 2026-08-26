@@ -585,6 +585,7 @@
       <option value="Kuchnia">Kuchnia</option>
       <option value="Łazienka">Łazienka</option>
       <option value="WC">WC</option>
+      <option value="Kotłownia">Kotłownia</option>
       <option value="Garderoba">Garderoba</option>
       <option value="Korytarz">Korytarz</option>
       <option value="Wiatrołap">Wiatrołap</option>
@@ -902,7 +903,13 @@
     { n: "Cegła pełna zwykła", g: "Konstrukcja", l: 0.78 },
     { n: "Pustak ceramiczny MAX", g: "Konstrukcja", l: 0.43 },
     { n: "Płyta o wiórach orientowanych (OSB)", g: "Wykończenie", l: 0.13 },
-    { n: "Mur z cegły kratówki", g: "Konstrukcja", l: 0.56 }
+    { n: "Mur z cegły kratówki", g: "Konstrukcja", l: 0.56 },
+    { n: "Tynk lub gładź cementowa", g: "Wykończenie", l: 1.0 },
+    { n: "Płyta styropianowa EPS 70-044 FASADA", g: "Izolacja", l: 0.044 },
+    { n: "Parkiet", g: "Wykończenie", l: 0.20 },
+    { n: "Pianka polietylenowa", g: "Izolacja", l: 0.05 },
+    { n: "Trociny drzewne luzem", g: "Izolacja", l: 0.09 },
+    { n: "Wykładzina z PVC", g: "Wykończenie", l: 0.23 }
   ];
 
   // ================= ŹRÓDŁA CIEPŁA I C.W.U. =================
@@ -954,10 +961,11 @@
 
   // Opór pojedynczej warstwy. Pustka powietrzna ma stały opór, reszta liczy się z λ.
   function oporWarstwy(w) {
+    const g = parseFloat(w.gr);
+    if (w.l > 0) return (g > 0) ? (g / 100) / w.l : null;   // własna lambda
     const mat = materialByName(w.mat);
     if (!mat) return null;
     if (mat.R !== undefined) return mat.R;
-    const g = parseFloat(w.gr);
     if (!(g > 0) || !(mat.l > 0)) return null;
     return (g / 100) / mat.l;          // grubość podajemy w cm
   }
@@ -1071,6 +1079,10 @@
     el.value = arr.length ? JSON.stringify(arr) : '';
   }
 
+  // Pozwala dopisać materiał spoza bazy. Bez lambdy nie da sie policzyc U,
+  // wiec taka warstwa liczy sie tylko do grubosci i opisu w raporcie.
+  const MATERIAL_INNY = 'Inny (wpisz własny)';
+
   function fillMaterialOptions() {
     const dl = document.getElementById('layerMatOptions');
     if (!dl) return;
@@ -1083,7 +1095,7 @@
         html += `<option value="${m.n}">${g} · ${opis}</option>`;
       });
     });
-    dl.innerHTML = html;
+    dl.innerHTML = `<option value="${MATERIAL_INNY}">wpisz własną nazwę materiału</option>` + html;
   }
 
   function openLayersDialog(key, cat) {
@@ -1140,12 +1152,21 @@
     const nazwa = document.getElementById('layerMatInput').value.trim();
     const gr = document.getElementById('layerThickInput').value.trim().replace(',', '.');
     if (!nazwa) { alert('Wybierz materiał z listy.'); return; }
-    if (!materialByName(nazwa)) {
-      alert('Nie znam materiału „' + nazwa + '".\n\nWybierz pozycję z listy — program potrzebuje współczynnika λ, żeby policzyć U.');
-      return;
-    }
     if (!(parseFloat(gr) > 0)) { alert('Podaj grubość warstwy w centymetrach.'); return; }
-    layersDraft.push({ mat: nazwa, gr: parseFloat(gr).toFixed(1) });
+
+    if (nazwa === MATERIAL_INNY || !materialByName(nazwa)) {
+      const podp = (nazwa === MATERIAL_INNY) ? '' : nazwa;
+      const w = prompt('Nazwa materiału (spoza bazy):', podp);
+      if (w === null || !String(w).trim()) return;
+      const lam = prompt('Współczynnik λ [W/(m·K)] — zostaw puste, jeśli nie znasz.\n\nBez λ program nie policzy U tej przegrody.', '');
+      const l = (lam !== null && String(lam).trim()) ? parseFloat(String(lam).replace(',', '.')) : NaN;
+      const w2 = { mat: String(w).trim(), gr: parseFloat(gr).toFixed(1), wlasny: true };
+      if (l > 0) w2.l = l;
+      layersDraft.push(w2);
+    } else {
+      layersDraft.push({ mat: nazwa, gr: parseFloat(gr).toFixed(1) });
+    }
+
     document.getElementById('layerMatInput').value = '';
     document.getElementById('layerThickInput').value = '';
     renderLayers();
@@ -1557,12 +1578,15 @@
   function saveAuditLocal(event) {
     if(event) event.preventDefault();
     if(!document.querySelector('input[name="fullName"]').value || !document.querySelector('input[name="address"]').value) { alert("Wypełnij przynajmniej Imię/Nazwisko i Adres przed zapisem."); return; }
+    // Przegroda jest opisana, jeśli ma warstwy ALBO wpisany opis własny.
     const incompleteTags = getAllEnvTags().filter(t => {
-        const el = document.querySelector(`[name="${t.label}_type"]`);
-        return !el || !el.value || el.value.indexOf('Wybierz') === 0;
+        const w = readLayers(t.label);
+        if (w.length) return false;
+        const opis = document.querySelector(`[name="${t.label}_desc"]`);
+        return !(opis && String(opis.value).trim());
     });
     if (incompleteTags.length) {
-        alert(`Uzupełnij budowę dla oznaczonych na przekroju przegród: ${incompleteTags.map(t => t.label).join(', ')}\n\nKażda ściana/strop/dach/podłoga oznaczona narzędziem 🏷️ Przegroda musi mieć wybraną budowę w sekcji „3. Przegrody budowlane", zanim zapiszesz raport.`);
+        alert(`Uzupełnij budowę dla oznaczonych na przekroju przegród: ${incompleteTags.map(t => t.label).join(', ')}\n\nW sekcji „3. Przegrody budowlane" złóż każdą z warstw (🧱 Warstwy przegrody) albo wpisz opis własny.`);
         return;
     }
 
@@ -1732,7 +1756,7 @@
     Object.keys(tags).forEach(k => {
       const t = tags[k];
       const id = t.cat + t.num;
-      const type = audit[id + '_type'];
+      const type = audit[id + '_type'];   // pole ze starszych raportów, zachowane dla zgodności
       let warstwy = [];
       try { const raw = audit[id + '_layers']; if (raw) warstwy = JSON.parse(raw) || []; } catch (e) {}
       const uObl = warstwy.length ? obliczU(t.cat, warstwy) : null;
@@ -1902,7 +1926,9 @@
           const a = parseFloat(r.area);
           if (r.area !== "Wymaga pomiaru!") total += a || 0;
           const v = (!isNaN(a) && skH !== null) ? a * skH : null; if (v !== null) volTotal += v;
-          roomTable += `<tr><td>${esc(r.num)}</td><td>${esc(r.name)}</td><td>${esc(r.heated)}</td><td>${esc(r.area)}</td><td>${v !== null ? v.toFixed(2) : '-'}</td></tr>`; });
+          const st = (r.heated === 'Nie') ? ' style="background:#fdecea;color:#a4262c;font-weight:bold"'
+                   : (r.ac === 'Tak' ? ' style="background:#e8f1fb;color:#0b4a8f;font-weight:bold"' : '');
+          roomTable += `<tr${st}><td>${esc(r.num)}</td><td>${esc(r.name)}</td><td>${esc(r.heated)}</td><td>${esc(r.area)}</td><td>${v !== null ? v.toFixed(2) : '-'}</td></tr>`; });
         roomTable += `<tr><th colspan="3" style="text-align:right">RAZEM</th><th>${total.toFixed(2)}</th><th>${volTotal.toFixed(2)}</th></tr></table>`;
       }
 
@@ -2064,7 +2090,11 @@
         if (!isNaN(a)) roomAreaTotal += a;
         const v = (!isNaN(a) && skH !== null) ? a * skH : null;
         if (v !== null) roomVolTotal += v;
-        return `<tr><td>${esc(r.num)}</td><td>${esc(r.name)}</td><td>${r.heated === 'Tak' ? '🔥' : '❄️'} ${esc(r.heated)}</td><td class="num">${esc(r.area)}</td><td class="num">${v !== null ? v.toFixed(2) : '–'}</td></tr>`;
+        // nieogrzewane na czerwono, klimatyzowane na niebiesko
+        const nieogrz = (r.heated === 'Nie');
+        const klima = (r.ac === 'Tak');
+        const cls = nieogrz ? ' class="r-nieogrz"' : (klima ? ' class="r-klima"' : '');
+        return `<tr${cls}><td>${esc(r.num)}</td><td>${esc(r.name)}${klima ? ' 💨' : ''}</td><td>${r.heated === 'Tak' ? '🔥' : '❄️'} ${esc(r.heated)}</td><td class="num">${esc(r.area)}</td><td class="num">${v !== null ? v.toFixed(2) : '–'}</td></tr>`;
       }).join('');
       const ops = sk.objects.openings || [];
       const opGroups = groupOpenings(ops);
@@ -2166,6 +2196,10 @@
   .kv dd { margin:0; font-weight:600; }
   .sketch { background:#fff; border:1px solid #dee2e6; border-radius:10px; padding:8px; text-align:center; margin-bottom:14px; }
   .sketch-row { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+  /* Nieogrzewane pomieszczenia na czerwono, klimatyzowane na niebiesko -
+     od razu widać, co wypada poza bryłą ogrzewaną. */
+  tr.r-nieogrz td { background:#fdecea !important; color:#a4262c !important; font-weight:600; }
+  tr.r-klima  td { background:#e8f1fb !important; color:#0b4a8f !important; font-weight:600; }
   table.warstwy { width:100%; margin:0; font-size:.78rem; }
   table.warstwy td { border:none; border-bottom:1px dotted #ccc; padding:1px 0; }
   table.warstwy tr.suma td { border-bottom:none; border-top:1px solid #888; font-weight:700; }

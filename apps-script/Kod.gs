@@ -139,12 +139,14 @@ function doPost(e) {
 
     // 4. KARTA OBIEKTU (HTML) - szablon przychodzi z aplikacji, tu wstawiamy obrazy
     let cardUrl = '';
+    let cardHtmlPelna = '';   // karta z podstawionymi rysunkami - z niej robimy PDF
     if (data.cardHtml) {
       try {
         const html = String(data.cardHtml).replace(/\[\[SKETCH_(\d+)\]\]/g, function (m, idx) {
           const im = (data.sketchImages || [])[Number(idx)];
           return im ? im.dataUrl : '';
         });
+        cardHtmlPelna = html;
         const cardFile = folder.createFile(
           Utilities.newBlob(html, 'text/html', 'Karta obiektu - ' + clientName + '.html'));
         cardUrl = cardFile.getUrl();
@@ -154,7 +156,7 @@ function doPost(e) {
     }
 
     // 5. RAPORT: DOKUMENT GOOGLE + PDF
-    const docs = buildGoogleDoc(data, folder, imageBlobs, clientName, stamp);
+    const docs = buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, cardHtmlPelna);
 
     // 6. REJESTR
     try {
@@ -179,7 +181,7 @@ function doPost(e) {
 // ---------------------------------------------------------------------
 // RAPORT W DOKUMENTACH GOOGLE + EKSPORT PDF
 // ---------------------------------------------------------------------
-function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp) {
+function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) {
   const docName = 'Audyt - ' + clientName + ' (' + stamp + ')';
   const doc = DocumentApp.create(docName);
   const body = doc.getBody();
@@ -393,10 +395,24 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp) {
 
   let pdfUrl = '';
   try {
-    const pdf = docFile.getAs('application/pdf').setName(docName + '.pdf');
-    pdfUrl = folder.createFile(pdf).getUrl();
+    // PDF robimy z KARTY OBIEKTU, nie z Dokumentu Google - karta ma czytelniejszy
+    // uklad (kafelki, tabele obok szkicow, kolory). Dokument Google zostaje
+    // jako wersja do edycji.
+    if (kartaHtml) {
+      const htmlPdf = HtmlService.createHtmlOutput(String(kartaHtml))
+                                 .getBlob().getAs('application/pdf')
+                                 .setName(docName + '.pdf');
+      pdfUrl = folder.createFile(htmlPdf).getUrl();
+    } else {
+      const pdf = docFile.getAs('application/pdf').setName(docName + '.pdf');
+      pdfUrl = folder.createFile(pdf).getUrl();
+    }
   } catch (err) {
-    Logger.log('PDF: ' + err);
+    Logger.log('PDF z karty nie wyszedl, biore Dokument Google: ' + err);
+    try {
+      const pdf = docFile.getAs('application/pdf').setName(docName + '.pdf');
+      pdfUrl = folder.createFile(pdf).getUrl();
+    } catch (e2) { Logger.log('PDF: ' + e2); }
   }
 
   return { docUrl: doc.getUrl(), pdfUrl: pdfUrl };

@@ -395,7 +395,11 @@ Liczone tak jak w programach do audytu: opór warstwy = grubość ÷ λ, a opory
 
 **📋 Kopiuj z innej** — większość ścian różni się tylko grubością ocieplenia, więc kopiujesz układ i poprawiasz jedną liczbę.
 
-> Warstwy są **opcjonalne**. Przegroda bez nich działa jak dotąd: opis budowy z listy i U wpisane ręcznie. Ręcznie wpisane U ma pierwszeństwo nad policzonym.
+**Materiał spoza bazy.** Wybierz **Inny (wpisz własny)** — program zapyta o nazwę i o λ. Jeśli λ podasz, warstwa liczy się do U normalnie; jeśli nie, wchodzi tylko do opisu i grubości, a U trzeba wpisać ręcznie.
+
+> Przegroda musi mieć **warstwy albo opis własny** — bez jednego z tych dwóch zapis raportu jest blokowany. Ręcznie wpisane U ma pierwszeństwo nad policzonym.
+
+**W tabelach raportu** pomieszczenia **nieogrzewane są na czerwono**, a **klimatyzowane na niebiesko** — od razu widać, co wypada poza bryłą ogrzewaną.
 
 ### Konkretne urządzenie grzewcze
 
@@ -455,6 +459,7 @@ W sekcji 1 każdy raport ma **Kod zlecenia** (6 znaków, np. `A7K2QD`). Przy now
 1. Dane ogólne i budynek
 2. Instalacje
 3. **Przegrody budowlane** — przekrój z opisem warstw obok (materiały z grubościami, suma, U)
+   · PDF na Dysku powstaje teraz **z karty obiektu**, więc wygląda tak samo jak ona; Dokument Google zostaje jako wersja do edycji
 4. **Preferencje inwestora** — wyróżnione zieloną ramką, łatwe do znalezienia przy przewijaniu
 5. **Szkice** — rzut z tabelą pomieszczeń obok, tabela otworów pod rysunkiem
 6. Podsumowanie powierzchni

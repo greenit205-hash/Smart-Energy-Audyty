@@ -1,7 +1,7 @@
 // Smart Energy Audyty - Service Worker
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v35';
+const CACHE_NAME = 'smart-energy-v38';
 
 const APP_SHELL = [
   './',
