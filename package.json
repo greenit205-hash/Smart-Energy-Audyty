@@ -1,0 +1,11 @@
+{
+  "name": "smart-energy-audyty",
+  "private": true,
+  "description": "Aplikacja audytora energetycznego - testy",
+  "scripts": {
+    "test": "node tests/uruchom-wszystkie.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

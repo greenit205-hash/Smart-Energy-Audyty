@@ -1,0 +1,556 @@
+{
+  "_opis": "Baza materiałów do warstwowego opisu przegród. lambda = W/(m·K), rho = kg/m³, cp = J/(kg·K), delta = kg/(m·s·Pa). R warstwy = grubość[m] / lambda.",
+  "_zrodlo": "zrzuty ekranu przekazane przez audytora, 08.2026",
+  "materialy": [
+    {
+      "lp": 1,
+      "nazwa": "Płyta styropianowa EPS 100-036 PODŁOGA",
+      "grupa": "Izolacja",
+      "rho": 20,
+      "lambda": 0.036,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 2,
+      "nazwa": "Wełna mineralna 0,036",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.036,
+      "cp": 630,
+      "delta": 1.33e-10
+    },
+    {
+      "lp": 3,
+      "nazwa": "Wełna mineralna 0,055",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.055,
+      "cp": 630,
+      "delta": 1.33e-10
+    },
+    {
+      "lp": 4,
+      "nazwa": "Płyta styropianowa EPS 70-038 FASADA",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.038,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 5,
+      "nazwa": "Płyta styropianowa EPS 70-031 FASADA (grafit)",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.031,
+      "cp": 1450,
+      "delta": 3.33e-12,
+      "_uwaga": "KONFLIKT z lp.23 - ta sama nazwa, lambda 0,033"
+    },
+    {
+      "lp": 6,
+      "nazwa": "Celuloza wdmuchiwana 0,038",
+      "grupa": "Izolacja",
+      "rho": 25,
+      "lambda": 0.038,
+      "cp": 2150,
+      "delta": 0
+    },
+    {
+      "lp": 7,
+      "nazwa": "Wełna mineralna 0,035",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.035,
+      "cp": 630,
+      "delta": 1.33e-10
+    },
+    {
+      "lp": 8,
+      "nazwa": "Płyty z wełny skalnej 0,036",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.036,
+      "cp": 630,
+      "delta": 1.33e-10,
+      "_uwaga": "KONFLIKT z lp.28 - ta sama nazwa, lambda 0,039"
+    },
+    {
+      "lp": 9,
+      "nazwa": "Płyta styropianowa EPS 100-044 PODŁOGA",
+      "grupa": "Izolacja",
+      "rho": 20,
+      "lambda": 0.044,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 10,
+      "nazwa": "Tynk mineralny",
+      "grupa": "Wykończenie",
+      "rho": 1500,
+      "lambda": 1.0,
+      "cp": 1000,
+      "delta": 2.82e-12
+    },
+    {
+      "lp": 11,
+      "nazwa": "Tynk lub gładź cementowo-wapienna",
+      "grupa": "Wykończenie",
+      "rho": 1850,
+      "lambda": 0.82,
+      "cp": 840,
+      "delta": 1.25e-11
+    },
+    {
+      "lp": 12,
+      "nazwa": "Wylewka betonowa",
+      "grupa": "Podkład",
+      "rho": 1900,
+      "lambda": 1.0,
+      "cp": 840,
+      "delta": 2.08e-11
+    },
+    {
+      "lp": 13,
+      "nazwa": "Płyta GK",
+      "grupa": "Wykończenie",
+      "rho": 968,
+      "lambda": 0.25,
+      "cp": 1000,
+      "delta": 2e-11,
+      "_uwaga": "lambda 0,25 potwierdzona drugim zrzutem (0,0125 m -> R 0,05)"
+    },
+    {
+      "lp": 14,
+      "nazwa": "Pustak",
+      "grupa": "Konstrukcja",
+      "rho": 1100,
+      "lambda": 0.5,
+      "cp": 880,
+      "delta": 2.5e-11
+    },
+    {
+      "lp": 15,
+      "nazwa": "Wełna mineralna 0,033",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.033,
+      "cp": 630,
+      "delta": 1.33e-10
+    },
+    {
+      "lp": 16,
+      "nazwa": "Membrana dachowa",
+      "grupa": "Wykończenie",
+      "rho": 140,
+      "lambda": 0.04,
+      "cp": 0,
+      "delta": 6.67e-12
+    },
+    {
+      "lp": 17,
+      "nazwa": "Podkład z betonu",
+      "grupa": "Podkład",
+      "rho": 1900,
+      "lambda": 1.0,
+      "cp": 840,
+      "delta": 2.08e-11
+    },
+    {
+      "lp": 18,
+      "nazwa": "Pianka poliuretanowa 0,037",
+      "grupa": "Izolacja",
+      "rho": 30,
+      "lambda": 0.037,
+      "cp": 1460,
+      "delta": 1.6e-10
+    },
+    {
+      "lp": 19,
+      "nazwa": "Płyta betonowa",
+      "grupa": "Konstrukcja",
+      "rho": 2400,
+      "lambda": 2.5,
+      "cp": 1000,
+      "delta": 2.12e-12
+    },
+    {
+      "lp": 20,
+      "nazwa": "Strop z cegły dziurawki",
+      "grupa": "Konstrukcja",
+      "rho": 2400,
+      "lambda": 1.07,
+      "cp": 1000,
+      "delta": 2.12e-12
+    },
+    {
+      "lp": 21,
+      "nazwa": "Styrobeton",
+      "grupa": "Konstrukcja",
+      "rho": 159,
+      "lambda": 0.06,
+      "cp": 1500,
+      "delta": 0
+    },
+    {
+      "lp": 22,
+      "nazwa": "Płyty XPS 0,034",
+      "grupa": "Izolacja",
+      "rho": 30,
+      "lambda": 0.034,
+      "cp": 1450,
+      "delta": 1.33e-12
+    },
+    {
+      "lp": 23,
+      "nazwa": "Płyta styropianowa EPS 70-033 FASADA (grafit)",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.033,
+      "cp": 1450,
+      "delta": 3.33e-12,
+      "_uwaga": "na zrzucie podpisana jako 70-031 - poprawiona nazwa wg lambdy"
+    },
+    {
+      "lp": 24,
+      "nazwa": "Piana poliuretanowa 0,038",
+      "grupa": "Izolacja",
+      "rho": 30,
+      "lambda": 0.038,
+      "cp": 1460,
+      "delta": 1.6e-10
+    },
+    {
+      "lp": 25,
+      "nazwa": "Płyta styropianowa EPS 70-032 FASADA (grafit)",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.032,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 26,
+      "nazwa": "Płyta izolacyjna PIR 0,022",
+      "grupa": "Izolacja",
+      "rho": 30,
+      "lambda": 0.022,
+      "cp": 1400,
+      "delta": 2e-12
+    },
+    {
+      "lp": 27,
+      "nazwa": "Swisspor EPS 100-030 PODŁOGA",
+      "grupa": "Izolacja",
+      "rho": 20,
+      "lambda": 0.03,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 28,
+      "nazwa": "Płyty z wełny skalnej 0,039",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.039,
+      "cp": 630,
+      "delta": 1.33e-10,
+      "_uwaga": "na zrzucie podpisana jako 0,036 - poprawiona nazwa wg lambdy"
+    },
+    {
+      "lp": 29,
+      "nazwa": "Wełna drzewna Steico 0,036",
+      "grupa": "Izolacja",
+      "rho": 22,
+      "lambda": 0.036,
+      "cp": 630,
+      "delta": 1.33e-10
+    },
+    {
+      "lp": 30,
+      "nazwa": "Płyta styropianowa EPS 80-038",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.038,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 31,
+      "nazwa": "Pianobeton",
+      "grupa": "Konstrukcja",
+      "rho": 300,
+      "lambda": 0.07,
+      "cp": 840,
+      "delta": 0
+    },
+    {
+      "lp": 32,
+      "nazwa": "Siatka z klejem",
+      "grupa": "Wykończenie",
+      "rho": 2400,
+      "lambda": 1.0,
+      "cp": 1000,
+      "delta": 4e-12
+    },
+    {
+      "lp": 33,
+      "nazwa": "Płyta styropianowa EPS 70-040 FASADA",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.04,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 34,
+      "nazwa": "Płyta styropianowa EPS 100-031 PODŁOGA (grafit)",
+      "grupa": "Izolacja",
+      "rho": 15,
+      "lambda": 0.031,
+      "cp": 1450,
+      "delta": 3.33e-12
+    },
+    {
+      "lp": 35,
+      "nazwa": "Piana poliuretanowa zamkniętokomórkowa",
+      "grupa": "Izolacja",
+      "rho": 30,
+      "lambda": 0.022,
+      "cp": 1400,
+      "delta": 2e-12
+    },
+    {
+      "lp": 36,
+      "nazwa": "Mur z betonu komórkowego na zaprawie cementowo-wapiennej",
+      "grupa": "Konstrukcja",
+      "lambda": 0.38,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 37,
+      "nazwa": "Płyty wiórkowo-cementowe",
+      "grupa": "Wykończenie",
+      "lambda": 0.14,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 38,
+      "nazwa": "Deska",
+      "grupa": "Wykończenie",
+      "lambda": 0.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 39,
+      "nazwa": "Niewentylowane warstwy powietrza",
+      "grupa": "Pustka powietrzna",
+      "lambda": null,
+      "R_stale": 0.18,
+      "_uwaga": "pustka powietrzna - ma stały opór R, nie liczy się z lambdy"
+    },
+    {
+      "lp": 40,
+      "nazwa": "Panele podłogowe",
+      "grupa": "Wykończenie",
+      "lambda": 0.05,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 41,
+      "nazwa": "Beton zbrojony z 1% stali",
+      "grupa": "Konstrukcja",
+      "lambda": 2.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 42,
+      "nazwa": "Gres",
+      "grupa": "Wykończenie",
+      "lambda": 1.0,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 43,
+      "nazwa": "Piasek średni",
+      "grupa": "Podkład",
+      "lambda": 0.4,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 44,
+      "nazwa": "Bale drewniane",
+      "grupa": "Konstrukcja",
+      "lambda": 0.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 45,
+      "nazwa": "Kantówki drewniane",
+      "grupa": "Konstrukcja",
+      "lambda": 0.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 46,
+      "nazwa": "Boazeria",
+      "grupa": "Wykończenie",
+      "lambda": 0.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 47,
+      "nazwa": "Legary",
+      "grupa": "Konstrukcja",
+      "lambda": 0.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 48,
+      "nazwa": "Podłoga drewniana",
+      "grupa": "Wykończenie",
+      "lambda": 0.3,
+      "_zrodlo": "zrzut z kalkulatora warstw"
+    },
+    {
+      "lp": 49,
+      "nazwa": "Mur z cegły silikatowej drążonej i bloków drążonych",
+      "grupa": "Konstrukcja",
+      "rho": 1600,
+      "lambda": 0.8,
+      "cp": 880,
+      "delta": 3.8e-11
+    },
+    {
+      "lp": 50,
+      "nazwa": "Cegła pełna zwykła",
+      "grupa": "Konstrukcja",
+      "rho": 1800,
+      "lambda": 0.78,
+      "cp": 880,
+      "delta": 2.86e-11
+    },
+    {
+      "lp": 51,
+      "nazwa": "Pustak ceramiczny MAX",
+      "grupa": "Konstrukcja",
+      "rho": 1100,
+      "lambda": 0.43,
+      "cp": 880,
+      "delta": 2.5e-11
+    },
+    {
+      "lp": 52,
+      "nazwa": "Płyta o wiórach orientowanych (OSB)",
+      "grupa": "Wykończenie",
+      "rho": 650,
+      "lambda": 0.13,
+      "cp": 1700,
+      "delta": 5.67e-12
+    },
+    {
+      "lp": 53,
+      "nazwa": "Mur z cegły kratówki",
+      "grupa": "Konstrukcja",
+      "rho": 1300,
+      "lambda": 0.56,
+      "cp": 880,
+      "delta": 4.17e-11
+    },
+    {
+      "lp": 54,
+      "nazwa": "Tynk lub gładź cementowa",
+      "grupa": "Wykończenie",
+      "lambda": 1.0,
+      "rho": 2000,
+      "cp": 840,
+      "delta": 1.25e-11
+    },
+    {
+      "lp": 55,
+      "nazwa": "Płyta styropianowa EPS 70-044 FASADA",
+      "grupa": "Izolacja",
+      "lambda": 0.044
+    },
+    {
+      "lp": 56,
+      "nazwa": "Parkiet",
+      "grupa": "Wykończenie",
+      "lambda": 0.2
+    },
+    {
+      "lp": 57,
+      "nazwa": "Pianka polietylenowa",
+      "grupa": "Izolacja",
+      "lambda": 0.05,
+      "rho": 70,
+      "cp": 2300,
+      "delta": 1.7e-12
+    },
+    {
+      "lp": 58,
+      "nazwa": "Trociny drzewne luzem",
+      "grupa": "Izolacja",
+      "rho": 250,
+      "lambda": 0.09,
+      "cp": 2510,
+      "delta": 1.04e-10
+    },
+    {
+      "lp": 59,
+      "nazwa": "Wykładzina z PVC",
+      "grupa": "Wykończenie",
+      "rho": 1300,
+      "lambda": 0.23,
+      "cp": 1460,
+      "delta": 4e-15
+    },
+    {
+      "lp": 60,
+      "nazwa": "Żużel paleniskowy",
+      "grupa": "Podkład",
+      "rho": 1000,
+      "lambda": 0.25,
+      "cp": 750,
+      "_dopisane": "08.2026 - ze starego skanu audytora",
+      "_do_weryfikacji": "lambda 0,25 dla zuzla paleniskowego suchego, rho ~1000. Zawilgocony w podlodze na gruncie ma lambde wyrazne wyzsza (0,30-0,45)."
+    },
+    {
+      "lp": 61,
+      "nazwa": "Papa asfaltowa",
+      "grupa": "Wykończenie",
+      "rho": 1100,
+      "lambda": 0.18,
+      "cp": 1000,
+      "delta": 2.3e-15,
+      "_dopisane": "08.2026 - ze starego skanu audytora",
+      "_do_weryfikacji": "wartosc typowa dla asfaltu/papy; wplyw na U pomijalny przy 0,5-1 cm"
+    },
+    {
+      "lp": 62,
+      "nazwa": "Płyta pilśniowa miękka",
+      "grupa": "Izolacja",
+      "rho": 250,
+      "lambda": 0.07,
+      "cp": 1450,
+      "_dopisane": "08.2026 - ze starego skanu audytora",
+      "_do_weryfikacji": "plyta porowata rho ~250. Twarda pilsniowa (rho 800-1000) ma lambde ok. 0,17 - to inny material."
+    },
+    {
+      "lp": 63,
+      "nazwa": "Eternit (płyta azbestowo-cementowa)",
+      "grupa": "Wykończenie",
+      "rho": 1400,
+      "lambda": 0.35,
+      "cp": 840,
+      "_dopisane": "08.2026 - ze starego skanu audytora",
+      "_do_weryfikacji": "w tabelach spotyka sie 0,35-0,95 zaleznie od gestosci plyty; wplyw na U pomijalny przy 6 mm"
+    }
+  ],
+  "_braki_do_uzupelnienia": [],
+  "_historia": [
+    "08.2026: dopisano lp. 60-63 (zuzel paleniskowy, papa asfaltowa, plyta pilsniowa miekka, eternit) - lista brakow wyczyszczona"
+  ]
+}

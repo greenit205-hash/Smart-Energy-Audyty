@@ -1,7 +1,8 @@
 // Smart Energy Audyty - Service Worker
+// v39: dopisano 4 materialy (zuzel paleniskowy, papa, plyta pilsniowa miekka, eternit)
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v38';
+const CACHE_NAME = 'smart-energy-v39';
 
 const APP_SHELL = [
   './',

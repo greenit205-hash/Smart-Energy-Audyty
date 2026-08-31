@@ -1,0 +1,274 @@
+{
+  "_opis": "Źródła ciepła i c.w.u. ze sprawnościami. eta_min / eta_max - sprawność wytwarzania (część źródeł ma widełki).",
+  "_zrodlo": "zrzuty ekranu przekazane przez audytora, 08.2026",
+  "zrodla": [
+    {
+      "lp": 1,
+      "nazwa": "Kocioł węglowy",
+      "eta_min": 0.82,
+      "eta_max": 0.82,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe"
+    },
+    {
+      "lp": 2,
+      "nazwa": "Kolektory słoneczne",
+      "eta_min": 0.7,
+      "eta_max": 0.7,
+      "rodzaj": "Odnawialne",
+      "grupa": "OZE"
+    },
+    {
+      "lp": 3,
+      "nazwa": "Wężownica w piecu kaflowym",
+      "eta_min": 0.5,
+      "eta_max": 0.5,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Piece i inne"
+    },
+    {
+      "lp": 4,
+      "nazwa": "Grzałka elektryczna w zasobniku c.w.u.",
+      "eta_min": 0.99,
+      "eta_max": 0.99,
+      "rodzaj": "Odnawialne",
+      "grupa": "Elektryczne",
+      "_uwaga": "pozycja występuje na liście dwa razy (lp. 4 i 5) z identycznymi danymi"
+    },
+    {
+      "lp": 5,
+      "nazwa": "Grzałka elektryczna w zasobniku c.w.u.",
+      "eta_min": 0.99,
+      "eta_max": 0.99,
+      "rodzaj": "Odnawialne",
+      "grupa": "Elektryczne",
+      "_uwaga": "duplikat lp. 4"
+    },
+    {
+      "lp": 6,
+      "nazwa": "Kocioł na pellet drzewny (podwyższony standard)",
+      "eta_min": 0.88,
+      "eta_max": 0.88,
+      "rodzaj": "Odnawialne",
+      "grupa": "Kotły na biomasę"
+    },
+    {
+      "lp": 7,
+      "nazwa": "Kocioł węglowy 5 klasa",
+      "eta_min": 0.88,
+      "eta_max": 0.88,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe"
+    },
+    {
+      "lp": 8,
+      "nazwa": "Kocioł zgazowujący drewno (podwyższony standard)",
+      "eta_min": 0.92,
+      "eta_max": 0.92,
+      "rodzaj": "Odnawialne",
+      "grupa": "Kotły na biomasę"
+    },
+    {
+      "lp": 9,
+      "nazwa": "Kocioł węglowy 1980-2000",
+      "eta_min": 0.65,
+      "eta_max": 0.65,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe"
+    },
+    {
+      "lp": 10,
+      "nazwa": "Kocioł na pellet SAS BIO EFEKT PLUS 23KW",
+      "eta_min": 0.93,
+      "eta_max": 0.93,
+      "rodzaj": "Odnawialne",
+      "grupa": "Kotły na biomasę",
+      "model": true
+    },
+    {
+      "lp": 11,
+      "nazwa": "Kocioł na pellet drzewny 5 klasa",
+      "eta_min": 0.85,
+      "eta_max": 0.85,
+      "rodzaj": "Odnawialne",
+      "grupa": "Kotły na biomasę"
+    },
+    {
+      "lp": 12,
+      "nazwa": "Saunier Duval Thelia 20 kW",
+      "eta_min": 0.98,
+      "eta_max": 0.98,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły gazowe",
+      "model": true
+    },
+    {
+      "lp": 13,
+      "nazwa": "Piec wolnostojący (koza)",
+      "eta_min": 0.7,
+      "eta_max": 0.7,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Piece i inne"
+    },
+    {
+      "lp": 14,
+      "nazwa": "Gazowy podgrzewacz akumulacyjny",
+      "eta_min": 0.9,
+      "eta_max": 0.9,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły gazowe"
+    },
+    {
+      "lp": 15,
+      "nazwa": "Kocioł MPM DS DUO 24",
+      "eta_min": 0.866,
+      "eta_max": 0.869,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe",
+      "model": true
+    },
+    {
+      "lp": 16,
+      "nazwa": "Kocioł gazowy kondensacyjny Vaillant ecoTEC plus",
+      "eta_min": 0.94,
+      "eta_max": 0.94,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły gazowe",
+      "model": true
+    },
+    {
+      "lp": 17,
+      "nazwa": "Kocioł gazowy Buderus Logamax plus GB162-85 V2",
+      "eta_min": 0.873,
+      "eta_max": 0.873,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły gazowe",
+      "model": true
+    },
+    {
+      "lp": 18,
+      "nazwa": "Kocioł na pellet SAS BIO EFEKT PLUS 17KW",
+      "eta_min": 0.92,
+      "eta_max": 0.92,
+      "rodzaj": "Odnawialne",
+      "grupa": "Kotły na biomasę",
+      "model": true
+    },
+    {
+      "lp": 19,
+      "nazwa": "Kocioł węglowy KAMEN WDS 20KW 5 klasa",
+      "eta_min": 0.896,
+      "eta_max": 0.896,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe",
+      "model": true
+    },
+    {
+      "lp": 20,
+      "nazwa": "Kocioł gazowy kondensacyjny Vaillant VC 206/5-5",
+      "eta_min": 0.94,
+      "eta_max": 0.94,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły gazowe",
+      "model": true
+    },
+    {
+      "lp": 21,
+      "nazwa": "Kocioł węglowy KAMEN WDS 15KW 5 klasa",
+      "eta_min": 0.896,
+      "eta_max": 0.896,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe",
+      "model": true
+    },
+    {
+      "lp": 22,
+      "nazwa": "Pompa ciepła powietrze-woda",
+      "eta_min": 3.5,
+      "eta_max": 3.5,
+      "rodzaj": "Odnawialne",
+      "grupa": "Pompy ciepła",
+      "cop": true,
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI",
+      "_uwaga": "eta to COP sezonowy (SCOP); zalezy od temperatury zasilania"
+    },
+    {
+      "lp": 23,
+      "nazwa": "Pompa ciepła gruntowa",
+      "eta_min": 4.0,
+      "eta_max": 4.0,
+      "rodzaj": "Odnawialne",
+      "grupa": "Pompy ciepła",
+      "cop": true,
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI",
+      "_uwaga": "eta to COP sezonowy (SCOP)"
+    },
+    {
+      "lp": 24,
+      "nazwa": "Pompa ciepła powietrze-woda (c.w.u.)",
+      "eta_min": 2.8,
+      "eta_max": 2.8,
+      "rodzaj": "Odnawialne",
+      "grupa": "Pompy ciepła",
+      "cop": true,
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI",
+      "_uwaga": "osobna pozycja dla c.w.u. - nizszy COP niz przy c.o."
+    },
+    {
+      "lp": 25,
+      "nazwa": "Kocioł na ekogroszek",
+      "eta_min": 0.82,
+      "eta_max": 0.82,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły węglowe",
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI"
+    },
+    {
+      "lp": 26,
+      "nazwa": "Kocioł olejowy",
+      "eta_min": 0.86,
+      "eta_max": 0.86,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Kotły olejowe",
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI"
+    },
+    {
+      "lp": 27,
+      "nazwa": "Ogrzewanie elektryczne bezpośrednie",
+      "eta_min": 0.99,
+      "eta_max": 0.99,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Elektryczne",
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI"
+    },
+    {
+      "lp": 28,
+      "nazwa": "Kominek z płaszczem wodnym",
+      "eta_min": 0.7,
+      "eta_max": 0.7,
+      "rodzaj": "Odnawialne",
+      "grupa": "Piece i inne",
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI"
+    },
+    {
+      "lp": 29,
+      "nazwa": "Sieć ciepłownicza",
+      "eta_min": 0.95,
+      "eta_max": 0.95,
+      "rodzaj": "Konwencjonalne",
+      "grupa": "Piece i inne",
+      "cop": true,
+      "_dopisane": "dopisane przez audytora, wartosc typowa - DO WERYFIKACJI"
+    }
+  ],
+  "_braki_do_uzupelnienia": [],
+  "_pytania": [
+    "Czy 'Grzałka elektryczna w zasobniku c.w.u.' faktycznie ma być oznaczona jako Odnawialne? Na zrzucie tak jest, ale to nietypowe.",
+    "Czy lista ma być wspólna dla ogrzewania i c.w.u., czy dwie osobne?",
+    "Czy przy wyborze źródła potrzebne są dodatkowe pola: rok montażu, moc [kW], paliwo, obecność zasobnika?"
+  ],
+  "_historia": [
+    "08.2026: dopisano lp. 22-29 - te pozycje sa juz w aplikacji (flaga dodane:true). Lista brakow wyczyszczona.",
+    "W aplikacji jest 28 pozycji, w tym pliku 29 - roznica to duplikat lp. 4/5 ze zrzutu (w aplikacji wystepuje raz)."
+  ]
+}

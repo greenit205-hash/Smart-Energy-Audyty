@@ -385,7 +385,7 @@ Lista przegród do wypełnienia **buduje się z przekroju**, nie z gotowego zest
 
 Przy każdej przegrodzie jest przycisk **🧱 Warstwy**. Składasz przegrodę z materiałów, a program sam liczy współczynnik U.
 
-1. Wybierz materiał z listy (ponad 50 pozycji: izolacje, konstrukcja, wykończenia, pustki powietrzne).
+1. Wybierz materiał z listy (ponad 60 pozycji: izolacje, konstrukcja, wykończenia, podkłady, pustki powietrzne).
 2. **Wpisz grubość w centymetrach** — sam, materiał jej nie narzuca.
 3. **Dodaj**. Kolejność od wewnątrz na zewnątrz, strzałkami ▲▼ przestawiasz.
 
