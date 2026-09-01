@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 27.08.2026 · wersja aplikacji `smart-energy-v39`
+**Stan na:** 01.09.2026 · wersja aplikacji `smart-energy-v41`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -64,6 +64,8 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 - **Szczyt dachu:** zamiast mierzyć połacie podaję wysokość szczytu i odległość poziomą (od lewej **albo prawej** krawędzi — do wyboru)
 - **Klasyfikacja ścian po kącie** (tolerancja 3°), nie po pikselach. Wcześniej krzywizna 2 px robiła z prostokąta „skos" i pole wychodziło 24,95 zamiast 25,00
 - **Scalanie węzłów po odległości**, nie przez zaokrąglanie do siatki. Plus **dociąganie końców ścian** do 12 px. Bez tego pomieszczenia o 5+ ścianach czasem się nie domykały
+- **v41 — naprawiony rozjazd kluczy odcinków.** Obrys pomieszczenia powstaje z pozycji po dociągnięciu rogów, a wymiar wpisywany dotknięciem ściany — z pozycji narysowanej. Gdy róg został dociągnięty, klucze przestawały być identyczne i **wpisany pomiar był po cichu ignorowany**: pokój pokazywał „Wymaga pomiaru!" mimo zmierzenia wszystkich ścian. Dotyczyło ręcznego wymiarowania (🎯 prowadzony pomiar działał, bo używa kluczy z obrysu). Teraz przy nietrafionym kluczu szukamy najbliższego odcinka (środek ≤ 8 px, długość ≤ 18 px); gdy pasują dwa — nie zgadujemy, tylko prosimy o pomiar
+- **v41 — nowe ostrzeżenie: ukośna ściana na rzucie.** Ściana odchylona o więcej niż 3° jest liczona jak skos, czyli jej kąt bierze się z rysunku i po cichu zmienia powierzchnię. Na rzucie to prawie zawsze pomyłka rysunkowa, więc kontrola pomiarów o tym mówi
 
 ## Warstwy przegród i obliczanie U
 
@@ -72,7 +74,8 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 - Program liczy: `R warstwy = grubość/λ`, `U = 1/(Rsi + ΣR + Rse)`. Opory przejmowania dobierane po typie przegrody (PN-EN ISO 6946)
 - **Inny (wpisz własny)** — materiał spoza bazy; pyta o nazwę i λ. Bez λ liczy się tylko do opisu
 - **📋 Kopiuj z innej** — bo SZ2 zwykle różni się od SZ1 tylko grubością ocieplenia
-- Stary sposób opisu przegród (listy budowy/izolacji) **został usunięty**; został opis własny i pole U
+- Stary sposób opisu przegród (listy „wybierz budowę" / „wybierz izolację") **został usunięty w v40**. W sekcji 3 przy każdej przegrodzie są tylko: **🧱 Warstwy**, **opis własny**, **grubość** i **U**. Grubość i U wypełniają się po złożeniu warstw, obie można nadpisać ręcznie
+- Archiwalne kopie zapasowe zrobione starszą wersją **nadal się drukują** — pola starego modelu są czytane przy generowaniu raportu (i w `Kod.gs`), ale nigdzie już nie są zapisywane
 
 ## Źródła ciepła i c.w.u.
 
@@ -152,10 +155,12 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
 - Testuj zmiany przed wysłaniem plików. W repozytorium jest katalog `tests/` — uruchamia się przez `node tests/uruchom-wszystkie.js`, bez instalowania czegokolwiek:
   - `test-warstwy.js` — baza materiałów i źródeł, zgodność z plikami JSON, obliczenia U, numer wersji w `sw.js`, brak adresu `/exec` w paczce (493 sprawdzenia)
   - `test-paczka.js` — składnia wszystkich skryptów w `index.html`, kluczowe funkcje, powtórzone `id`, kompletność plików PWA (31 sprawdzeń)
-  - `test-pomiary.js` — **silnik wymiarowania i kontrola pomiarów** (34 sprawdzenia). Ładuje całe `index.html` do sztucznej przeglądarki i wywołuje prawdziwe `recalculateRooms` i `runAuditChecks`, więc testuje kod, który trafia na tablet, a nie jego kopię. Potrzebuje jednorazowo `npm install`; bez tego jest pomijany, reszta i tak się wykona.
+  - `test-pomiary.js` — **silnik wymiarowania, kontrola pomiarów i przegrody warstwowe** (57 sprawdzeń). Ładuje całe `index.html` do sztucznej przeglądarki i wywołuje prawdziwe `recalculateRooms` i `runAuditChecks`, więc testuje kod, który trafia na tablet, a nie jego kopię. Potrzebuje jednorazowo `npm install`; bez tego jest pomijany, reszta i tak się wykona.
+  - `test-obrysy.js` — domykanie obrysów i powierzchnie przy niedokładnym rysowaniu (39 sprawdzeń)
+  - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v39), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v41), żeby tablety pobrały nową wersję.
 
 ---
 

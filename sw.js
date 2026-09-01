@@ -1,8 +1,10 @@
 // Smart Energy Audyty - Service Worker
+// v41: NAPRAWA - wpisane wymiary byly ignorowane, gdy rogi zostaly dociagniete (pokoj pokazywal "Wymaga pomiaru!" mimo zmierzenia)
+// v40: usuniety stary model opisu przegrod - zostaly warstwy, opis wlasny, grubosc i U
 // v39: dopisano 4 materialy (zuzel paleniskowy, papa, plyta pilsniowa miekka, eternit)
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v39';
+const CACHE_NAME = 'smart-energy-v41';
 
 const APP_SHELL = [
   './',

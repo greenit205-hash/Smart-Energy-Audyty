@@ -17,12 +17,12 @@ const BRAND_DARK = '#2c3e50';
 const BRAND_GOLD = '#d4af37';
 
 const ENVELOPES = [
-  { id: 'SZ', name: 'Sciany zewnetrzne', count: 5 },
-  { id: 'S',  name: 'Stropy',            count: 10 },
-  { id: 'PG', name: 'Podlogi',           count: 5 },
-  { id: 'D',  name: 'Dachy',             count: 5 },
-  { id: 'O',  name: 'Okna',              count: 5 },
-  { id: 'DZ', name: 'Drzwi',             count: 5 }
+  { id: 'SZ', name: 'Sciany zewnetrzne' },
+  { id: 'S',  name: 'Stropy' },
+  { id: 'PG', name: 'Podlogi' },
+  { id: 'D',  name: 'Dachy' },
+  { id: 'O',  name: 'Okna' },
+  { id: 'DZ', name: 'Drzwi' }
 ];
 
 // Folder na paczki wymieniane miedzy tabletami (audytor <-> pomocnik)
@@ -234,8 +234,12 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) 
   const envRows = collectEnvelopes(data);
   if (envRows.length) {
     head(body, '3. Przegrody budowlane');
-    const rows = [['Symbol', 'Rodzaj', 'Budowa / typ', 'Opis', 'Grubosc [cm]', 'Izolacja', 'Gr. izol. [cm]', 'U [W/m2K]']];
-    envRows.forEach(function (r) { rows.push([r.id, r.section, r.type, r.desc, r.thick, r.ins, r.insThick, r.u]); });
+    const rows = [['Symbol', 'Rodzaj', 'Budowa', 'Grubosc [cm]', 'U [W/m2K]']];
+    envRows.forEach(function (r) {
+      const gr = r.thick || (r.warstwy && r.warstwy.length
+        ? r.warstwy.reduce(function (t, w) { return t + (parseFloat(w.gr) || 0); }, 0).toFixed(1) : '');
+      rows.push([r.id, r.section, budowaEnv(r) || '-', gr || '-', r.u || '-']);
+    });
     styledTable(body, rows);
   }
 
@@ -290,9 +294,7 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) 
             budowa = v.warstwy.map(function (w) { return w.mat + ' - ' + w.gr + ' cm'; }).join('\n');
             if (v.gruboscWarstw) budowa += '\nRAZEM ' + Number(v.gruboscWarstw).toFixed(1) + ' cm';
           } else {
-            budowa = [v.type, v.thick ? 'gr. ' + v.thick + ' cm' : '',
-                      v.ins ? 'ocieplenie: ' + v.ins + (v.insThick ? ' ' + v.insThick + ' cm' : '') : '',
-                      v.desc].filter(function (x) { return x; }).join('; ');
+            budowa = budowaEnv(v);
           }
           eRows.push([str(v.id), str(v.catName), budowa || '-', str(v.u) || '-']);
         });
@@ -595,32 +597,60 @@ function styledTable(body, rows) {
 function collectEnvelopes(data) {
   // Oznaczen na przekroju moze byc dowolnie duzo (SZ6, S12...), wiec skanujemy
   // realne klucze przyslane z aplikacji zamiast sztywnych zakresow 1..count.
+  // Przegroda liczy sie, gdy ma warstwy albo cokolwiek wpisane recznie.
+  // Pola _type/_insulation/_insthick pochodza ze starego modelu opisu przegrod -
+  // czytamy je wylacznie po to, zeby archiwalne audyty nadal sie drukowaly.
   const nameById = {};
   ENVELOPES.forEach(function (s) { nameById[s.id] = s.name; });
-  const found = [];
+  const found = {};
   Object.keys(data).forEach(function (k) {
-    const m = k.match(/^(SZ|DZ|PG|S|D|O)(\d+)_type$/);
+    const m = k.match(/^(SZ|DZ|PG|S|D|O)(\d+)_(layers|desc|totalthick|uvalue|type|insulation|insthick)$/);
     if (!m) return;
-    const type = data[k];
-    if (!type || String(type).indexOf('Wybierz') === 0) return;
-    found.push({ cat: m[1], num: parseInt(m[2], 10) });
+    const v = data[k];
+    if (!v || String(v).indexOf('Wybierz') === 0) return;
+    found[m[1] + m[2]] = { cat: m[1], num: parseInt(m[2], 10) };
   });
   const order = ['SZ', 'S', 'PG', 'D', 'O', 'DZ'];
-  found.sort(function (a, b) {
-    return (order.indexOf(a.cat) - order.indexOf(b.cat)) || (a.num - b.num);
-  });
-  return found.map(function (f) {
-    const key = f.cat + f.num;
+  return Object.keys(found).map(function (key) {
+    const f = found[key];
+    var warstwy = [];
+    try { const raw = data[key + '_layers']; if (raw) warstwy = JSON.parse(raw) || []; } catch (e) {}
     return {
       id: key,
+      cat: f.cat,
+      num: f.num,
       section: nameById[f.cat] || f.cat,
-      type: str(data[key + '_type']),
+      warstwy: warstwy,
       desc: str(data[key + '_desc']),
       thick: str(data[key + '_totalthick']),
-      ins: (data[key + '_insulation'] && String(data[key + '_insulation']).indexOf('Wybierz') !== 0)
-           ? str(data[key + '_insulation']) : '',
-      insThick: str(data[key + '_insthick']),
+      archiwalne: archiwalnyOpisEnv(data, key),
       u: str(data[key + '_uvalue'])
     };
+  }).sort(function (a, b) {
+    return (order.indexOf(a.cat) - order.indexOf(b.cat)) || (a.num - b.num);
   });
+}
+
+// Sklejka pol starego modelu opisu przegrod - tylko do odczytu archiwalnych audytow.
+function archiwalnyOpisEnv(data, key) {
+  const czesci = [];
+  const typ = data[key + '_type'];
+  const izol = data[key + '_insulation'];
+  const izolGr = data[key + '_insthick'];
+  if (typ && String(typ).indexOf('Wybierz') !== 0) czesci.push(str(typ));
+  if (izol && String(izol).indexOf('Wybierz') !== 0 && String(izol) !== 'Brak') {
+    czesci.push('ocieplenie: ' + str(izol) + (izolGr ? ' ' + str(izolGr) + ' cm' : ''));
+  }
+  return czesci.join(' - ');
+}
+
+// Budowa przegrody w jednej komorce tabeli: warstwy albo opis wlasny.
+function budowaEnv(v) {
+  if (v.warstwy && v.warstwy.length) {
+    var t = v.warstwy.map(function (w) { return w.mat + ' - ' + w.gr + ' cm'; }).join('\n');
+    if (v.gruboscWarstw) t += '\nRAZEM ' + Number(v.gruboscWarstw).toFixed(1) + ' cm';
+    return t;
+  }
+  return [v.desc, v.thick ? 'gr. ' + v.thick + ' cm' : '', v.archiwalne]
+         .filter(function (x) { return x; }).join('; ');
 }

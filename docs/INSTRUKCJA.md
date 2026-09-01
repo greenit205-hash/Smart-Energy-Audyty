@@ -381,6 +381,8 @@ Lista przegród do wypełnienia **buduje się z przekroju**, nie z gotowego zest
 3. Wybierz rodzaj: **SZ** (ściana zewnętrzna), **S** (strop), **PG** (podłoga na gruncie), **D** (dach). Numer nadaje się sam — pierwszy dach to D1, kolejny D2.
 4. W sekcji 3 pojawiają się do wypełnienia wyłącznie oznaczone przegrody.
 
+Każda przegroda ma w sekcji 3 cztery rzeczy: **🧱 Warstwy**, **opis własny**, **grubość** i **U**. Nie ma już list „wybierz budowę" ani „wybierz izolację" — budowę przegrody składasz z warstw, a jeśli nie chcesz, wpisujesz opis własny. Grubość i U wypełniają się same po złożeniu warstw; obie wartości możesz nadpisać ręcznie.
+
 ### 🧱 Warstwy przegrody — U liczone automatycznie
 
 Przy każdej przegrodzie jest przycisk **🧱 Warstwy**. Składasz przegrodę z materiałów, a program sam liczy współczynnik U.

@@ -348,6 +348,92 @@ sprawdz('na przekroju nie ma alarmu o braku okien',
 sprawdz('na przekroju nie ma alarmu o wysokości kondygnacji',
   !ostrzezenia().some(i => i.text.toLowerCase().includes('wysokość kondygnacji')));
 
+// ===================== PRZEGRODY =====================
+console.log('--- przegrody (opis warstwowy) ---');
+
+// Formularz sekcji 3 - po usunięciu starego modelu zostaje opis własny, grubość, U i warstwy
+reset();
+app(`
+  sketches[0].objects.envTags = { 'a': { cat:'SZ', num:1 }, 'b': { cat:'S', num:1 } };
+  renderEnvelopeFields();
+`);
+{
+  const pole = n => dom.window.document.querySelector('[name="' + n + '"]');
+  sprawdz('przegroda ma pole opisu własnego', !!pole('SZ1_desc'));
+  sprawdz('przegroda ma pole grubości', !!pole('SZ1_totalthick'));
+  sprawdz('przegroda ma pole U', !!pole('SZ1_uvalue'));
+  sprawdz('pole U jest polem liczbowym', pole('SZ1_uvalue') && pole('SZ1_uvalue').type === 'number');
+  sprawdz('przegroda ma przycisk warstw',
+    !!dom.window.document.getElementById('warstwyInfo_SZ1'));
+
+  // stary model: lista budowy i lista izolacji
+  sprawdz('nie ma już listy budowy przegrody', !pole('SZ1_type'));
+  sprawdz('nie ma już listy izolacji', !pole('SZ1_insulation'));
+  sprawdz('nie ma już grubości izolacji', !pole('SZ1_insthick'));
+  sprawdz('drugie oznaczenie też dostaje pola', !!pole('S1_desc') && !!pole('S1_uvalue'));
+}
+
+// Złożenie warstw wypełnia U i grubość w formularzu
+app(`
+  layersKey = 'SZ1'; layersCat = 'SZ';
+  layersDraft = [{ mat:'Cegła pełna zwykła', gr:25 },
+                 { mat:'Płyta styropianowa EPS 70-038 FASADA', gr:12 }];
+  saveLayers();
+`);
+{
+  const u = dom.window.document.querySelector('[name="SZ1_uvalue"]').value;
+  const gr = dom.window.document.querySelector('[name="SZ1_totalthick"]').value;
+  sprawdz('warstwy wpisują U do formularza', parseFloat(u) > 0.26 && parseFloat(u) < 0.29, u);
+  sprawdz('warstwy wpisują grubość całkowitą', gr === '37.0', gr);
+}
+
+// Przegroda opisana warstwami trafia do raportu razem z U
+{
+  const rows = app(`
+    const audit = {
+      SZ1_layers: JSON.stringify([{mat:'Cegła pełna zwykła',gr:25},
+                                  {mat:'Płyta styropianowa EPS 70-038 FASADA',gr:12}]),
+      SZ1_uvalue: '0.274', SZ1_totalthick: '37.0',
+      S1_desc: 'strop drewniany, nieocieplony', S1_totalthick: '20'
+    };
+    return rowsFromEnvelopes(audit).map(r => ({
+      id: r.id, section: r.section, warstw: r.warstwy.length,
+      u: r.u, uObl: r.uObliczone, budowa: budowaPrzegrody(r, x => x) }));
+  `);
+  sprawdz('do raportu trafiają obie przegrody', rows.length === 2, rows.length);
+  const sz = rows.find(r => r.id === 'SZ1'), st = rows.find(r => r.id === 'S1');
+  sprawdz('przegroda warstwowa niesie swoje warstwy', sz && sz.warstw === 2);
+  sprawdz('U z formularza trafia do raportu', sz && sz.u === '0.274', sz && sz.u);
+  sprawdz('U jest też przeliczane z warstw', sz && sz.uObl > 0.26 && sz.uObl < 0.29, sz && sz.uObl);
+  sprawdz('budowa wypisuje materiały z grubościami',
+    sz && sz.budowa.includes('Cegła pełna zwykła — 25 cm') && sz.budowa.includes('RAZEM 37.0 cm'), sz && sz.budowa);
+  sprawdz('przegroda bez warstw pokazuje opis własny',
+    st && st.budowa.includes('strop drewniany'), st && st.budowa);
+  sprawdz('rodzaj przegrody bierze się z oznaczenia, nie z listy',
+    sz && sz.section === 'Ściany Zewnętrzne', sz && sz.section);
+}
+
+// Archiwalna kopia zapasowa (stary model) nadal daje się wydrukować
+{
+  const r = app(`
+    const audit = { SZ1_type:'Cegła pełna zwykła + Tynk', SZ1_insulation:'Wełna mineralna 0,036',
+                    SZ1_insthick:'10', SZ1_totalthick:'35' };
+    const w = rowsFromEnvelopes(audit)[0];
+    return { ile: rowsFromEnvelopes(audit).length, budowa: budowaPrzegrody(w, x => x) };
+  `);
+  sprawdz('stary audyt nadal jest rozpoznawany', r.ile === 1, r.ile);
+  sprawdz('stary opis budowy nie ginie w raporcie',
+    r.budowa.includes('Cegła pełna zwykła + Tynk'), r.budowa);
+  sprawdz('stare ocieplenie nie ginie w raporcie',
+    r.budowa.includes('ocieplenie: Wełna mineralna 0,036 10 cm'), r.budowa);
+}
+
+// Pusty audyt nie tworzy widmowych przegród
+sprawdz('pusty audyt nie daje żadnych przegród',
+  app('return rowsFromEnvelopes({}).length;') === 0);
+sprawdz('samo "Wybierz..." nie tworzy przegrody',
+  app("return rowsFromEnvelopes({ SZ1_type: 'Wybierz budowę...' }).length;") === 0);
+
 // ===================== PODSUMOWANIE =====================
 console.log('');
 if (bledy.length) {
