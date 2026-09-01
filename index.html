@@ -78,7 +78,7 @@
       <button class="btn btn-sm btn-outline-primary fw-bold" onclick="document.getElementById('backupFileInput').click()">📂 Wczytaj Kopię</button>
       <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="importBackup(this)">
     </div>
-    <div class="card-body" id="savedAuditsList"></div>
+    <div class="card-body"><div id="storageBar"></div><div id="savedAuditsList"></div></div>
   </div>
 
   <div class="card border-0 shadow-sm mt-4">
@@ -1371,15 +1371,80 @@
   }
 
   function getLocalAudits() { try { return JSON.parse(localStorage.getItem('auditsDB') || '[]'); } catch(e) { return []; } }
+
+  // ================= MIEJSCE W PAMIĘCI =================
+  // Wszystkie audyty siedzą w localStorage, a przeglądarki dają na to ok. 5 MB.
+  // Zapis, ktory sie nie miesci, wywala blad w POLOWIE audytu - u klienta to
+  // najgorszy moment. Dlatego pilnujemy zapelnienia i ostrzegamy WCZESNIEJ.
+  const STORAGE_LIMIT = 5 * 1024 * 1024;   // typowy limit przegladarki
+  const STORAGE_WARN = 0.70;               // od tego miejsca zaczynamy przypominac
+
+  function storageUsage() {
+    let bajty = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        // klucz i wartosc sa przechowywane jako UTF-16, stad x2
+        bajty += ((localStorage.getItem(k) || '').length + k.length) * 2;
+      }
+    } catch (e) { return null; }
+    return { bajty, procent: bajty / STORAGE_LIMIT };
+  }
+
+  function formatMB(b) { return (b / 1024 / 1024).toFixed(1) + ' MB'; }
+
+  // Pasek na pulpicie: widoczny dopiero, gdy jest się czym przejmować.
+  function renderStorageBar() {
+    const box = document.getElementById('storageBar');
+    if (!box) return;
+    const u = storageUsage();
+    if (!u || u.procent < STORAGE_WARN) { box.innerHTML = ''; return; }
+    const krytycznie = u.procent >= 0.85;
+    const proc = Math.min(100, Math.round(u.procent * 100));
+    box.innerHTML = `
+      <div class="alert ${krytycznie ? 'alert-danger' : 'alert-warning'} py-2 mb-3">
+        <div class="fw-bold">${krytycznie ? '⛔' : '⚠️'} Pamięć aplikacji zapełniona w ${proc}%
+          <span class="fw-normal small">(${formatMB(u.bajty)} z ok. ${formatMB(STORAGE_LIMIT)})</span></div>
+        <div class="progress my-2" style="height:8px">
+          <div class="progress-bar ${krytycznie ? 'bg-danger' : 'bg-warning'}" style="width:${proc}%"></div>
+        </div>
+        <div class="small">${krytycznie
+          ? 'Kolejny zapis może się nie udać. Zrób to <b>teraz</b>, zanim pojedziesz do klienta.'
+          : 'Zrób kopię zapasową i zwolnij miejsce, zanim zabraknie go w trakcie audytu.'}</div>
+        <div class="mt-2">
+          <button class="btn btn-sm btn-dark fw-bold" onclick="downloadBackup()">💾 Pobierz kopię zapasową</button>
+          <span class="small text-muted ms-2">potem wyślij stare audyty na Dysk i usuń je z listy</span>
+        </div>
+      </div>`;
+  }
+
+  // Ostrzeżenie raz na uruchomienie aplikacji - żeby nie męczyć przy każdym zapisie.
+  let ostrzezonoOPamieci = false;
+  function checkStorageAfterSave() {
+    renderStorageBar();
+    const u = storageUsage();
+    if (!u || ostrzezonoOPamieci || u.procent < 0.85) return;
+    ostrzezonoOPamieci = true;
+    alert('⚠️ Pamięć aplikacji jest zapełniona w ' + Math.round(u.procent * 100) + '%.\n\n' +
+          'Zapis jeszcze się udał, ale kolejny może się nie powieść.\n\n' +
+          'Zrób kopię zapasową (💾 na pulpicie), wyślij stare audyty na Dysk i usuń je z listy.');
+  }
+
   function saveLocalAudits(arr) {
-    try { localStorage.setItem('auditsDB', JSON.stringify(arr)); return true; }
+    try {
+      localStorage.setItem('auditsDB', JSON.stringify(arr));
+      checkStorageAfterSave();
+      return true;
+    }
     catch(e) {
       alert('❌ BRAK MIEJSCA W PAMIĘCI PRZEGLĄDARKI!\n\nZapis się nie powiódł. Pobierz kopię zapasową (💾), wyślij stare raporty na Dysk i usuń je z listy, a następnie spróbuj ponownie.');
+      renderStorageBar();
       return false;
     }
   }
 
   function renderDashboard() {
+    renderStorageBar();
     const audits = getLocalAudits(); const listDiv = document.getElementById('savedAuditsList'); listDiv.innerHTML = '';
     if(audits.length === 0) { listDiv.innerHTML = '<p class="text-muted text-center py-4">Brak zapisanych audytów. Kliknij "Nowy Raport".</p>'; } else {
       audits.forEach((audit, index) => {

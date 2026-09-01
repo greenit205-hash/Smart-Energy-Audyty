@@ -401,7 +401,9 @@ Liczone tak jak w programach do audytu: opór warstwy = grubość ÷ λ, a opory
 
 > Przegroda musi mieć **warstwy albo opis własny** — bez jednego z tych dwóch zapis raportu jest blokowany. Ręcznie wpisane U ma pierwszeństwo nad policzonym.
 
-**W tabelach raportu** pomieszczenia **nieogrzewane są na czerwono**, a **klimatyzowane na niebiesko** — od razu widać, co wypada poza bryłą ogrzewaną.
+**W tabelach raportu** pomieszczenia **nieogrzewane są na czerwono**, a **klimatyzowane na niebiesko** — od razu widać, co wypada poza bryłą ogrzewaną. Dotyczy to wszystkich wersji raportu: karty obiektu, PDF-a i Dokumentu Google.
+
+> **Pamięć aplikacji.** Audyty są przechowywane w przeglądarce tabletu i miejsca jest około 5 MB. Gdy zapełni się w 70%, na pulpicie pojawia się ostrzeżenie z przyciskiem kopii zapasowej; przy 85% zmienia się w czerwony alarm. Wtedy: pobierz kopię, wyślij stare audyty na Dysk i usuń je z listy. Nie zwlekaj do wyjazdu — zapis, który się nie zmieści, przerwie pracę u klienta.
 
 ### Konkretne urządzenie grzewcze
 

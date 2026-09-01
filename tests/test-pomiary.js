@@ -434,6 +434,60 @@ sprawdz('pusty audyt nie daje żadnych przegród',
 sprawdz('samo "Wybierz..." nie tworzy przegrody',
   app("return rowsFromEnvelopes({ SZ1_type: 'Wybierz budowę...' }).length;") === 0);
 
+
+// ===================== PAMIĘĆ APLIKACJI =====================
+console.log('--- ostrzeganie o zapełnionej pamięci ---');
+{
+  const pusto = app('return storageUsage();');
+  sprawdz('zapełnienie pamięci daje się zmierzyć', pusto && pusto.bajty >= 0, JSON.stringify(pusto));
+  sprawdz('pusta pamięć to niski procent', pusto && pusto.procent < 0.1, pusto && pusto.procent);
+
+  // przy pustej pamięci pasek ma być niewidoczny - nie straszymy bez powodu
+  app('renderStorageBar();');
+  sprawdz('pasek ukryty, gdy miejsca jest dużo',
+    dom.window.document.getElementById('storageBar').innerHTML.trim() === '');
+
+  // 75% - ostrzeżenie żółte, bez blokowania pracy
+  const zolty = app(`
+    localStorage.setItem('balast', 'x'.repeat(Math.floor(STORAGE_LIMIT * 0.75 / 2)));
+    renderStorageBar();
+    const h = document.getElementById('storageBar').innerHTML;
+    const u = storageUsage();
+    return { procent: u.procent, ostrzega: h.includes('Pamięć aplikacji'),
+             zolte: h.includes('alert-warning'), czerwone: h.includes('alert-danger'),
+             kopia: h.includes('downloadBackup') };
+  `);
+  sprawdz('przy 75% pojawia się ostrzeżenie', zolty.ostrzega, JSON.stringify(zolty));
+  sprawdz('75% to ostrzeżenie, nie alarm', zolty.zolte && !zolty.czerwone);
+  sprawdz('ostrzeżenie proponuje kopię zapasową', zolty.kopia);
+
+  // 90% - alarm czerwony
+  const czerwony = app(`
+    localStorage.setItem('balast', 'x'.repeat(Math.floor(STORAGE_LIMIT * 0.90 / 2)));
+    renderStorageBar();
+    const h = document.getElementById('storageBar').innerHTML;
+    return { czerwone: h.includes('alert-danger'), teraz: h.includes('teraz') };
+  `);
+  sprawdz('przy 90% ostrzeżenie zmienia się w alarm', czerwony.czerwone);
+  sprawdz('alarm mówi, żeby zrobić kopię przed wyjazdem', czerwony.teraz);
+
+  // po zwolnieniu miejsca pasek znika
+  const poSprzataniu = app(`
+    localStorage.removeItem('balast');
+    renderStorageBar();
+    return document.getElementById('storageBar').innerHTML.trim();
+  `);
+  sprawdz('po zwolnieniu miejsca pasek znika', poSprzataniu === '', poSprzataniu.slice(0, 60));
+
+  // zapis audytu nie może się psuć przez samo sprawdzanie pamięci
+  const zapis = app(`
+    return saveLocalAudits([{ fullName:'Test', address:'Testowa 1' }]) &&
+           getLocalAudits().length === 1;
+  `);
+  sprawdz('zapis audytu nadal działa', zapis === true);
+  app("localStorage.removeItem('auditsDB');");
+}
+
 // ===================== PODSUMOWANIE =====================
 console.log('');
 if (bledy.length) {

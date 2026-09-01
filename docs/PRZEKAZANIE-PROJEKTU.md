@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 01.09.2026 · wersja aplikacji `smart-energy-v41`
+**Stan na:** 01.09.2026 · wersja aplikacji `smart-energy-v42`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -103,6 +103,8 @@ Panel pod szkicem, liczony lokalnie (bez AI, offline). Trzy poziomy: **⛔ sprze
 
 ## Kopie i przenoszenie
 
+- **v42 — pasek zapełnienia pamięci.** Wszystkie audyty siedzą w `localStorage` (ok. 5 MB). Od 70% zapełnienia na pulpicie pojawia się ostrzeżenie z przyciskiem kopii zapasowej, od 85% zmienia się w czerwony alarm i raz na uruchomienie wyskakuje komunikat. Wcześniej dowiadywałeś się dopiero wtedy, gdy zapis się nie udał — w połowie audytu
+- **v42 — kolory pomieszczeń w Dokumencie Google.** Nieogrzewane na czerwono, klimatyzowane na niebiesko były tylko w karcie obiektu i w PDF; w edytowalnym Dokumencie tabela była szara
 - **💾 Pobierz Kopię Zapasową** / **📂 Wczytaj Kopię** — pamięć jest przypisana do adresu, więc przy zmianie hostingu trzeba przenieść raporty tą drogą. Ponowne wczytanie nie dubluje
 
 ---
@@ -160,7 +162,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v41), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v42), żeby tablety pobrały nową wersję.
 
 ---
 

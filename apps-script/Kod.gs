@@ -330,6 +330,7 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) 
             .setFontSize(8).setForegroundColor('#6c757d');
       } else {
         const rows = [['Nr', 'Typ pomieszczenia', 'Ogrzewane', 'Klimatyzacja', 'Powierzchnia [m2]', 'Kubatura [m3]']];
+        const style = [];
         let total = 0, volTotal = 0;
         rooms.forEach(function (r) {
           const a = parseFloat(r.area);
@@ -338,9 +339,12 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) 
           if (v !== null) volTotal += v;
           rows.push([str(r.num), str(r.name), str(r.heated), str(r.ac),
                      str(r.area), v !== null ? v.toFixed(2) : '-']);
+          style.push(r.heated === 'Nie' ? STYL_NIEOGRZEWANE
+                   : (r.ac === 'Tak' ? STYL_KLIMATYZOWANE : null));
         });
         rows.push(['', '', '', 'SUMA', total.toFixed(2), volTotal.toFixed(2)]);
-        styledTable(body, rows);
+        style.push(null);
+        styledTable(body, rows, style);
       }
     }
 
@@ -582,7 +586,11 @@ function kvTable(body, pairs) {
   return table;
 }
 
-function styledTable(body, rows) {
+// rowStyles (opcjonalne) - tablica rowna liczbie wierszy DANYCH (bez naglowka),
+// kazdy element to null albo { bg: '#..', fg: '#..' }. Dzieki temu w Dokumencie
+// Google pomieszczenia nieogrzewane sa czerwone, a klimatyzowane niebieskie -
+// tak samo jak w karcie obiektu i w PDF.
+function styledTable(body, rows, rowStyles) {
   const clean = rows.map(function (r) { return r.map(function (c) { return str(c); }); });
   const table = body.appendTable(clean);
   table.setBorderColor('#adb5bd');
@@ -591,8 +599,24 @@ function styledTable(body, rows) {
     headerRow.getCell(c).setBackgroundColor('#eceff1').editAsText().setBold(true);
   }
   table.editAsText().setFontSize(9);
+  if (rowStyles && rowStyles.length) {
+    for (let r = 0; r < rowStyles.length; r++) {
+      const st = rowStyles[r];
+      if (!st) continue;
+      const row = table.getRow(r + 1);   // +1, bo wiersz 0 to naglowek
+      for (let c = 0; c < row.getNumCells(); c++) {
+        const cell = row.getCell(c);
+        if (st.bg) cell.setBackgroundColor(st.bg);
+        if (st.fg) cell.editAsText().setForegroundColor(st.fg).setBold(true);
+      }
+    }
+  }
   return table;
 }
+
+// Te same kolory co w karcie obiektu: nieogrzewane czerwone, klimatyzowane niebieskie.
+const STYL_NIEOGRZEWANE = { bg: '#fdecea', fg: '#a4262c' };
+const STYL_KLIMATYZOWANE = { bg: '#e8f1fb', fg: '#0b4a8f' };
 
 function collectEnvelopes(data) {
   // Oznaczen na przekroju moze byc dowolnie duzo (SZ6, S12...), wiec skanujemy
