@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 01.09.2026 · wersja aplikacji `smart-energy-v42`
+**Stan na:** 01.09.2026 · wersja aplikacji `smart-energy-v45`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -44,8 +44,10 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 - **📏 Ściana** — rysowanie; linie prawie proste same się prostują, końce przyciągają się do istniejących. Podczas ciągnięcia widać **przybliżoną długość** (`~4.00 m` — tylko pomoc, nie pomiar)
 - **Odległość od narożnika** — najazd na narysowaną ścianę pokazuje odległość od bliższego rogu
 - **🏠 Pomieszcz.** — klikam w środku, program **sam rozpoznaje obrys** (analiza grafu płaskiego). Numeracja osobna dla każdego szkicu
+- **v43 — obrys a zmiany ścian.** Pomieszczenie pamięta obrys z chwili założenia. Gdy później dorysuję wnękę albo skasuję ścianę, rysunek się zmienia, a zapisany obrys nie — i powierzchnia zostawała stara, bez żadnego sygnału. Teraz program to wykrywa: wiersz w tabeli robi się żółty z napisem „obrys nieaktualny" i przyciskiem **🔄**, a nad tabelą jest **🔄 Przelicz obrysy** dla wszystkich naraz. Numer, typ, ogrzewanie i klimatyzacja zostają — zmienia się wyłącznie kształt. Gdy obszar nie jest zamknięty, program mówi o tym wprost i **nie rusza** starego obrysu
+- Typy pomieszczeń: v43 dokłada **Piwnica**, **Garaż** i **Strych / poddasze nieużytkowe**
 - **🎯 Pomiar** — prowadzony pomiar: program podświetla ścianę („MIERZ TĘ ŚCIANĘ"), czeka na odczyt, przechodzi do następnej
-- **🚪 Otwór** — okna/drzwi z podpowiedziami wcześniejszych wymiarów, kategorie i zestawienia
+- **🚪 Otwór** — okna/drzwi z podpowiedziami wcześniejszych wymiarów, kategorie i zestawienia. **v43: kliknięcie w już wstawiony otwór otwiera go do poprawki** (rodzaj, numer, wymiary, U) zamiast wstawiać drugi obok; zmiana rodzaju podpowiada nowy numer, ale nie kasuje wpisanych wymiarów. Pod tabelą otworów jest wykaz pojedynczych sztuk z przyciskiem ✏️
 - **🏷️ Przegroda** — oznaczanie przegród na przekroju (SZ/S/PG/D + numer); **📋 Lista przegród** do zarządzania
 - **📐 Skos** — skosy poddasza z wymiarami (osobny rodzaj szkicu)
 - **▨ obszary kreskowane**, **📐 Miarka**, **✏️ Ołówek**, **abc Txt**, **🧽 Usuń**, **🩺 Diagnostyka**
@@ -71,7 +73,13 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 
 - Baza **63 materiałów** ze współczynnikami λ (izolacje, konstrukcja, wykończenia, podkłady, pustki powietrzne)
 - Składam przegrodę z warstw: materiał z listy + **grubość wpisuję sam**
-- Program liczy: `R warstwy = grubość/λ`, `U = 1/(Rsi + ΣR + Rse)`. Opory przejmowania dobierane po typie przegrody (PN-EN ISO 6946)
+- Program liczy: `R warstwy = grubość/λ`, `U = 1/(Rsi + ΣR + Rse)`
+- **v44 — typ przegrody.** Lista 13 typów jak w ArCADia-TERMOCAD (ściana zewnętrzna/wewnętrzna/na gruncie, dach, stropy, podłoga na gruncie, okna, drzwi). Typ podstawia Rsi i Rse z PN-EN ISO 6946, a przy stropie wewnętrznym dochodzi **typ stropu** (pod nieogrzewanym poddaszem 0,10/0,10 · nad piwnicami 0,17/0,17 · międzykondygnacyjny 0,10/0,10). Opory można nadpisać ręcznie
+- **v44 — przegroda niejednorodna.** Zakładka Wycinek A / Wycinek B z szerokościami (np. rozstaw belek 0,90 m, belka 0,15 m). Liczone wg PN-EN ISO 6946: wycinki składane równolegle proporcjonalnie do szerokości; gdy oba mają ten sam układ warstw, liczona jest też granica dolna i wynik jest średnią z obu granic
+- **v44 — opór pustki powietrznej z tabeli normy.** Wcześniej stałe 0,18 niezależnie od wszystkiego. Teraz zależy od grubości i kierunku strumienia (10 cm: w górę 0,16 · poziomo 0,18 · w dół 0,22). To była realna różnica — na stropie dawało U zaniżone o ok. 1,5%
+- **v45 — opory przegród gruntowych poprawione.** Sprawdzone na prawdziwym pliku `.thb` z ArCADia-TERMOCAD (plik to ZIP z danymi w Protocol Buffers — da się z niego wyciągnąć definicje przegród). Podłoga na gruncie ma **Rse = 0,00**, nie 0,17; ściana na gruncie **Rse = 0,00**, nie 0,04. Przegroda stykająca się z gruntem nie ma oporu przejmowania po stronie zewnętrznej. Wcześniej U podłogi na gruncie wychodziło zaniżone o ok. 20%
+- **Sprawdzone wzorce:** pięć przegród z pliku audytora (SZ1, SZ2, SZ3, PG, SG) liczy się teraz **co do czwartego miejsca po przecinku** tak samo jak w programie obliczeniowym. Testy trzymają te wartości na stałe
+- **v44 — szablony przegród.** ⭐ Zapisz jako szablon zapamiętuje warstwy, typ, opory i oba wycinki; przy kolejnej przegrodzie wybierasz z listy zamiast składać od nowa. Szablony żyją w pamięci tabletu, między audytami
 - **Inny (wpisz własny)** — materiał spoza bazy; pyta o nazwę i λ. Bez λ liczy się tylko do opisu
 - **📋 Kopiuj z innej** — bo SZ2 zwykle różni się od SZ1 tylko grubością ocieplenia
 - Stary sposób opisu przegród (listy „wybierz budowę" / „wybierz izolację") **został usunięty w v40**. W sekcji 3 przy każdej przegrodzie są tylko: **🧱 Warstwy**, **opis własny**, **grubość** i **U**. Grubość i U wypełniają się po złożeniu warstw, obie można nadpisać ręcznie
@@ -162,7 +170,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v42), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v45), żeby tablety pobrały nową wersję.
 
 ---
 

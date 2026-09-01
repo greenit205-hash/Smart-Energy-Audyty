@@ -467,14 +467,63 @@
 </div>
 
 <div id="layersOverlay" class="modal-overlay">
-  <div class="card shadow p-3" style="width: min(560px, 96vw); max-height: 92vh; overflow-y: auto;">
+  <div class="card shadow p-3" style="width: min(620px, 96vw); max-height: 92vh; overflow-y: auto;">
     <h6 class="fw-bold mb-1 text-primary">🧱 Warstwy przegrody <span id="layersBadge" class="badge bg-primary"></span></h6>
-    <p class="text-muted small mb-2">Kolejność od wewnątrz na zewnątrz. Materiał z listy, <b>grubość wpisujesz sam</b> — program policzy U.</p>
+
+    <label class="form-label small fw-bold text-muted mb-1">Typ przegrody</label>
+    <select id="layerTypSelect" class="form-select form-select-sm mb-2" onchange="onTypPrzegrodyChange()"></select>
+
+    <div id="layerTypStropuBox" style="display:none;">
+      <label class="form-label small fw-bold text-muted mb-1">Typ stropu</label>
+      <select id="layerTypStropu" class="form-select form-select-sm mb-2" onchange="onTypStropuChange()"></select>
+    </div>
+
+    <div class="border rounded p-2 mb-2 small" style="background:#f8f9fa;">
+      <div class="d-flex align-items-center gap-2">
+        <span class="fw-bold text-muted">Opory przejmowania:</span>
+        <span class="input-group input-group-sm" style="width:auto;">
+          <span class="input-group-text">R<sub>si</sub></span>
+          <input type="number" step="0.01" id="layerRsi" class="form-control" style="width:5rem;" oninput="renderLayers()">
+        </span>
+        <span class="input-group input-group-sm" style="width:auto;">
+          <span class="input-group-text">R<sub>se</sub></span>
+          <input type="number" step="0.01" id="layerRse" class="form-control" style="width:5rem;" oninput="renderLayers()">
+        </span>
+      </div>
+      <div class="text-muted mt-1" id="layerOporyHint"></div>
+    </div>
+
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="layerNiejednorodna" onchange="onNiejednorodnaChange()">
+      <label class="form-check-label small fw-bold" for="layerNiejednorodna">
+        Przegroda niejednorodna <span class="fw-normal text-muted">(np. belki stropowe i wypełnienie między nimi)</span>
+      </label>
+    </div>
+
+    <div id="layerWycinkiBox" style="display:none;">
+      <ul class="nav nav-tabs nav-fill small mb-2">
+        <li class="nav-item"><a class="nav-link active fw-bold" id="tabWycA" href="#" onclick="setWycinek('A');return false;">Wycinek A</a></li>
+        <li class="nav-item"><a class="nav-link fw-bold" id="tabWycB" href="#" onclick="setWycinek('B');return false;">Wycinek B</a></li>
+      </ul>
+      <div class="row g-2 mb-2">
+        <div class="col-6"><div class="input-group input-group-sm">
+          <span class="input-group-text">Szer. A</span>
+          <input type="number" step="0.01" id="layerLA" class="form-control" placeholder="m" oninput="renderLayers()">
+          <span class="input-group-text">m</span></div></div>
+        <div class="col-6"><div class="input-group input-group-sm">
+          <span class="input-group-text">Szer. B</span>
+          <input type="number" step="0.01" id="layerLB" class="form-control" placeholder="m" oninput="renderLayers()">
+          <span class="input-group-text">m</span></div></div>
+      </div>
+      <div class="small text-muted mb-2">Szerokości powtarzalnego fragmentu: np. rozstaw belek 0,90 m i szerokość belki 0,15 m.</div>
+    </div>
+
+    <p class="text-muted small mb-2">Kolejność od wewnątrz na zewnątrz. Materiał z listy, <b>grubość wpisujesz sam</b>.</p>
 
     <div id="layersList" class="mb-2"></div>
 
     <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
-      <label class="form-label small fw-bold text-muted mb-1">Dodaj warstwę</label>
+      <label class="form-label small fw-bold text-muted mb-1">Dodaj warstwę <span id="layerAddTarget" class="text-primary"></span></label>
       <input type="text" id="layerMatInput" class="form-control form-control-sm mb-1" list="layerMatOptions" placeholder="wpisz nazwę lub rozwiń listę">
       <datalist id="layerMatOptions"></datalist>
       <div class="input-group input-group-sm">
@@ -487,7 +536,13 @@
 
     <div class="d-flex gap-2 mb-2">
       <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" onclick="copyLayersFrom()">📋 Kopiuj z innej</button>
-      <button type="button" class="btn btn-outline-danger btn-sm flex-fill" onclick="clearLayers()">Wyczyść</button>
+      <button type="button" class="btn btn-outline-warning btn-sm flex-fill fw-bold" onclick="saveAsTemplate()">⭐ Zapisz jako szablon</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearLayers()">Wyczyść</button>
+    </div>
+
+    <div class="border rounded p-2 mb-2">
+      <div class="small fw-bold text-muted mb-1">Szablony przegród</div>
+      <div id="layerTemplateList" style="max-height:150px; overflow-y:auto;"></div>
     </div>
 
     <div class="d-flex justify-content-between">
@@ -592,6 +647,9 @@
       <option value="Pom. techniczne">Pom. techniczne</option>
       <option value="Spiżarka">Spiżarka</option>
       <option value="Klatka schodowa">Klatka schodowa</option>
+      <option value="Piwnica">Piwnica</option>
+      <option value="Garaż">Garaż</option>
+      <option value="Strych / poddasze nieużytkowe">Strych / poddasze nieużytkowe</option>
       <option value="Inny">Inny (Wpisz własny)</option>
     </select>
     <input type="text" id="roomCustomTypeInput" class="form-control form-control-sm mb-2" style="display:none;" placeholder="Wpisz typ...">
@@ -616,7 +674,8 @@
       <div class="small text-muted mt-1">Ten sam otwór w kilku miejscach = ten sam identyfikator.</div>
     </div>
 
-    <select id="openingTypeSelect" class="form-select form-select-sm mb-2" onchange="autoFillOpeningId()">
+    <div class="fw-bold mb-2" id="openingDialogTitle">🚪 Otwór budowlany</div>
+    <select id="openingTypeSelect" class="form-select form-select-sm mb-2" onchange="onOpeningTypeChange()">
       <option value="O">Okna (O)</option>
       <option value="DZ">Drzwi Zewnętrzne (DZ)</option>
       <option value="DW">Drzwi Wewnętrzne (DW)</option>
@@ -629,9 +688,10 @@
     </div>
     <input type="number" step="0.01" id="openingUValue" class="form-control form-control-sm mb-2" placeholder="Wsp. U (Opcjonalnie)">
     <div class="small mb-2" id="openingDupWarn" style="display:none; color:#fd7e14;"></div>
-    <div class="d-flex justify-content-between">
+    <div class="d-flex justify-content-between align-items-center">
       <button type="button" class="btn btn-secondary btn-sm" onclick="closeOpeningDialog()">Anuluj</button>
-      <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="addOpeningToCanvas()">Zapisz</button>
+      <button type="button" class="btn btn-outline-danger btn-sm fw-bold" id="openingDeleteBtn" style="display:none;" onclick="deleteOpeningFromDialog()">🗑️ Usuń</button>
+      <button type="button" class="btn btn-primary btn-sm fw-bold" id="openingSaveBtn" onclick="addOpeningToCanvas()">Zapisz</button>
     </div>
   </div>
 </div>
@@ -888,7 +948,7 @@
     { n: "Mur z betonu komórkowego na zaprawie cementowo-wapiennej", g: "Konstrukcja", l: 0.38 },
     { n: "Płyty wiórkowo-cementowe", g: "Wykończenie", l: 0.14 },
     { n: "Deska", g: "Wykończenie", l: 0.3 },
-    { n: "Niewentylowane warstwy powietrza", g: "Pustka powietrzna", R: 0.18 },
+    { n: "Niewentylowane warstwy powietrza", g: "Pustka powietrzna", R: 0.18, pustka: true },
     { n: "Panele podłogowe", g: "Wykończenie", l: 0.05 },
     { n: "Beton zbrojony z 1% stali", g: "Konstrukcja", l: 2.3 },
     { n: "Gres", g: "Wykończenie", l: 1.0 },
@@ -964,26 +1024,174 @@
   }
 
   // Opór pojedynczej warstwy. Pustka powietrzna ma stały opór, reszta liczy się z λ.
-  function oporWarstwy(w) {
+  // Opór niewentylowanej warstwy powietrza wg PN-EN ISO 6946, tab. 2.
+  // Zależy od grubości ORAZ od kierunku strumienia ciepła: ta sama pustka
+  // w ścianie i w stropie ma inny opór (poziomo 0,18, w górę 0,16, w dół 0,22
+  // przy 10 cm). Między wartościami z tabeli interpolujemy liniowo.
+  const OPOR_PUSTKI = [
+    { d:5,   gora:0.11, poziom:0.11, dol:0.11 },
+    { d:7,   gora:0.13, poziom:0.13, dol:0.13 },
+    { d:10,  gora:0.15, poziom:0.15, dol:0.15 },
+    { d:15,  gora:0.16, poziom:0.17, dol:0.17 },
+    { d:25,  gora:0.16, poziom:0.18, dol:0.19 },
+    { d:50,  gora:0.16, poziom:0.18, dol:0.21 },
+    { d:100, gora:0.16, poziom:0.18, dol:0.22 },
+    { d:300, gora:0.16, poziom:0.18, dol:0.23 }
+  ];
+
+  function oporPustki(grCm, kier) {
+    const kol = (kier === 'w górę') ? 'gora' : (kier === 'w dół') ? 'dol' : 'poziom';
+    const d = (parseFloat(grCm) || 0) * 10;                 // cm -> mm
+    if (!(d > 0)) return null;
+    if (d <= OPOR_PUSTKI[0].d) return OPOR_PUSTKI[0][kol];
+    for (let i = 1; i < OPOR_PUSTKI.length; i++) {
+      const a = OPOR_PUSTKI[i - 1], b = OPOR_PUSTKI[i];
+      if (d <= b.d) {
+        const t = (d - a.d) / (b.d - a.d);
+        return a[kol] + t * (b[kol] - a[kol]);
+      }
+    }
+    return OPOR_PUSTKI[OPOR_PUSTKI.length - 1][kol];
+  }
+
+  function oporWarstwy(w, kier) {
     const g = parseFloat(w.gr);
     if (w.l > 0) return (g > 0) ? (g / 100) / w.l : null;   // własna lambda
     const mat = materialByName(w.mat);
     if (!mat) return null;
-    if (mat.R !== undefined) return mat.R;
+    if (mat.R !== undefined) {
+      // pustka powietrzna - opór z tabeli normy, nie jedna sztywna liczba
+      const zTabeli = mat.pustka ? oporPustki(g, kier) : null;
+      return (zTabeli !== null) ? zTabeli : mat.R;
+    }
     if (!(g > 0) || !(mat.l > 0)) return null;
     return (g / 100) / mat.l;          // grubość podajemy w cm
   }
 
-  // U całej przegrody: 1 / (Rsi + suma oporów warstw + Rse)
+  // ================= TYPY PRZEGRÓD (PN-EN ISO 6946) =================
+  // Opory przejmowania zaleza od RODZAJU przegrody i kierunku strumienia ciepla.
+  // Wartosci jak w tabeli normy - te same, ktore podstawia ArCADia-TERMOCAD.
+  // Przegrody stykające się z gruntem NIE mają oporu przejmowania po stronie
+  // zewnętrznej (Rse = 0) - potwierdzone na pliku .thb z ArCADia-TERMOCAD.
+  const PRZEGRODA_TYPY = [
+    { id:'SC_ZEW',    n:'Ściana zewnętrzna',       rsi:0.13, rse:0.04, kier:'poziomy' },
+    { id:'SC_WEW',    n:'Ściana wewnętrzna',       rsi:0.13, rse:0.13, kier:'poziomy' },
+    { id:'SC_GRUNT',  n:'Ściana na gruncie',       rsi:0.13, rse:0.00, kier:'poziomy' },
+    { id:'DACH',      n:'Dach',                    rsi:0.10, rse:0.04, kier:'w górę' },
+    { id:'STR_ZEW',   n:'Strop zewnętrzny',        rsi:0.10, rse:0.04, kier:'w górę' },
+    { id:'STR_WEW',   n:'Strop wewnętrzny',        rsi:0.10, rse:0.10, kier:'w górę', stropy:true },
+    { id:'STR_PRZEJ', n:'Strop nad przejazdem',    rsi:0.17, rse:0.04, kier:'w dół' },
+    { id:'PODL_GR',   n:'Podłoga na gruncie',      rsi:0.17, rse:0.00, kier:'w dół' },
+    { id:'OK_ZEW',    n:'Okno zewnętrzne',         rsi:0.13, rse:0.04, kier:'poziomy' },
+    { id:'OK_WEW',    n:'Okno wewnętrzne',         rsi:0.13, rse:0.13, kier:'poziomy' },
+    { id:'OK_POL',    n:'Okno połaciowe',          rsi:0.10, rse:0.04, kier:'w górę' },
+    { id:'DRZ_ZEW',   n:'Drzwi zewnętrzne',        rsi:0.13, rse:0.04, kier:'poziomy' },
+    { id:'DRZ_WEW',   n:'Drzwi wewnętrzne',        rsi:0.13, rse:0.13, kier:'poziomy' }
+  ];
+
+  // Strop wewnetrzny: opory zaleza od tego, CO jest po drugiej stronie.
+  const TYPY_STROPU = [
+    { n:'Pod nieogrzewanym poddaszem', rsi:0.10, rse:0.10 },
+    { n:'Nad nieogrzewanymi piwnicami i zamkniętymi przestrzeniami podpodłogowymi', rsi:0.17, rse:0.17 },
+    { n:'Międzykondygnacyjny', rsi:0.10, rse:0.10 }
+  ];
+
+  // Oznaczenie na przekroju podpowiada typ, ale audytor moze go zmienic.
+  const TYP_DOMYSLNY = { SZ:'SC_ZEW', S:'STR_WEW', D:'DACH', PG:'PODL_GR', O:'OK_ZEW', DZ:'DRZ_ZEW' };
+
+  function typPrzegrodyById(id) { return PRZEGRODA_TYPY.find(t => t.id === id) || null; }
+  function typStropuByName(n) { return TYPY_STROPU.find(t => t.n === n) || null; }
+
+  // Opory przejmowania dla konkretnej przegrody: typ + ewentualny typ stropu,
+  // z mozliwoscia recznego nadpisania (tak jak w programach obliczeniowych).
+  function oporyPrzegrody(meta, cat) {
+    const typ = typPrzegrodyById(meta && meta.typ) || typPrzegrodyById(TYP_DOMYSLNY[cat]) ||
+                { rsi: (OPORY_PRZEJMOWANIA[cat] || OPORY_PRZEJMOWANIA.SZ).rsi,
+                  rse: (OPORY_PRZEJMOWANIA[cat] || OPORY_PRZEJMOWANIA.SZ).rse };
+    let rsi = typ.rsi, rse = typ.rse;
+    if (typ.stropy && meta && meta.typStropu) {
+      const ts = typStropuByName(meta.typStropu);
+      if (ts) { rsi = ts.rsi; rse = ts.rse; }
+    }
+    if (meta && meta.rsi !== undefined && meta.rsi !== null && meta.rsi !== '') rsi = parseFloat(meta.rsi);
+    if (meta && meta.rse !== undefined && meta.rse !== null && meta.rse !== '') rse = parseFloat(meta.rse);
+    return { rsi, rse };
+  }
+
+  // Suma oporów warstw (bez przejmowania). null = brak kompletu danych.
+  function sumaOporow(warstwy, kier) {
+    if (!warstwy || !warstwy.length) return null;
+    let suma = 0;
+    for (const w of warstwy) {
+      const r = oporWarstwy(w, kier);
+      if (r === null) return null;
+      suma += r;
+    }
+    return suma;
+  }
+
+  // Kierunek strumienia ciepła bierze się z typu przegrody.
+  function kierunekStrumienia(meta, cat) {
+    const t = typPrzegrodyById(meta && meta.typ) || typPrzegrodyById(TYP_DOMYSLNY[cat]);
+    return t ? t.kier : 'poziomy';
+  }
+
+  // ================= PRZEGRODA NIEJEDNORODNA =================
+  // Metoda z PN-EN ISO 6946: przegroda złożona z powtarzalnych wycinków
+  // (np. mijające się belki stropowe i wypełnienie między nimi). Liczymy
+  // opór każdego wycinka osobno i składamy je równolegle, proporcjonalnie
+  // do zajmowanej szerokości.
+  //   1/R = f_A/R_A + f_B/R_B,   f = szerokość wycinka / szerokość razem
+  // Gdy oba wycinki mają tę samą liczbę warstw o tych samych grubościach,
+  // norma pozwala policzyć też granicę dolną i uśrednić - wtedy to robimy.
+  function obliczPrzegrode(meta, warstwyA, cat) {
+    const op = oporyPrzegrody(meta, cat);
+    const kier = kierunekStrumienia(meta, cat);
+    const rA = sumaOporow(warstwyA, kier);
+    if (rA === null) return null;
+    const RA = op.rsi + rA + op.rse;
+
+    if (!meta || !meta.niejednorodna) {
+      return { U: 1 / RA, R: RA, RA: RA, RB: null, fA: 1, fB: 0, rsi: op.rsi, rse: op.rse, granice: false };
+    }
+
+    const warstwyB = meta.warstwyB || [];
+    const rB = sumaOporow(warstwyB, kier);
+    const LA = parseFloat(meta.LA), LB = parseFloat(meta.LB);
+    if (rB === null || !(LA > 0) || !(LB > 0)) return null;
+    const RB = op.rsi + rB + op.rse;
+    const fA = LA / (LA + LB), fB = LB / (LA + LB);
+
+    // granica górna - wycinki równolegle
+    const Rgorna = 1 / (fA / RA + fB / RB);
+
+    // granica dolna - tylko gdy warstwy da się zestawić parami
+    let Rdolna = null;
+    if (warstwyA.length === warstwyB.length) {
+      let zgodne = true, suma = 0;
+      for (let i = 0; i < warstwyA.length; i++) {
+        const ra = oporWarstwy(warstwyA[i], kier), rb = oporWarstwy(warstwyB[i], kier);
+        if (ra === null || rb === null) { zgodne = false; break; }
+        if (Math.abs(parseFloat(warstwyA[i].gr) - parseFloat(warstwyB[i].gr)) > 0.05) { zgodne = false; break; }
+        suma += 1 / (fA / ra + fB / rb);
+      }
+      if (zgodne) Rdolna = op.rsi + suma + op.rse;
+    }
+
+    const R = (Rdolna !== null) ? (Rgorna + Rdolna) / 2 : Rgorna;
+    return { U: 1 / R, R, RA, RB, fA, fB, rsi: op.rsi, rse: op.rse,
+             Rgorna, Rdolna, granice: Rdolna !== null };
+  }
+
+  // U przegrody jednorodnej, bez wskazanego typu - opory bierzemy po oznaczeniu
+  // (SZ/S/D/PG). Zostawione dla zgodności; przegrody z wybranym typem liczy
+  // obliczPrzegrode(), które uwzględnia też wycinek B.
   function obliczU(cat, warstwy) {
     if (!warstwy || !warstwy.length) return null;
     const op = OPORY_PRZEJMOWANIA[cat] || OPORY_PRZEJMOWANIA.SZ;
-    let suma = 0;
-    for (const w of warstwy) {
-      const r = oporWarstwy(w);
-      if (r === null) return null;     // brak kompletu danych - nie zgadujemy
-      suma += r;
-    }
+    const kier = (cat === 'PG') ? 'w dół' : (cat === 'S' || cat === 'D') ? 'w górę' : 'poziomy';
+    const suma = sumaOporow(warstwy, kier);
+    if (suma === null) return null;    // brak kompletu danych - nie zgadujemy
     const total = op.rsi + suma + op.rse;
     return total > 0 ? 1 / total : null;
   }
@@ -1067,6 +1275,117 @@
   // tak samo jak reszta pól formularza.
   let layersKey = null, layersCat = null, layersDraft = [];
 
+  // ================= METADANE PRZEGRODY =================
+  // Warstwy zostaja tam gdzie byly (pole _layers), zeby stare kopie zapasowe
+  // i raporty dzialaly bez zmian. Typ przegrody, opory i drugi wycinek trzymamy
+  // obok, w polu _przegroda.
+  function readMeta(key) {
+    const el = document.querySelector('[name="' + key + '_przegroda"]');
+    if (!el || !el.value) return {};
+    try { return JSON.parse(el.value) || {}; } catch (e) { return {}; }
+  }
+
+  function writeMeta(key, meta) {
+    let el = document.querySelector('[name="' + key + '_przegroda"]');
+    if (!el) {
+      el = document.createElement('input');
+      el.type = 'hidden'; el.name = key + '_przegroda';
+      const cont = document.getElementById('dynamicEnvelopesContainer');
+      if (cont) cont.appendChild(el);
+    }
+    el.value = (meta && Object.keys(meta).length) ? JSON.stringify(meta) : '';
+  }
+
+  // ================= SZABLONY PRZEGRÓD =================
+  // Ta sama ściana wraca w kolejnych audytach. Szablon zapamietuje warstwy,
+  // typ i wycinek B - wystarczy wybrac z listy zamiast skladac od nowa.
+  const SZABLONY_KEY = 'przegrodySzablony';
+
+  function getSzablony() {
+    try { const v = JSON.parse(localStorage.getItem(SZABLONY_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+    catch (e) { return []; }
+  }
+
+  function saveSzablony(arr) {
+    try { localStorage.setItem(SZABLONY_KEY, JSON.stringify(arr)); return true; }
+    catch (e) { alert('Nie udało się zapisać szablonu — brakuje miejsca w pamięci.'); return false; }
+  }
+
+  function saveAsTemplate() {
+    if (!layersDraft.length) { alert('Najpierw dodaj warstwy.'); return; }
+    const domyslna = (layersDraft[0] ? layersDraft[0].mat : 'Przegroda') + ' ' +
+                     gruboscCalkowita(layersDraft).toFixed(0) + ' cm';
+    const nazwa = prompt('Nazwa szablonu:', domyslna);
+    if (nazwa === null || !String(nazwa).trim()) return;
+    const arr = getSzablony();
+    const meta = zbierzMetaZDialogu();
+    const wpis = {
+      nazwa: String(nazwa).trim(),
+      typ: meta.typ, typStropu: meta.typStropu,
+      rsi: meta.rsi, rse: meta.rse,
+      niejednorodna: !!meta.niejednorodna,
+      LA: meta.LA, LB: meta.LB,
+      warstwy: JSON.parse(JSON.stringify(layersDraft)),
+      warstwyB: JSON.parse(JSON.stringify(meta.warstwyB || [])),
+      data: new Date().toISOString().slice(0, 10)
+    };
+    const i = arr.findIndex(t => t.nazwa.toLowerCase() === wpis.nazwa.toLowerCase());
+    if (i !== -1) {
+      if (!confirm('Szablon "' + wpis.nazwa + '" już istnieje. Nadpisać?')) return;
+      arr[i] = wpis;
+    } else arr.push(wpis);
+    if (saveSzablony(arr)) {
+      renderTemplateList();
+      alert('Zapisano szablon "' + wpis.nazwa + '".');
+    }
+  }
+
+  function applyTemplate(i) {
+    const t = getSzablony()[i];
+    if (!t) return;
+    if (layersDraft.length && !confirm('Zastąpić obecne warstwy szablonem "' + t.nazwa + '"?')) return;
+    layersDraft = JSON.parse(JSON.stringify(t.warstwy || []));
+    layersDraftB = JSON.parse(JSON.stringify(t.warstwyB || []));
+    document.getElementById('layerTypSelect').value = t.typ || '';
+    document.getElementById('layerNiejednorodna').checked = !!t.niejednorodna;
+    document.getElementById('layerLA').value = t.LA || '';
+    document.getElementById('layerLB').value = t.LB || '';
+    onTypPrzegrodyChange();
+    if (t.typStropu) document.getElementById('layerTypStropu').value = t.typStropu;
+    onNiejednorodnaChange();
+    renderLayers();
+  }
+
+  function deleteTemplate(i) {
+    const arr = getSzablony();
+    if (!arr[i]) return;
+    if (!confirm('Usunąć szablon "' + arr[i].nazwa + '"?')) return;
+    arr.splice(i, 1);
+    saveSzablony(arr);
+    renderTemplateList();
+  }
+
+  function renderTemplateList() {
+    const box = document.getElementById('layerTemplateList');
+    if (!box) return;
+    const arr = getSzablony();
+    if (!arr.length) {
+      box.innerHTML = '<span class="text-muted small">Brak zapisanych szablonów. Złóż warstwy i kliknij „⭐ Zapisz jako szablon".</span>';
+      return;
+    }
+    box.innerHTML = arr.map((t, i) => {
+      const typ = typPrzegrodyById(t.typ);
+      const opis = (t.warstwy || []).length + ' warstw' +
+                   (t.niejednorodna ? ' · niejednorodna' : '') +
+                   (typ ? ' · ' + typ.n : '');
+      return `<div class="d-flex align-items-center border-bottom py-1">
+        <span class="small flex-fill">${t.nazwa}<br><span class="text-muted">${opis}</span></span>
+        <button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" onclick="applyTemplate(${i})">Użyj</button>
+        <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteTemplate(${i})">🗑️</button>
+      </div>`;
+    }).join('');
+  }
+
   function readLayers(key) {
     const el = document.querySelector('[name="' + key + '_layers"]');
     if (!el || !el.value) return [];
@@ -1103,29 +1422,127 @@
     dl.innerHTML = `<option value="${MATERIAL_INNY}">wpisz własną nazwę materiału</option>` + html;
   }
 
+  let layersDraftB = [];      // warstwy wycinka B (przegroda niejednorodna)
+  let aktywnyWycinek = 'A';   // do ktorego wycinka trafiaja nowe warstwy
+
+  function fillTypOptions() {
+    const sel = document.getElementById('layerTypSelect');
+    sel.innerHTML = PRZEGRODA_TYPY.map(t =>
+      `<option value="${t.id}">${t.n} — Rsi ${t.rsi.toFixed(2)} / Rse ${t.rse.toFixed(2)}</option>`).join('');
+    const ss = document.getElementById('layerTypStropu');
+    ss.innerHTML = TYPY_STROPU.map(t => `<option value="${t.n}">${t.n}</option>`).join('');
+  }
+
+  function onTypPrzegrodyChange() {
+    const t = typPrzegrodyById(document.getElementById('layerTypSelect').value);
+    document.getElementById('layerTypStropuBox').style.display = (t && t.stropy) ? 'block' : 'none';
+    // przy zmianie typu wracamy do wartosci normowych - reczne nadpisanie kasujemy
+    const op = oporyPrzegrody({ typ: t ? t.id : null, typStropu: document.getElementById('layerTypStropu').value }, layersCat);
+    document.getElementById('layerRsi').value = op.rsi.toFixed(2);
+    document.getElementById('layerRse').value = op.rse.toFixed(2);
+    document.getElementById('layerOporyHint').innerText = t
+      ? 'Wartości z PN-EN ISO 6946 dla kierunku strumienia: ' + t.kier + '. Możesz je nadpisać.'
+      : '';
+    renderLayers();
+  }
+
+  function onTypStropuChange() {
+    const ts = typStropuByName(document.getElementById('layerTypStropu').value);
+    if (ts) {
+      document.getElementById('layerRsi').value = ts.rsi.toFixed(2);
+      document.getElementById('layerRse').value = ts.rse.toFixed(2);
+    }
+    renderLayers();
+  }
+
+  function onNiejednorodnaChange() {
+    const on = document.getElementById('layerNiejednorodna').checked;
+    document.getElementById('layerWycinkiBox').style.display = on ? 'block' : 'none';
+    if (!on) aktywnyWycinek = 'A';
+    setWycinek(aktywnyWycinek);
+  }
+
+  function setWycinek(w) {
+    aktywnyWycinek = w;
+    const on = document.getElementById('layerNiejednorodna').checked;
+    const a = document.getElementById('tabWycA'), b = document.getElementById('tabWycB');
+    if (a && b) {
+      a.className = 'nav-link fw-bold' + (w === 'A' ? ' active' : '');
+      b.className = 'nav-link fw-bold' + (w === 'B' ? ' active' : '');
+    }
+    const cel = document.getElementById('layerAddTarget');
+    if (cel) cel.innerText = on ? ('do wycinka ' + w) : '';
+    renderLayers();
+  }
+
+  // Warstwy wycinka, ktory jest teraz na wierzchu.
+  function biezaceWarstwy() {
+    return (document.getElementById('layerNiejednorodna').checked && aktywnyWycinek === 'B')
+      ? layersDraftB : layersDraft;
+  }
+
+  function zbierzMetaZDialogu() {
+    const typ = document.getElementById('layerTypSelect').value;
+    const niejed = document.getElementById('layerNiejednorodna').checked;
+    const t = typPrzegrodyById(typ);
+    const meta = { typ };
+    if (t && t.stropy) meta.typStropu = document.getElementById('layerTypStropu').value;
+    // Rsi/Rse zapisujemy tylko, gdy audytor je ZMIENIL wobec normy
+    const norm = oporyPrzegrody({ typ, typStropu: meta.typStropu }, layersCat);
+    const rsi = parseFloat(document.getElementById('layerRsi').value);
+    const rse = parseFloat(document.getElementById('layerRse').value);
+    if (rsi > 0 && Math.abs(rsi - norm.rsi) > 0.001) meta.rsi = rsi;
+    if (rse > 0 && Math.abs(rse - norm.rse) > 0.001) meta.rse = rse;
+    if (niejed) {
+      meta.niejednorodna = true;
+      meta.LA = document.getElementById('layerLA').value;
+      meta.LB = document.getElementById('layerLB').value;
+      meta.warstwyB = layersDraftB;
+    }
+    return meta;
+  }
+
   function openLayersDialog(key, cat) {
     layersKey = key; layersCat = cat;
     layersDraft = readLayers(key).slice();
+    const meta = readMeta(key);
+    layersDraftB = (meta.warstwyB || []).slice();
     document.getElementById('layersBadge').innerText = key;
     fillMaterialOptions();
+    fillTypOptions();
+    document.getElementById('layerTypSelect').value = meta.typ || TYP_DOMYSLNY[cat] || 'SC_ZEW';
+    document.getElementById('layerNiejednorodna').checked = !!meta.niejednorodna;
+    document.getElementById('layerLA').value = meta.LA || '';
+    document.getElementById('layerLB').value = meta.LB || '';
+    onTypPrzegrodyChange();
+    if (meta.typStropu) { document.getElementById('layerTypStropu').value = meta.typStropu; onTypStropuChange(); }
+    if (meta.rsi !== undefined) document.getElementById('layerRsi').value = meta.rsi;
+    if (meta.rse !== undefined) document.getElementById('layerRse').value = meta.rse;
+    aktywnyWycinek = 'A';
+    onNiejednorodnaChange();
     document.getElementById('layerMatInput').value = '';
     document.getElementById('layerThickInput').value = '';
+    renderTemplateList();
     renderLayers();
     document.getElementById('layersOverlay').style.display = 'flex';
   }
 
   function closeLayersDialog() {
     document.getElementById('layersOverlay').style.display = 'none';
-    layersKey = null; layersDraft = [];
+    layersKey = null; layersDraft = []; layersDraftB = []; aktywnyWycinek = 'A';
   }
 
   function renderLayers() {
     const box = document.getElementById('layersList');
-    if (!layersDraft.length) {
-      box.innerHTML = '<p class="text-muted small mb-0">Brak warstw. Dodaj pierwszą poniżej — zacznij od warstwy wewnętrznej (np. tynk).</p>';
+    const lista = biezaceWarstwy();
+    const niejed = document.getElementById('layerNiejednorodna').checked;
+    if (!lista.length) {
+      box.innerHTML = '<p class="text-muted small mb-0">Brak warstw' +
+        (niejed ? ' w wycinku ' + aktywnyWycinek : '') +
+        '. Dodaj pierwszą poniżej — zacznij od warstwy wewnętrznej (np. tynk).</p>';
     } else {
       let html = '';
-      layersDraft.forEach((w, i) => {
+      lista.forEach((w, i) => {
         const r = oporWarstwy(w);
         const mat = materialByName(w.mat);
         const opis = mat && mat.R !== undefined ? 'pustka powietrzna' : (r !== null ? 'R = ' + r.toFixed(3) : 'brak λ');
@@ -1134,22 +1551,35 @@
           <span class="small flex-fill">${w.mat}<br><span class="text-muted">${w.gr} cm · ${opis}</span></span>
           <span class="text-nowrap">
             <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
-            <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},1)" ${i === layersDraft.length - 1 ? 'disabled' : ''}>▼</button>
+            <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},1)" ${i === lista.length - 1 ? 'disabled' : ''}>▼</button>
             <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeLayer(${i})">🗑️</button>
           </span></div>`;
       });
       box.innerHTML = html;
     }
 
-    const u = obliczU(layersCat, layersDraft);
+    const wynik = obliczPrzegrode(zbierzMetaZDialogu(), layersDraft, layersCat);
     const res = document.getElementById('layersResult');
     const gr = gruboscCalkowita(layersDraft);
-    if (u === null) {
+    if (wynik === null) {
       res.className = 'alert alert-secondary py-2 mb-2 text-center fw-bold';
-      res.innerText = layersDraft.length ? 'Uzupełnij grubości, żeby policzyć U' : 'Dodaj warstwy, żeby policzyć U';
+      res.innerText = niejed
+        ? 'Uzupełnij oba wycinki i ich szerokości, żeby policzyć U'
+        : (layersDraft.length ? 'Uzupełnij grubości, żeby policzyć U' : 'Dodaj warstwy, żeby policzyć U');
     } else {
       res.className = 'alert alert-success py-2 mb-2 text-center fw-bold';
-      res.innerHTML = `U = ${u.toFixed(3)} W/(m²·K) <span class="small fw-normal">· grubość razem ${gr.toFixed(1)} cm</span>`;
+      let dod = `<span class="small fw-normal">· grubość razem ${gr.toFixed(1)} cm</span>`;
+      if (niejed) {
+        dod = `<div class="small fw-normal mt-1">
+          R<sub>A</sub> = ${wynik.RA.toFixed(3)} (${(wynik.fA * 100).toFixed(0)}%) ·
+          R<sub>B</sub> = ${wynik.RB.toFixed(3)} (${(wynik.fB * 100).toFixed(0)}%) ·
+          R = ${wynik.R.toFixed(3)} m²K/W<br>
+          ${wynik.granice
+            ? 'średnia z granicy górnej i dolnej wg PN-EN ISO 6946'
+            : 'wycinki mają różny układ warstw — liczone równolegle (granica górna)'}
+        </div>`;
+      }
+      res.innerHTML = `U = ${wynik.U.toFixed(3)} W/(m²·K) ` + dod;
     }
   }
 
@@ -1167,9 +1597,9 @@
       const l = (lam !== null && String(lam).trim()) ? parseFloat(String(lam).replace(',', '.')) : NaN;
       const w2 = { mat: String(w).trim(), gr: parseFloat(gr).toFixed(1), wlasny: true };
       if (l > 0) w2.l = l;
-      layersDraft.push(w2);
+      biezaceWarstwy().push(w2);
     } else {
-      layersDraft.push({ mat: nazwa, gr: parseFloat(gr).toFixed(1) });
+      biezaceWarstwy().push({ mat: nazwa, gr: parseFloat(gr).toFixed(1) });
     }
 
     document.getElementById('layerMatInput').value = '';
@@ -1178,16 +1608,23 @@
     setTimeout(() => { const el = document.getElementById('layerMatInput'); if (el) el.focus({ preventScroll: true }); }, 40);
   }
 
-  function removeLayer(i) { layersDraft.splice(i, 1); renderLayers(); }
+  function removeLayer(i) { biezaceWarstwy().splice(i, 1); renderLayers(); }
 
   function moveLayer(i, d) {
+    const lista = biezaceWarstwy();
     const j = i + d;
-    if (j < 0 || j >= layersDraft.length) return;
-    const t = layersDraft[i]; layersDraft[i] = layersDraft[j]; layersDraft[j] = t;
+    if (j < 0 || j >= lista.length) return;
+    const t = lista[i]; lista[i] = lista[j]; lista[j] = t;
     renderLayers();
   }
 
   function clearLayers() {
+    const niejed = document.getElementById('layerNiejednorodna').checked;
+    if (niejed && aktywnyWycinek === 'B') {
+      if (!layersDraftB.length) return;
+      if (!confirm('Usunąć wszystkie warstwy wycinka B?')) return;
+      layersDraftB = []; renderLayers(); return;
+    }
     if (!layersDraft.length) return;
     if (!confirm('Usunąć wszystkie warstwy tej przegrody?')) return;
     layersDraft = []; renderLayers();
@@ -1211,11 +1648,13 @@
   }
 
   function saveLayers() {
+    const meta = zbierzMetaZDialogu();
     writeLayers(layersKey, layersDraft);
-    const u = obliczU(layersCat, layersDraft);
-    if (u !== null) {
+    writeMeta(layersKey, meta);
+    const wynik = obliczPrzegrode(meta, layersDraft, layersCat);
+    if (wynik !== null) {
       const uEl = document.querySelector('[name="' + layersKey + '_uvalue"]');
-      if (uEl) uEl.value = u.toFixed(3);
+      if (uEl) uEl.value = wynik.U.toFixed(3);
       const gEl = document.querySelector('[name="' + layersKey + '_totalthick"]');
       if (gEl) gEl.value = gruboscCalkowita(layersDraft).toFixed(1);
     }
@@ -1229,9 +1668,13 @@
       const w = readLayers(key);
       if (!w.length) { el.innerHTML = '<span class="text-muted">brak warstw</span>'; return; }
       const cat = key.replace(/\d+$/, '');
-      const u = obliczU(cat, w);
+      const meta = readMeta(key);
+      const wynik = obliczPrzegrode(meta, w, cat);
+      const typ = typPrzegrodyById(meta.typ);
       el.innerHTML = `<span class="text-success fw-bold">${w.length} warstw · ${gruboscCalkowita(w).toFixed(1)} cm</span>` +
-                     (u !== null ? ` <span class="text-primary fw-bold">U = ${u.toFixed(3)}</span>` : '');
+                     (typ ? ` <span class="text-muted">${typ.n}</span>` : '') +
+                     (meta.niejednorodna ? ' <span class="badge bg-secondary">niejednorodna</span>' : '') +
+                     (wynik !== null ? ` <span class="text-primary fw-bold">U = ${wynik.U.toFixed(3)}</span>` : '');
     });
   }
 
@@ -1857,8 +2300,16 @@
   // zeby archiwalne kopie zapasowe nadal dalo sie wydrukowac.
   function budowaPrzegrody(v, esc) {
     if (v.warstwy && v.warstwy.length) {
-      return v.warstwy.map(w => `${esc(w.mat)} — ${esc(w.gr)} cm`).join('<br>') +
-             `<br><b>RAZEM ${v.gruboscWarstw.toFixed(1)} cm</b>`;
+      let t = '';
+      if (v.typNazwa) t += `<i>${esc(v.typNazwa)}</i><br>`;
+      if (v.niejednorodna) t += '<b>Wycinek A:</b><br>';
+      t += v.warstwy.map(w => `${esc(w.mat)} — ${esc(w.gr)} cm`).join('<br>') +
+           `<br><b>RAZEM ${v.gruboscWarstw.toFixed(1)} cm</b>`;
+      if (v.niejednorodna && v.warstwyB && v.warstwyB.length) {
+        t += '<br><b>Wycinek B:</b><br>' +
+             v.warstwyB.map(w => `${esc(w.mat)} — ${esc(w.gr)} cm`).join('<br>');
+      }
+      return t;
     }
     return [v.desc, v.thick ? 'gr. ' + v.thick + ' cm' : '', v.archiwalne || '']
            .filter(Boolean).map(x => esc(x)).join('<br>');
@@ -1900,7 +2351,7 @@
     envelopeConfig.forEach(s => { nameById[s.id] = s.name; });
     const found = {};
     Object.keys(audit).forEach(k => {
-      const m = k.match(/^(SZ|DZ|PG|S|D|O)(\d+)_(layers|desc|totalthick|uvalue|type|insulation|insthick)$/);
+      const m = k.match(/^(SZ|DZ|PG|S|D|O)(\d+)_(layers|przegroda|desc|totalthick|uvalue|type|insulation|insthick)$/);
       if (!m) return;
       const v = audit[k];
       if (!v || String(v).indexOf('Wybierz') === 0) return;
@@ -1909,12 +2360,18 @@
     const order = ['SZ', 'S', 'PG', 'D', 'O', 'DZ'];
     return Object.keys(found).map(key => {
       const f = found[key];
-      let warstwy = [];
+      let warstwy = [], meta = {};
       try { const raw = audit[key + '_layers']; if (raw) warstwy = JSON.parse(raw) || []; } catch (e) {}
-      const uObl = warstwy.length ? obliczU(f.cat, warstwy) : null;
+      try { const rawM = audit[key + '_przegroda']; if (rawM) meta = JSON.parse(rawM) || {}; } catch (e) {}
+      const wynik = warstwy.length ? obliczPrzegrode(meta, warstwy, f.cat) : null;
+      const uObl = wynik ? wynik.U : null;
+      const typ = typPrzegrodyById(meta.typ);
       return {
         section: nameById[f.cat] || f.cat, id: key, cat: f.cat, num: f.num,
         warstwy: warstwy,
+        typNazwa: typ ? typ.n : '',
+        niejednorodna: !!meta.niejednorodna,
+        warstwyB: meta.warstwyB || [],
         uObliczone: uObl,
         gruboscWarstw: warstwy.length ? gruboscCalkowita(warstwy) : null,
         archiwalne: archiwalnyOpis(audit, key),
@@ -3787,7 +4244,7 @@ ${sketchBlocks}
 
     // czyścimy pola opisu tej przegrody, żeby po ponownym użyciu numeru
     // nie wróciły dane sprzed skasowania
-    ['_desc', '_totalthick', '_uvalue'].forEach(suf => {
+    ['_desc', '_totalthick', '_uvalue', '_layers', '_przegroda'].forEach(suf => {
       const el = document.querySelector('[name="' + label + suf + '"]');
       if (el) { if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = ''; }
     });
@@ -4444,6 +4901,77 @@ ${sketchBlocks}
 
   // Edycja i usuwanie pomieszczenia wprost z tabeli - bez szukania go na rysunku.
   // Działa też dla pomieszczeń z innej zakładki: program sam ją otwiera.
+  // ============ OBRYS POMIESZCZENIA A ZMIANY SCIAN ============
+  // Pomieszczenie pamieta swoj obrys z chwili zalozenia. Gdy pozniej dorysujesz
+  // wneke albo skasujesz sciane, rysunek sie zmienia, a zapisany obrys - nie,
+  // wiec powierzchnia zostaje stara. Ponizsze funkcje pozwalaja obrys odswiezyc
+  // BEZ cofania pracy (dane pomieszczenia: numer, typ, ogrzewanie - zostaja).
+
+  // Zwraca obrys, ktory program rozpoznaje DZIS w miejscu tego pomieszczenia.
+  function detectFaceForRoom(room) {
+    if (!room || room.manual || !room.polygon || room.polygon.length < 3) return null;
+    const srodek = room.centroid || getVisualCenter(room.polygon);
+    let face = findEnclosingFace(srodek);
+    if (face) return face;
+    // srodek mogl wypasc na nowej sciance dzialowej - probujemy w kilku punktach
+    for (const p of room.polygon) {
+      const ku = { x: srodek.x + (p.x - srodek.x) * 0.5, y: srodek.y + (p.y - srodek.y) * 0.5 };
+      face = findEnclosingFace(ku);
+      if (face) return face;
+    }
+    return null;
+  }
+
+  // Czy zapisany obrys nadal pasuje do narysowanych scian?
+  function roomOutlineStale(room) {
+    if (!room || room.manual || !room.polygon || room.polygon.length < 3) return false;
+    const face = detectFaceForRoom(room);
+    if (!face) return true;                       // obszar przestal byc zamkniety
+    if (polygonsMatch(room.polygon, face)) return false;
+    const stare = Math.abs(polygonSignedArea(room.polygon));
+    const nowe = Math.abs(polygonSignedArea(face));
+    // drobne przesuniecia wezlow ignorujemy; chodzi o realna zmiane ksztaltu
+    return Math.abs(stare - nowe) > stare * 0.005 || room.polygon.length !== face.length;
+  }
+
+  function refreshRoomOutline(sketchIndex, roomIndex, cicho) {
+    if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
+    const room = objects.rooms && objects.rooms[roomIndex];
+    if (!room) return false;
+    const face = detectFaceForRoom(room);
+    if (!face) {
+      if (!cicho) alert('Nie widzę tu zamkniętego obszaru.\n\nSprawdź, czy ściany wokół pomieszczenia ' +
+                        room.num + ' się stykają, i spróbuj ponownie.');
+      return false;
+    }
+    room.polygon = face;
+    room.centroid = getVisualCenter(face);
+    recalculateRooms();
+    saveStateToHistory(); renderCanvas(); renderTablesPerSketch();
+    return true;
+  }
+
+  // Przelicza wszystkie nieaktualne obrysy w biezacym szkicu naraz.
+  function refreshAllOutlines(sketchIndex) {
+    if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
+    const doPoprawy = [];
+    (objects.rooms || []).forEach((r, i) => { if (roomOutlineStale(r)) doPoprawy.push(i); });
+    if (!doPoprawy.length) { alert('Wszystkie obrysy są aktualne.'); return; }
+    let udane = 0;
+    doPoprawy.forEach(i => {
+      const room = objects.rooms[i];
+      const face = detectFaceForRoom(room);
+      if (!face) return;
+      room.polygon = face;
+      room.centroid = getVisualCenter(face);
+      udane++;
+    });
+    recalculateRooms(); saveStateToHistory(); renderCanvas(); renderTablesPerSketch();
+    const nieudane = doPoprawy.length - udane;
+    alert('Przeliczono obrysy: ' + udane + '.' +
+          (nieudane ? '\n\nDla ' + nieudane + ' pomieszczeń nie widzę zamkniętego obszaru — sprawdź, czy ściany się stykają.' : ''));
+  }
+
   function editRoomFromTable(sketchIndex, roomIndex) {
     if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
     const room = objects.rooms && objects.rooms[roomIndex];
@@ -4471,7 +4999,13 @@ ${sketchBlocks}
       sketches.forEach(sk => {
         objects = sk.objects;
         if (!objects.customDims) objects.customDims = {};
-        if (objects.rooms && objects.rooms.length) recalculateRooms();
+        if (objects.rooms && objects.rooms.length) {
+          recalculateRooms();
+          // Po zmianie scian zapisany obrys moze juz nie pasowac do rysunku.
+          // Zaznaczamy to przy pomieszczeniu, zamiast po cichu pokazywac
+          // powierzchnie policzona ze starego ksztaltu.
+          objects.rooms.forEach(r => { r._staleOutline = roomOutlineStale(r); });
+        }
       });
       objects = savedObjects;
 
@@ -4500,7 +5034,15 @@ ${sketchBlocks}
                   });
                   html += `</tbody><tfoot><tr class="fw-bold" style="background:#f3effa;"><td colspan="2" class="text-end">RAZEM:</td><td>${totalArea.toFixed(2)} m²</td><td></td></tr></tfoot></table>`;
               } else {
+                  const ileNieakt = sketch.objects.rooms.filter(r => r._staleOutline).length;
                   html += `<h6 class="text-primary fw-bold">Pomieszczenia: <span class="small fw-normal text-muted">wysokość kondygnacji: ${skH !== null ? skH.toFixed(2) + ' m' : '<span class=\'text-danger fw-bold\'>nie podano!</span>'}</span></h6>`;
+                  if (ileNieakt) {
+                    html += `<div class="alert alert-warning py-2 small">
+                      <b>⚠️ ${ileNieakt === 1 ? 'Jedno pomieszczenie ma' : ileNieakt + ' pomieszczenia mają'} obrys nieaktualny wobec rysunku.</b>
+                      Ściany zostały zmienione po założeniu pomieszczenia, więc powierzchnia liczy się ze starego kształtu.
+                      <button class="btn btn-sm btn-warning fw-bold ms-2" onclick="refreshAllOutlines(${index})">🔄 Przelicz obrysy</button>
+                    </div>`;
+                  }
                   html += `<table class="table table-sm table-bordered mb-4"><thead><tr class="table-light"><th>Nr</th><th>Typ</th><th>Ogrzewane</th><th>Klimatyzacja</th><th>Powierzchnia</th><th>Kubatura [m³]</th><th></th></tr></thead><tbody>`;
                   sketch.objects.rooms.forEach(r => {
                       let areaStr = r.area; const aNum = parseFloat(areaStr);
@@ -4508,7 +5050,8 @@ ${sketchBlocks}
                       const vol = (!isNaN(aNum) && skH !== null) ? aNum * skH : null;
                       if (vol !== null) totalVol += vol;
                       const ri = sketch.objects.rooms.indexOf(r);
-                      html += `<tr><td>${r.num}</td><td>${r.name}</td><td>${r.heated}</td><td>${r.ac}</td><td class="${areaStr === 'Wymaga pomiaru!' ? 'text-danger fw-bold' : ''}">${areaStr === 'Wymaga pomiaru!' ? areaStr : areaStr + ' m²'}</td><td>${vol !== null ? vol.toFixed(2) : '–'}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editRoomFromTable(${index}, ${ri})" title="Edytuj">✏️</button> <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteRoomFromTable(${index}, ${ri})" title="Usuń">🗑️</button></td></tr>`;
+                      const nieakt = r._staleOutline;
+                      html += `<tr${nieakt ? ' style="background:#fff8e1"' : ''}><td>${r.num}</td><td>${r.name}</td><td>${r.heated}</td><td>${r.ac}</td><td class="${areaStr === 'Wymaga pomiaru!' ? 'text-danger fw-bold' : ''}">${areaStr === 'Wymaga pomiaru!' ? areaStr : areaStr + ' m²'}${nieakt ? '<br><span class="small text-warning-emphasis fw-bold">obrys nieaktualny</span>' : ''}</td><td>${vol !== null ? vol.toFixed(2) : '–'}</td><td class="text-nowrap">${nieakt ? `<button class="btn btn-sm btn-warning py-0 px-1 fw-bold" onclick="refreshRoomOutline(${index}, ${ri})" title="Przelicz obrys wg dzisiejszych ścian">🔄</button> ` : ''}<button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editRoomFromTable(${index}, ${ri})" title="Edytuj">✏️</button> <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteRoomFromTable(${index}, ${ri})" title="Usuń">🗑️</button></td></tr>`;
                   });
                   html += `</tbody><tfoot><tr class="table-info fw-bold"><td colspan="4" class="text-end">SUMA:</td><td>${totalArea.toFixed(2)} m²</td><td>${totalVol.toFixed(2)}</td><td></td></tr></tfoot></table>`;
               }
@@ -4548,6 +5091,14 @@ ${sketchBlocks}
                   html += `<tr><td>${g.id}</td><td class="fw-bold">${g.count}</td><td>${g.width}</td><td>${g.height}</td><td>${g.unitArea.toFixed(2)}</td><td class="fw-bold">${g.totalArea.toFixed(2)}</td><td>${g.uValue || '-'}</td></tr>`;
               });
               html += `</tbody><tfoot><tr class="table-info fw-bold"><td colspan="5" class="text-end">RAZEM:</td><td>${totalOp.toFixed(2)} m²</td><td></td></tr></tfoot></table>`;
+
+              // Wykaz pojedynczych otworow - tabela wyzej grupuje po numerze,
+              // a poprawiac trzeba konkretna sztuke na rysunku.
+              html += `<div class="small text-muted mb-1">Pojedyncze otwory na rysunku — kliknij ✏️, żeby poprawić rodzaj lub wymiary:</div><div class="mb-3">`;
+              sketch.objects.openings.forEach((op, oi) => {
+                  html += `<button class="btn btn-sm btn-outline-secondary py-0 px-2 me-1 mb-1" onclick="editOpeningFromTable(${index}, ${oi})">✏️ ${op.id} <span class="text-muted">${op.width}×${op.height}</span></button>`;
+              });
+              html += `</div>`;
 
               // podsumowanie wg kategorii (osobno okna, drzwi zewnetrzne itd.)
               const sums = summarizeOpenings(sketch.objects.openings);
@@ -4769,13 +5320,94 @@ ${sketchBlocks}
     checkOpeningDuplicate();
   }
 
-  function closeOpeningDialog() { document.getElementById('openingOverlay').style.display = 'none'; pendingOpeningPos = null; }
+  // Indeks poprawianego otworu; -1 = wstawiamy nowy.
+  let editingOpeningIndex = -1;
+
+  function closeOpeningDialog() {
+    document.getElementById('openingOverlay').style.display = 'none';
+    pendingOpeningPos = null;
+    editingOpeningIndex = -1;
+    setOpeningDialogMode(false);
+  }
+
+  function setOpeningDialogMode(edycja) {
+    const tytul = document.getElementById('openingDialogTitle');
+    const zapisz = document.getElementById('openingSaveBtn');
+    const usun = document.getElementById('openingDeleteBtn');
+    if (tytul) tytul.innerText = edycja ? '✏️ Popraw otwór' : '🚪 Otwór budowlany';
+    if (zapisz) zapisz.innerText = edycja ? 'Zapisz zmiany' : 'Zapisz';
+    if (usun) usun.style.display = edycja ? 'inline-block' : 'none';
+    const reuse = document.getElementById('openingReuseBox');
+    if (reuse && edycja) reuse.style.display = 'none';
+  }
+
+  // Otwiera okno wypelnione danymi istniejacego otworu. Pozycja i kat zostaja
+  // bez zmian - poprawiamy rodzaj i wymiary, nie przestawiamy otworu.
+  function openOpeningForEdit(idx) {
+    const op = objects.openings[idx];
+    if (!op) return;
+    editingOpeningIndex = idx;
+    pendingOpeningPos = { x: op.x, y: op.y };
+    pendingOpeningAngle = op.angle;
+    document.getElementById('openingTypeSelect').value = openingCatOf(op.id).pref;
+    document.getElementById('openingIdInput').value = op.id;
+    document.getElementById('openingWidth').value = op.width;
+    document.getElementById('openingHeight').value = op.height;
+    document.getElementById('openingUValue').value = (op.uValue !== null && op.uValue !== undefined) ? op.uValue : '';
+    setOpeningDialogMode(true);
+    document.getElementById('openingOverlay').style.display = 'flex';
+    checkOpeningDuplicate();
+  }
+
+  function editOpeningFromTable(sketchIndex, openingIndex) {
+    if (sketchIndex !== currentSketchIndex) switchSketch(sketchIndex);
+    const scr = document.getElementById('editorScreen');
+    if (scr && scr.scrollIntoView) scr.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    openOpeningForEdit(openingIndex);
+  }
+
+  function deleteOpeningFromDialog() {
+    if (editingOpeningIndex === -1) return;
+    const op = objects.openings[editingOpeningIndex];
+    if (!confirm('Usunąć otwór ' + (op ? op.id : '') + ' z rysunku?')) return;
+    objects.openings.splice(editingOpeningIndex, 1);
+    saveStateToHistory(); renderCanvas(); renderTablesPerSketch(); closeOpeningDialog();
+  }
+
+  // Zmiana rodzaju otworu przy poprawianiu: podpowiadamy nowy numer
+  // (O3 -> DZ2), ale NIE kasujemy wpisanych wymiarow.
+  function onOpeningTypeChange() {
+    if (editingOpeningIndex === -1) { autoFillOpeningId(); return; }
+    const typ = document.getElementById('openingTypeSelect').value;
+    const pole = document.getElementById('openingIdInput');
+    if (openingCatOf(pole.value.trim().toUpperCase()).pref === typ) return;
+    let maxNum = 0;
+    for (const id in globalOpeningsMemory) {
+      if (openingCatOf(id).pref === typ) {
+        const n = parseInt(id.substring(typ.length));
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      }
+    }
+    (objects.openings || []).forEach(o => {
+      if (openingCatOf(o.id).pref === typ) {
+        const n = parseInt(o.id.substring(typ.length));
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      }
+    });
+    pole.value = typ + (maxNum + 1);
+    checkOpeningDuplicate();
+  }
 
   function addOpeningToCanvas() {
     let id = document.getElementById('openingIdInput').value.trim().toUpperCase(); let w = parseFloat(document.getElementById('openingWidth').value); let h = parseFloat(document.getElementById('openingHeight').value); let u = parseFloat(document.getElementById('openingUValue').value);
     if(!id || isNaN(w) || isNaN(h)) { alert("Proszę poprawnie uzupełnić ID, szerokość oraz wysokość!"); return; }
     globalOpeningsMemory[id] = {w: w, h: h, u: (isNaN(u) ? null : u)};
-    objects.openings.push({ x: pendingOpeningPos.x, y: pendingOpeningPos.y, angle: pendingOpeningAngle, id: id, width: w, height: h, uValue: (isNaN(u) ? null : u) });
+    if (editingOpeningIndex !== -1) {
+      const op = objects.openings[editingOpeningIndex];
+      op.id = id; op.width = w; op.height = h; op.uValue = (isNaN(u) ? null : u);
+    } else {
+      objects.openings.push({ x: pendingOpeningPos.x, y: pendingOpeningPos.y, angle: pendingOpeningAngle, id: id, width: w, height: h, uValue: (isNaN(u) ? null : u) });
+    }
     saveStateToHistory(); renderCanvas(); renderTablesPerSketch(); closeOpeningDialog();
   }
 
@@ -6069,9 +6701,18 @@ ${sketchBlocks}
 
     if(currentMode === 'text') { labelPosCanvas = rawPos; document.getElementById('labelOverlay').style.display = 'flex'; document.getElementById('labelInput').value = ''; populateLabelSelect(); return; }
     if(currentMode === 'opening') {
+      // Klikniecie w JUZ WSTAWIONY otwor = poprawka, nie drugi otwor obok.
+      // Bez tego pomylka (okno zamiast drzwi) wymagala cofania calej pracy.
+      let hitOp = -1, hitD = 30 / zoomLevel;
+      (objects.openings || []).forEach((op, idx) => {
+        const d = Math.hypot(rawPos.x - op.x, rawPos.y - op.y);
+        if (d < hitD) { hitD = d; hitOp = idx; }
+      });
+      if (hitOp !== -1) { openOpeningForEdit(hitOp); return; }
+
       let minD = 30 / zoomLevel; let foundLine = null; let exactPt = null;
       objects.lines.forEach((line) => { let pt = getClosestPointOnSegment(rawPos, {x: line.x1, y: line.y1}, {x: line.x2, y: line.y2}); let dist = Math.hypot(rawPos.x - pt.x, rawPos.y - pt.y); if (dist < minD) { minD = dist; foundLine = line; exactPt = pt; } });
-      if(foundLine) { pendingOpeningPos = exactPt; pendingOpeningAngle = Math.atan2(foundLine.y2 - foundLine.y1, foundLine.x2 - foundLine.x1); document.getElementById('openingOverlay').style.display = 'flex'; autoFillOpeningId(); }
+      if(foundLine) { editingOpeningIndex = -1; setOpeningDialogMode(false); pendingOpeningPos = exactPt; pendingOpeningAngle = Math.atan2(foundLine.y2 - foundLine.y1, foundLine.x2 - foundLine.x1); document.getElementById('openingOverlay').style.display = 'flex'; autoFillOpeningId(); }
       return;
     }
 

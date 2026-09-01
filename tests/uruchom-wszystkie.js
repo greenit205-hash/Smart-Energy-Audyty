@@ -4,7 +4,7 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 
-const zestawy = ['test-warstwy.js', 'test-paczka.js', 'test-pomiary.js', 'test-obrysy.js', 'test-rzuty.js'];
+const zestawy = ['test-warstwy.js', 'test-paczka.js', 'test-pomiary.js', 'test-obrysy.js', 'test-rzuty.js', 'test-korekty.js', 'test-przegrody.js'];
 let bledy = 0, pominiete = 0;
 
 for (const t of zestawy) {

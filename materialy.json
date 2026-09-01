@@ -349,7 +349,7 @@
       "grupa": "Pustka powietrzna",
       "lambda": null,
       "R_stale": 0.18,
-      "_uwaga": "pustka powietrzna - ma stały opór R, nie liczy się z lambdy"
+      "_uwaga": "pustka powietrzna - opor wg PN-EN ISO 6946 tab. 2, zalezy od gruboscI i kierunku strumienia (10 cm: w gore 0,16 / poziomo 0,18 / w dol 0,22). Aplikacja dobiera go sama po typie przegrody; R_stale 0,18 to wartosc zapasowa."
     },
     {
       "lp": 40,

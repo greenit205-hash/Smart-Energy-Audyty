@@ -165,6 +165,8 @@ Ponowne kliknięcie w opisane pomieszczenie pozwala poprawić numer lub typ. Kli
 
 ### Poprawianie pomieszczeń
 
+> **Poprawiłeś ściany po założeniu pomieszczenia?** Pomieszczenie pamięta obrys z chwili, w której je zakładałeś. Jeśli później dorysujesz wnękę albo skasujesz ścianę, program to zauważy: wiersz w tabeli zrobi się żółty z napisem „obrys nieaktualny", a obok pojawi się **🔄**. Kliknięcie przelicza kształt według dzisiejszych ścian — numer, typ, ogrzewanie i klimatyzacja zostają bez zmian. Nad tabelą jest **🔄 Przelicz obrysy**, żeby zrobić to dla wszystkich naraz. Nie musisz nic cofać.
+
 W tabeli pod szkicem każde pomieszczenie ma przyciski **✏️** i **🗑️**. Edycja otwiera to samo okno co przy zakładaniu — możesz zmienić numer, typ, ogrzewanie i klimatyzację. Jeśli pomieszczenie leży na innej zakładce, program sam ją otworzy.
 
 Usunięcie kasuje wyłącznie opis i powierzchnię — **ściany zostają na rysunku**. To samo osiągniesz, klikając w pomieszczenie narzędziem 🏠 Pomieszcz.
@@ -368,6 +370,8 @@ W oknie dodawania widzisz **listę wszystkich już wpisanych otworów** z wymiar
 
 Jeśli mimo to wpiszesz wymiary, które już istnieją, aplikacja to zauważy i zaproponuje użycie istniejącego numeru zamiast tworzenia nowego.
 
+> **Pomyłka przy wstawianiu?** Kliknij narzędziem 🚪 Otwór w **już wstawiony otwór** — okno otworzy się w trybie poprawki, wypełnione jego danymi. Możesz zmienić rodzaj (okno ↔ drzwi), numer, wymiary i U albo usunąć otwór przyciskiem 🗑️. Zmiana rodzaju podpowie nowy numer (np. O3 → DZ2), ale **nie skasuje wpisanych wymiarów**. Otwór zostaje na swoim miejscu na ścianie. To samo zrobisz z listy pod tabelą otworów — każda sztuka ma tam przycisk ✏️.
+
 W podsumowaniu pod każdym szkicem **powtarzające się otwory są zwinięte w jeden wiersz** z kolumną **Szt.** — trzy identyczne okna O1 to jeden wiersz z liczbą 3, powierzchnią jednej sztuki i powierzchnią razem. Na dole wiersz **RAZEM**, a pod spodem zestawienie kategoriami: ile sztuk i ile m² przypada na okna, ile na drzwi zewnętrzne i tak dalej. To samo trafia do karty obiektu i do raportów.
 
 ---
@@ -386,6 +390,12 @@ Każda przegroda ma w sekcji 3 cztery rzeczy: **🧱 Warstwy**, **opis własny**
 ### 🧱 Warstwy przegrody — U liczone automatycznie
 
 Przy każdej przegrodzie jest przycisk **🧱 Warstwy**. Składasz przegrodę z materiałów, a program sam liczy współczynnik U.
+
+**Najpierw wybierz typ przegrody** — ściana zewnętrzna, dach, strop wewnętrzny, podłoga na gruncie i tak dalej. Typ podstawia opory przejmowania Rsi i Rse zgodnie z PN-EN ISO 6946; przy stropie wewnętrznym dochodzi jeszcze pytanie, co jest po drugiej stronie (nieogrzewane poddasze, piwnica, inna kondygnacja). Obie wartości możesz nadpisać ręcznie.
+
+**Przegroda niejednorodna** — zaznacz pole, gdy przegrodę przecinają elementy o innym oporze, np. belki stropowe. Pojawią się dwie zakładki: **Wycinek A** (wypełnienie między belkami) i **Wycinek B** (belka), plus pola na szerokości powtarzalnego fragmentu — na przykład rozstaw 0,90 m i belka 0,15 m. Program składa oba wycinki wg normy i pokazuje opór każdego z osobna, żeby dało się to porównać z programem obliczeniowym.
+
+**⭐ Zapisz jako szablon** — zapamiętuje całą przegrodę: warstwy, typ, opory i oba wycinki. Przy następnym audycie wybierasz ją z listy zamiast składać od nowa. Szablony zostają w pamięci tabletu.
 
 1. Wybierz materiał z listy (ponad 60 pozycji: izolacje, konstrukcja, wykończenia, podkłady, pustki powietrzne).
 2. **Wpisz grubość w centymetrach** — sam, materiał jej nie narzuca.

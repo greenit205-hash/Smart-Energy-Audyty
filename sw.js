@@ -1,11 +1,14 @@
 // Smart Energy Audyty - Service Worker
+// v45: poprawione opory przegrod gruntowych (Rse=0) - wg pliku .thb z ArCADia
+// v44: typy przegrod wg PN-EN ISO 6946, przegroda niejednorodna (wycinki A/B), szablony przegrod
+// v43: poprawianie wstawionego otworu, przeliczanie obrysu po zmianie scian, typ Piwnica
 // v42: ostrzeganie o zapelniajacej sie pamieci + kolory pomieszczen w Dokumencie Google
 // v41: NAPRAWA - wpisane wymiary byly ignorowane, gdy rogi zostaly dociagniete (pokoj pokazywal "Wymaga pomiaru!" mimo zmierzenia)
 // v40: usuniety stary model opisu przegrod - zostaly warstwy, opis wlasny, grubosc i U
 // v39: dopisano 4 materialy (zuzel paleniskowy, papa, plyta pilsniowa miekka, eternit)
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v42';
+const CACHE_NAME = 'smart-energy-v45';
 
 const APP_SHELL = [
   './',
