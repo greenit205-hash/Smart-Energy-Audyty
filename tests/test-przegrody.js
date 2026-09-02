@@ -185,6 +185,27 @@ console.log('--- przegroda jednorodna ---');
   sprawdz('strop nad piwnicą ma wyższe opory, więc niższe U', strop.U < w.U);
 }
 
+
+// Drugi wzorzec ze zrzutu: ten sam strop, ale po dwie warstwy w każdym wycinku.
+// Deska 4 cm + pustka 15 cm (wycinek A, 0,90 m) oraz deska 4 cm + belka 15 cm
+// (wycinek B, 0,15 m). Program obliczeniowy pokazał R_TA = 0,49 i R_TB = 0,83.
+{
+  const w = app(`
+    const A = [{ mat:'Deska', gr:'4.0' }, { mat:'Niewentylowane warstwy powietrza', gr:'15.0' }];
+    const B = [{ mat:'Deska', gr:'4.0' }, { mat:'Bale drewniane', gr:'15.0' }];
+    return obliczPrzegrode({ typ:'STR_WEW', typStropu:'Pod nieogrzewanym poddaszem',
+      niejednorodna:true, LA:'0.90', LB:'0.15', warstwyB:B }, A, 'S');
+  `);
+  sprawdz('wycinek A: R = 0,49 m²K/W', blisko(w.RA, 0.4933, 0.001), w.RA.toFixed(5));
+  sprawdz('wycinek B: R = 0,83 m²K/W', blisko(w.RB, 0.8333, 0.001), w.RB.toFixed(5));
+  sprawdz('pustka 15 cm w stropie liczona jako 0,16',
+    blisko(w.RA - 0.20 - 0.04 / 0.3, 0.16, 0.0001), (w.RA - 0.20 - 0.04 / 0.3).toFixed(5));
+  sprawdz('belka 15 cm liczona jako 0,50',
+    blisko(w.RB - 0.20 - 0.04 / 0.3, 0.50, 0.0001));
+  // przy dwóch warstwach o zgodnych grubościach norma pozwala uśrednić granice
+  sprawdz('liczone są obie granice', w.granice === true);
+}
+
 // ===================== OKNO WARSTW =====================
 console.log('--- okno warstw ---');
 {

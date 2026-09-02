@@ -370,8 +370,16 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) 
   });
 
   head(body, '7. Uwagi audytora');
-  body.appendParagraph(' ');
-  body.appendParagraph(' ');
+  // Wpisane uwagi drukujemy akapit po akapicie; bez nich zostawiamy
+  // wolne miejsce na dopiski odreczne.
+  if (str(data.auditorNotes).trim()) {
+    str(data.auditorNotes).split(/\r?\n/).forEach(function (linia) {
+      body.appendParagraph(linia).setFontSize(10);
+    });
+  } else {
+    body.appendParagraph(' ');
+    body.appendParagraph(' ');
+  }
 
   head(body, '8. Potwierdzenie');
   body.appendParagraph('Potwierdzam zgodnosc powyzszych danych ze stanem faktycznym oraz zgadzam sie na ich ' +

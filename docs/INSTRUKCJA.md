@@ -411,6 +411,10 @@ Liczone tak jak w programach do audytu: opór warstwy = grubość ÷ λ, a opory
 
 > Przegroda musi mieć **warstwy albo opis własny** — bez jednego z tych dwóch zapis raportu jest blokowany. Ręcznie wpisane U ma pierwszeństwo nad policzonym.
 
+> **Dane do karty audytu.** W sekcji 1 jest wydzielona ramka z polami, których wymaga karta audytu energetycznego (Dz.U. 2022 poz. 2816): konstrukcja i technologia budynku, liczba kondygnacji, lokali i osób, a z części 5 — sposób doprowadzenia i odprowadzenia powietrza, strumień powietrza i krotność wymian. W sekcji 2 przy każdym źródle są **cztery sprawności składowe** (wytwarzania, przesyłu, regulacji i wykorzystania, akumulacji), współczynniki przerw w ogrzewaniu oraz nośnik energii z współczynnikiem w<sub>i</sub> wg Dz.U. 2023 poz. 697. Sprawność wytwarzania podpowiada się z bazy urządzeń, resztę wpisujesz sam. **Wszystkie te pola są opcjonalne** — jeśli robisz zwykłą inwentaryzację, zostaw je puste, a raport będzie wyglądał jak dotąd.
+
+> **Uwagi audytora.** W sekcji 4, pod preferencjami inwestora, jest duże pole na Twoje spostrzeżenia — wątpliwości, co sprawdzić przed obliczeniami, ustalenia z inwestorem. Przycisk **➕ Dopisz z datą** wstawia stempel czasu i przechodzi do nowego akapitu, więc możesz notować w kilku momentach wizyty i później widzieć, co kiedy zauważyłeś. Treść trafia do raportu (sekcja 8), do karty obiektu i do Dokumentu Google. Jeśli zostawisz pole puste, w raporcie zostanie wolne miejsce na dopiski odręczne — tak jak wcześniej.
+
 **W tabelach raportu** pomieszczenia **nieogrzewane są na czerwono**, a **klimatyzowane na niebiesko** — od razu widać, co wypada poza bryłą ogrzewaną. Dotyczy to wszystkich wersji raportu: karty obiektu, PDF-a i Dokumentu Google.
 
 > **Pamięć aplikacji.** Audyty są przechowywane w przeglądarce tabletu i miejsca jest około 5 MB. Gdy zapełni się w 70%, na pulpicie pojawia się ostrzeżenie z przyciskiem kopii zapasowej; przy 85% zmienia się w czerwony alarm. Wtedy: pobierz kopię, wyślij stare audyty na Dysk i usuń je z listy. Nie zwlekaj do wyjazdu — zapis, który się nie zmieści, przerwie pracę u klienta.

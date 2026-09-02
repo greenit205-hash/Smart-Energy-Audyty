@@ -147,6 +147,30 @@
             </select>
           </div>
         </div>
+
+        <!-- Pola wymagane przez kartę audytu energetycznego (Dz.U. 2022 poz. 2816)
+             i wzór świadectwa (Dz.U. 2023 poz. 697). Wszystkie opcjonalne w terenie. -->
+        <div class="border rounded p-2" style="background:#f8f9fa;">
+          <div class="small fw-bold text-muted mb-2">Dane do karty audytu <span class="fw-normal">— uzupełnij, jeśli robisz audyt lub świadectwo</span></div>
+          <div class="row g-2">
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Liczba kondygnacji</label>
+              <input type="number" class="form-control form-control-sm" name="kondygnacje"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Liczba lokali</label>
+              <input type="number" class="form-control form-control-sm" name="lokale"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Liczba osób</label>
+              <input type="number" class="form-control form-control-sm" name="osoby"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Konstrukcja / technologia</label>
+              <input type="text" class="form-control form-control-sm" name="konstrukcja" placeholder="np. murowana"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Strumień powietrza [m³/h]</label>
+              <input type="number" step="1" class="form-control form-control-sm" name="strumienPowietrza"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Krotność wymian [1/h]</label>
+              <input type="number" step="0.1" class="form-control form-control-sm" name="krotnoscWymian"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Sposób nawiewu/wywiewu</label>
+              <input type="text" class="form-control form-control-sm" name="wentylacjaOpis" placeholder="np. kratki, kominy"></div>
+            <div class="col-6 col-md-3"><label class="form-label small mb-0">Temp. wewnętrzna [°C]</label>
+              <input type="number" step="0.5" class="form-control form-control-sm" name="tempWewn" placeholder="20"></div>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -175,6 +199,31 @@
             <div class="col-md-3"><input type="text" class="form-control form-control-sm" name="heatingYear" placeholder="rok / moc"></div>
           </div>
           <div class="small text-muted mt-1" id="heatingHint"></div>
+
+          <!-- Karta audytu (Dz.U. 2022 poz. 2816, cz. 3) wymaga CZTERECH sprawności
+               składowych, nie jednej. To samo w świadectwie (Dz.U. 2023 poz. 697). -->
+          <div class="border rounded p-2 mt-2" style="background:#f8f9fa;">
+            <div class="small fw-bold text-muted mb-2">Sprawności składowe systemu grzewczego</div>
+            <div class="row g-2">
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">Wytwarzania</label>
+                <input type="number" step="0.001" class="form-control form-control-sm" name="etaCoWytw" id="etaCoWytw" placeholder="η"></div>
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">Przesyłu</label>
+                <input type="number" step="0.001" class="form-control form-control-sm" name="etaCoPrzesyl" placeholder="η"></div>
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">Regulacji i wykorzystania</label>
+                <input type="number" step="0.001" class="form-control form-control-sm" name="etaCoReg" placeholder="η"></div>
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">Akumulacji</label>
+                <input type="number" step="0.001" class="form-control form-control-sm" name="etaCoAkum" placeholder="η"></div>
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">Przerwy — tydzień</label>
+                <input type="number" step="0.01" class="form-control form-control-sm" name="przerwyTydzien" placeholder="np. 1,0"></div>
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">Przerwy — doba</label>
+                <input type="number" step="0.01" class="form-control form-control-sm" name="przerwyDoba" placeholder="np. 1,0"></div>
+              <div class="col-12 col-md-6"><label class="form-label small mb-0">Nośnik energii</label>
+                <select class="form-select form-select-sm" name="nosnikCo" onchange="onNosnikChange('nosnikCo','wiCo')"></select></div>
+              <div class="col-6 col-md-3"><label class="form-label small mb-0">w<sub>i</sub> [-]</label>
+                <input type="number" step="0.01" class="form-control form-control-sm" name="wiCo" placeholder="wg tabeli"></div>
+            </div>
+            <div class="small text-muted mt-1">Sprawność wytwarzania podpowiada się z bazy urządzeń. Pozostałe wpisujesz sam — karta audytu wymaga wszystkich czterech.</div>
+          </div>
         </div>
         <div class="mb-3 p-3 bg-light rounded border">
           <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="kafloweCheck" name="kaflowe_check" value="Tak" onchange="toggleKaflowe()"><label class="form-check-label fw-bold" for="kafloweCheck">Czy są piece kaflowe?</label></div>
@@ -198,6 +247,24 @@
                 <div class="col-md-3"><input type="text" class="form-control form-control-sm" name="cwuYear" placeholder="rok / poj. zasobnika"></div>
               </div>
               <div class="small text-muted mt-1" id="cwuHint"></div>
+
+              <div class="border rounded p-2 mt-2" style="background:#f8f9fa;">
+                <div class="small fw-bold text-muted mb-2">Sprawności składowe przygotowania c.w.u.</div>
+                <div class="row g-2">
+                  <div class="col-6 col-md-3"><label class="form-label small mb-0">Wytwarzania</label>
+                    <input type="number" step="0.001" class="form-control form-control-sm" name="etaCwuWytw" id="etaCwuWytw" placeholder="η"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small mb-0">Przesyłu</label>
+                    <input type="number" step="0.001" class="form-control form-control-sm" name="etaCwuPrzesyl" placeholder="η"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small mb-0">Regulacji i wykorzystania</label>
+                    <input type="number" step="0.001" class="form-control form-control-sm" name="etaCwuReg" placeholder="η"></div>
+                  <div class="col-6 col-md-3"><label class="form-label small mb-0">Akumulacji</label>
+                    <input type="number" step="0.001" class="form-control form-control-sm" name="etaCwuAkum" placeholder="η"></div>
+                  <div class="col-12 col-md-6"><label class="form-label small mb-0">Nośnik energii</label>
+                    <select class="form-select form-select-sm" name="nosnikCwu" onchange="onNosnikChange('nosnikCwu','wiCwu')"></select></div>
+                  <div class="col-6 col-md-3"><label class="form-label small mb-0">w<sub>i</sub> [-]</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" name="wiCwu" placeholder="wg tabeli"></div>
+                </div>
+              </div>
             </div>
             <div class="col-md-6 form-check"><input class="form-check-input" type="checkbox" name="cwu" value="Grzałka w zasobniku c.w.u."> <label class="form-check-label">Grzałka w zasobniku c.w.u.</label></div>
             <div class="col-md-6 form-check"><input class="form-check-input" type="checkbox" name="cwu" value="Zasobnik c.w.u."> <label class="form-check-label">Zasobnik c.w.u.</label></div>
@@ -215,9 +282,19 @@
     <div class="card border-primary mb-4 audytor-only">
       <div class="card-header bg-primary text-white" style="border-color: var(--se-gold);">4. Podsumowanie i Preferencje</div>
       <div class="card-body">
-        <div class="mb-2">
+        <div class="mb-3">
           <label class="form-label fw-bold text-danger">Preferencje inwestora dotyczące modernizacji *</label>
           <textarea class="form-control border-danger" name="preferences" rows="3" required></textarea>
+        </div>
+
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold mb-0">Uwagi audytora <span class="fw-normal text-muted small">— trafiają do raportu, sekcja 8</span></label>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="dopiszUwage()">➕ Dopisz z datą</button>
+          </div>
+          <textarea class="form-control" name="auditorNotes" id="auditorNotes" rows="6"
+                    placeholder="Spostrzeżenia z wizji lokalnej, wątpliwości, co sprawdzić przed obliczeniami, ustalenia z inwestorem..."></textarea>
+          <div class="small text-muted mt-1">Puste pole = w raporcie zostaje wolne miejsce na odręczne notatki, jak dotąd.</div>
         </div>
       </div>
     </div>
@@ -1299,6 +1376,54 @@
   // ================= SZABLONY PRZEGRÓD =================
   // Ta sama ściana wraca w kolejnych audytach. Szablon zapamietuje warstwy,
   // typ i wycinek B - wystarczy wybrac z listy zamiast skladac od nowa.
+  // ================= NOŚNIKI ENERGII I WSPÓŁCZYNNIK wi =================
+  // Tabela 1 z rozporządzenia Ministra Rozwoju i Technologii z 28.03.2023
+  // (Dz.U. 2023 poz. 697), pkt 3.1.3 - współczynnik nakładu nieodnawialnej
+  // energii pierwotnej. Stosuje się, gdy dostawca nie poda własnej wartości.
+  const NOSNIKI_WI = [
+    { n:'Olej opałowy',                              wi:1.10, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Gaz ziemny',                                wi:1.10, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Gaz płynny',                                wi:1.10, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Węgiel kamienny',                           wi:1.10, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Węgiel brunatny',                           wi:1.10, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Energia słoneczna',                         wi:0.00, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Energia wiatrowa',                          wi:0.00, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Energia geotermalna',                       wi:0.00, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Biomasa',                                   wi:0.20, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Biogaz',                                    wi:0.50, gr:'Miejscowe wytwarzanie w budynku' },
+    { n:'Ciepło sieciowe z kogeneracji — węgiel lub gaz', wi:0.80, gr:'Ciepło sieciowe' },
+    { n:'Ciepło sieciowe z kogeneracji — biomasa, biogaz', wi:0.15, gr:'Ciepło sieciowe' },
+    { n:'Ciepło sieciowe z ciepłowni — węgiel kamienny',  wi:1.30, gr:'Ciepło sieciowe' },
+    { n:'Ciepło sieciowe z ciepłowni — gaz lub olej',     wi:1.20, gr:'Ciepło sieciowe' },
+    { n:'Energia elektryczna z sieci',               wi:2.50, gr:'Sieć elektroenergetyczna' }
+  ];
+
+  function fillNosnikOptions() {
+    ['nosnikCo', 'nosnikCwu'].forEach(name => {
+      const sel = document.querySelector('[name="' + name + '"]');
+      if (!sel) return;
+      const grupy = {};
+      NOSNIKI_WI.forEach(x => { (grupy[x.gr] = grupy[x.gr] || []).push(x); });
+      let html = '<option value="">Wybierz...</option>';
+      Object.keys(grupy).forEach(g => {
+        html += `<optgroup label="${g}">` +
+          grupy[g].map(x => `<option value="${x.n}">${x.n} — w<sub>i</sub> ${x.wi.toFixed(2)}</option>`).join('') +
+          '</optgroup>';
+      });
+      sel.innerHTML = html;
+    });
+  }
+
+  // Po wybraniu nośnika podstawiamy wi z tabeli; audytor może nadpisać,
+  // bo dostawca ciepła sieciowego podaje własną wartość.
+  function onNosnikChange(selName, wiName) {
+    const sel = document.querySelector('[name="' + selName + '"]');
+    const pole = document.querySelector('[name="' + wiName + '"]');
+    if (!sel || !pole) return;
+    const n = NOSNIKI_WI.find(x => x.n === sel.value);
+    if (n) pole.value = n.wi.toFixed(2);
+  }
+
   const SZABLONY_KEY = 'przegrodySzablony';
 
   function getSzablony() {
@@ -1693,6 +1818,14 @@
   }
 
   // Po wybraniu urządzenia z listy sprawność wpisuje się sama.
+  // Sprawność z bazy urządzeń wpisuje się w oba pola: skrócone (jak dotąd)
+  // i "wytwarzania" w rozbiciu wymaganym przez kartę audytu.
+  function syncEtaWytwarzania(which) {
+    const zrodlo = document.getElementById(which + 'Eta');
+    const cel = document.getElementById(which === 'heating' ? 'etaCoWytw' : 'etaCwuWytw');
+    if (zrodlo && cel && zrodlo.value && !cel.value) cel.value = zrodlo.value;
+  }
+
   function onSourcePicked(which) {
     const inp = document.getElementById(which + 'Model');
     const eta = document.getElementById(which + 'Eta');
@@ -1701,6 +1834,7 @@
     const z = zrodloByName(inp.value.trim());
     if (!z) { if (hint) hint.innerText = ''; return; }
     if (eta && !eta.value) eta.value = z.e;
+    syncEtaWytwarzania(which);
     if (hint) {
       hint.innerHTML = `${z.g} · ${z.cop ? 'COP' : 'sprawność'} <b>${z.e}</b>` +
         (z.oze ? ' · <span class="text-success fw-bold">odnawialne</span>' : '') +
@@ -1766,6 +1900,20 @@
       const el = container.querySelector(`[name="${name}"]`);
       if (el) { if (el.type === 'checkbox') el.checked = preserved[name]; else el.value = preserved[name]; }
     });
+  }
+
+  // Uwagi powstaja w kilku momentach wizyty, wiec ulatwiamy oddzielanie wpisow.
+  function dopiszUwage() {
+    const el = document.getElementById('auditorNotes');
+    if (!el) return;
+    const d = new Date();
+    const stempel = d.toLocaleDateString('pl-PL') + ' ' +
+                    String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const sep = el.value.trim() ? '\n\n' : '';
+    el.value = el.value.replace(/\s+$/, '') + sep + '[' + stempel + '] ';
+    el.focus();
+    el.selectionStart = el.selectionEnd = el.value.length;
+    el.scrollTop = el.scrollHeight;
   }
 
   function toggleKaflowe() { 
@@ -2404,7 +2552,14 @@
       <tr><th>Rok budowy</th><td>${esc(audit.year)}</td></tr>
       <tr><th>Liczba mieszkańców</th><td>${esc(audit.residents)}</td></tr>
       <tr><th>Moc instalacji PV [kW]</th><td>${esc(audit.pv)}</td></tr>
-      <tr><th>Wentylacja</th><td>${esc(audit.ventilation)}</td></tr>
+      <tr><th>Wentylacja</th><td>${esc(audit.ventilation)}${audit.wentylacjaOpis ? ' — ' + esc(audit.wentylacjaOpis) : ''}</td></tr>
+      ${audit.kondygnacje ? `<tr><th>Liczba kondygnacji</th><td>${esc(audit.kondygnacje)}</td></tr>` : ''}
+      ${audit.lokale ? `<tr><th>Liczba lokali mieszkalnych</th><td>${esc(audit.lokale)}</td></tr>` : ''}
+      ${audit.osoby ? `<tr><th>Liczba osób użytkujących budynek</th><td>${esc(audit.osoby)}</td></tr>` : ''}
+      ${audit.konstrukcja ? `<tr><th>Konstrukcja / technologia budynku</th><td>${esc(audit.konstrukcja)}</td></tr>` : ''}
+      ${audit.strumienPowietrza ? `<tr><th>Strumień powietrza zewnętrznego [m³/h]</th><td>${esc(audit.strumienPowietrza)}</td></tr>` : ''}
+      ${audit.krotnoscWymian ? `<tr><th>Krotność wymian powietrza [1/h]</th><td>${esc(audit.krotnoscWymian)}</td></tr>` : ''}
+      ${audit.tempWewn ? `<tr><th>Temperatura wewnętrzna [°C]</th><td>${esc(audit.tempWewn)}</td></tr>` : ''}
     </table>
 
     <h2>2. Instalacje</h2>
@@ -2414,6 +2569,24 @@
       <tr><th>Opis instalacji C.O.</th><td>${esc(audit.coDesc)}</td></tr>
       <tr><th>Źródło C.W.U.</th><td>${esc(audit.cwu)}</td></tr>
     </table>`;
+
+    // Sprawności składowe i nośniki - układ jak w karcie audytu energetycznego
+    // (Dz.U. 2022 poz. 2816, części 3 i 4) oraz w świadectwie (Dz.U. 2023 poz. 697).
+    const spraw = [
+      ['Wytwarzania', audit.etaCoWytw || audit.heatingEta, audit.etaCwuWytw || audit.cwuEta],
+      ['Przesyłu', audit.etaCoPrzesyl, audit.etaCwuPrzesyl],
+      ['Regulacji i wykorzystania', audit.etaCoReg, audit.etaCwuReg],
+      ['Akumulacji', audit.etaCoAkum, audit.etaCwuAkum]
+    ];
+    if (spraw.some(r => r[1] || r[2]) || audit.nosnikCo || audit.nosnikCwu) {
+      h += `<h3>Sprawności składowe</h3><table>
+        <tr><th style="width:40%">Sprawność</th><th>Ogrzewanie</th><th>C.W.U.</th></tr>` +
+        spraw.map(r => `<tr><td>${r[0]}</td><td>${esc(r[1]) || '–'}</td><td>${esc(r[2]) || '–'}</td></tr>`).join('') +
+        `<tr><td>Przerwy w ogrzewaniu — tydzień / doba</td><td>${esc(audit.przerwyTydzien) || '–'} / ${esc(audit.przerwyDoba) || '–'}</td><td>–</td></tr>
+         <tr><td>Nośnik energii</td><td>${esc(audit.nosnikCo) || '–'}</td><td>${esc(audit.nosnikCwu) || '–'}</td></tr>
+         <tr><td>Współczynnik nakładu w<sub>i</sub></td><td>${esc(audit.wiCo) || '–'}</td><td>${esc(audit.wiCwu) || '–'}</td></tr>
+        </table>`;
+    }
 
     // ===== 3. PRZEGRODY: przekrój + opis warstw obok, bez zbiorczej tabeli =====
     const przekroje = sketchesArr.map((sk, i) => ({ sk, i }))
@@ -2570,7 +2743,13 @@
       });
     }
 
-    h += `<h2>8. Uwagi audytora</h2><p class="box">&nbsp;<br>&nbsp;<br>&nbsp;</p>`;
+    // Wpisane uwagi drukujemy z zachowaniem akapitów; bez nich zostaje
+    // wolne miejsce na dopiski odręczne - tak jak było.
+    if (audit.auditorNotes && String(audit.auditorNotes).trim()) {
+      h += `<h2>8. Uwagi audytora</h2><div class="box" style="white-space:pre-wrap;">${esc(audit.auditorNotes)}</div>`;
+    } else {
+      h += `<h2>8. Uwagi audytora</h2><p class="box">&nbsp;<br>&nbsp;<br>&nbsp;</p>`;
+    }
 
     h += `<h2>9. Potwierdzenie</h2>
     <p>Potwierdzam zgodność powyższych danych ze stanem faktycznym oraz zgadzam się na ich wykorzystanie w celu sporządzenia audytu energetycznego.</p>
@@ -2821,6 +3000,8 @@ ${st.envelopes.length ? `<section class="card"><h2>Przegrody budowlane</h2>
 <table><thead><tr><th>Symbol</th><th>Rodzaj</th><th>Budowa</th><th class="num">Grubość [cm]</th><th class="num">U</th></tr></thead><tbody>${envRows}</tbody></table></section>` : ''}
 
 <section class="card"><h2>Preferencje inwestora</h2><div class="pref">${esc(audit.preferences).replace(/\n/g, '<br>')}</div></section>
+
+${audit.auditorNotes && String(audit.auditorNotes).trim() ? `<section class="card"><h2>Uwagi audytora</h2><div style="white-space:pre-wrap;">${esc(audit.auditorNotes)}</div></section>` : ''}
 
 ${sketchBlocks}
 
@@ -6980,6 +7161,7 @@ ${sketchBlocks}
     renderDashboard(); renderTabs(); setMode('line'); resetView(); saveStateToHistory(); renderCanvasNow();
     fillZrodlaOptions();
     fillMaterialOptions();
+    fillNosnikOptions();
     applyRoleToUi();
     setTimeout(checkDraft, 400);
     setTimeout(autoFetchParts, 1500);

@@ -1,4 +1,6 @@
 // Smart Energy Audyty - Service Worker
+// v47: pole na uwagi audytora - trafiaja do raportu, karty obiektu i Dokumentu Google
+// v46: dane wymagane karta audytu (Dz.U. 2022 poz. 2816) i swiadectwem (Dz.U. 2023 poz. 697) - sprawnosci skladowe, wentylacja, nosniki energii z wi
 // v45: poprawione opory przegrod gruntowych (Rse=0) - wg pliku .thb z ArCADia
 // v44: typy przegrod wg PN-EN ISO 6946, przegroda niejednorodna (wycinki A/B), szablony przegrod
 // v43: poprawianie wstawionego otworu, przeliczanie obrysu po zmianie scian, typ Piwnica
@@ -8,7 +10,7 @@
 // v39: dopisano 4 materialy (zuzel paleniskowy, papa, plyta pilsniowa miekka, eternit)
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v45';
+const CACHE_NAME = 'smart-energy-v47';
 
 const APP_SHELL = [
   './',

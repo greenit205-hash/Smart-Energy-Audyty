@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 01.09.2026 · wersja aplikacji `smart-energy-v45`
+**Stan na:** 02.09.2026 · wersja aplikacji `smart-energy-v47`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -85,6 +85,18 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 - Stary sposób opisu przegród (listy „wybierz budowę" / „wybierz izolację") **został usunięty w v40**. W sekcji 3 przy każdej przegrodzie są tylko: **🧱 Warstwy**, **opis własny**, **grubość** i **U**. Grubość i U wypełniają się po złożeniu warstw, obie można nadpisać ręcznie
 - Archiwalne kopie zapasowe zrobione starszą wersją **nadal się drukują** — pola starego modelu są czytane przy generowaniu raportu (i w `Kod.gs`), ale nigdzie już nie są zapisywane
 
+## Zgodność z rozporządzeniami (v46)
+
+Dokumenty nadrzędne, ważniejsze niż ArCADia: **Dz.U. 2022 poz. 2816** (karta audytu energetycznego) i **Dz.U. 2023 poz. 697** (wzór świadectwa + tabela wi). Oba są w plikach projektu.
+
+- **Sprawności składowe.** Karta audytu (części 3 i 4) wymaga **czterech** sprawności osobno: wytwarzania, przesyłu, regulacji i wykorzystania, akumulacji — plus współczynniki przerw w ogrzewaniu w tygodniu i w ciągu doby. Aplikacja zbierała jedną. Teraz zbiera komplet dla c.o. i dla c.w.u.; sprawność wytwarzania nadal podpowiada się z bazy urządzeń
+- **Nośnik energii i wi.** Tabela 1 z Dz.U. 2023 poz. 697 pkt 3.1.3, 15 pozycji. Wybór nośnika podstawia wi, ale wartość można nadpisać — dostawca ciepła sieciowego wyznacza własną
+- **Wentylacja (część 5 karty).** Doszły: sposób doprowadzenia i odprowadzenia powietrza, strumień powietrza zewnętrznego [m³/h], krotność wymian [1/h]
+- **Dane ogólne (część 1 karty).** Doszły: konstrukcja/technologia, liczba kondygnacji, liczba lokali mieszkalnych, liczba osób użytkujących budynek, temperatura wewnętrzna
+- Wszystkie pola są **opcjonalne** — pusty raport wygląda jak dotąd, wiersze pojawiają się tylko wtedy, gdy coś wpiszesz
+
+**Czego rozporządzenia NIE rozstrzygają:** ani jedno, ani drugie nie podaje oporów przejmowania R<sub>si</sub>/R<sub>se</sub> ani metody liczenia U — to jest w PN-EN ISO 6946, przywołanej przez warunki techniczne. Więc w sporze o U punktem odniesienia zostaje norma i plik `.thb`, nie te rozporządzenia.
+
 ## Źródła ciepła i c.w.u.
 
 - Wspólna baza **28 urządzeń** ze sprawnościami (pompy ciepła mają COP), ale **dwa osobne miejsca** w formularzu
@@ -126,7 +138,7 @@ Panel pod szkicem, liczony lokalnie (bez AI, offline). Trzy poziomy: **⛔ sprze
 5. **Szkice** — rzut z **tabelą pomieszczeń obok**, tabela otworów pod rysunkiem
 6. Podsumowanie powierzchni
 7. Ściany — zestawienie długości, z podziałem na szkice
-8. Uwagi audytora
+8. **Uwagi audytora** — pole tekstowe w sekcji 4 formularza (v47). Przycisk **➕ Dopisz z datą** wstawia stempel, żeby dało się notować w kilku momentach wizyty. Puste pole = w raporcie zostaje wolne miejsce na dopiski odręczne, jak było
 9. Potwierdzenie i podpisy
 
 **W tabelach:** pomieszczenia **nieogrzewane na czerwono**, **klimatyzowane na niebiesko**.
@@ -170,7 +182,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v45), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v47), żeby tablety pobrały nową wersję.
 
 ---
 
