@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 02.09.2026 · wersja aplikacji `smart-energy-v47`
+**Stan na:** 02.09.2026 · wersja aplikacji `smart-energy-v49`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -50,6 +50,7 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 - **🚪 Otwór** — okna/drzwi z podpowiedziami wcześniejszych wymiarów, kategorie i zestawienia. **v43: kliknięcie w już wstawiony otwór otwiera go do poprawki** (rodzaj, numer, wymiary, U) zamiast wstawiać drugi obok; zmiana rodzaju podpowiada nowy numer, ale nie kasuje wpisanych wymiarów. Pod tabelą otworów jest wykaz pojedynczych sztuk z przyciskiem ✏️
 - **🏷️ Przegroda** — oznaczanie przegród na przekroju (SZ/S/PG/D + numer); **📋 Lista przegród** do zarządzania
 - **📐 Skos** — skosy poddasza z wymiarami (osobny rodzaj szkicu)
+- **abc Txt** — v48: pole **wielolinijkowe** z wyborem wielkości liter i ramki. Kliknięcie w istniejące pole otwiera je do poprawki; wyczyszczenie treści kasuje pole. Podpowiedź z listy (SZ1, Dach…) **dopisuje się** do tekstu, zamiast go zastępować
 - **▨ obszary kreskowane**, **📐 Miarka**, **✏️ Ołówek**, **abc Txt**, **🧽 Usuń**, **🩺 Diagnostyka**
 - **📐 Szablony szkiców** — gotowe rzuty, przekroje, ściany
 - **🔤 Ozn. ścian** — etykiety 1a, 1b… (na ekranie na żądanie, w raporcie zawsze)
@@ -64,6 +65,7 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 - **Ściany scalane w ciągi** — jeśli wzdłuż korytarza stoją ścianki działowe, program pyta o cały ciąg 5,0 m, nie o 2,0 + 0,2 + 2,8. Działa też odwrotnie (suma odcinków zastępuje ciąg)
 - **Jeden skos** liczy się sam z zamknięcia figury. **Dwa i więcej** (elewacja ze szczytem) wymagają pomiaru — sama podstawa i wysokości nie wystarczą
 - **Szczyt dachu:** zamiast mierzyć połacie podaję wysokość szczytu i odległość poziomą (od lewej **albo prawej** krawędzi — do wyboru)
+- **v49 — prostowanie ścian.** Przyciąganie do węzła miało bezwzględne pierwszeństwo przed prostowaniem, więc gdy koniec ściany trafiał w promień 30 px dowolnego istniejącego węzła, linia przyklejała się do niego **ukośnie** i nie dawała się wyprostować. Teraz najpierw prostujemy (tolerancja 10°), a do węzła dociągamy tylko wtedy, gdy leży w granicach 12 px od już wyprostowanej linii — czyli w narożniku, o który faktycznie chodzi
 - **Klasyfikacja ścian po kącie** (tolerancja 3°), nie po pikselach. Wcześniej krzywizna 2 px robiła z prostokąta „skos" i pole wychodziło 24,95 zamiast 25,00
 - **Scalanie węzłów po odległości**, nie przez zaokrąglanie do siatki. Plus **dociąganie końców ścian** do 12 px. Bez tego pomieszczenia o 5+ ścianach czasem się nie domykały
 - **v41 — naprawiony rozjazd kluczy odcinków.** Obrys pomieszczenia powstaje z pozycji po dociągnięciu rogów, a wymiar wpisywany dotknięciem ściany — z pozycji narysowanej. Gdy róg został dociągnięty, klucze przestawały być identyczne i **wpisany pomiar był po cichu ignorowany**: pokój pokazywał „Wymaga pomiaru!" mimo zmierzenia wszystkich ścian. Dotyczyło ręcznego wymiarowania (🎯 prowadzony pomiar działał, bo używa kluczy z obrysu). Teraz przy nietrafionym kluczu szukamy najbliższego odcinka (środek ≤ 8 px, długość ≤ 18 px); gdy pasują dwa — nie zgadujemy, tylko prosimy o pomiar
@@ -75,7 +77,9 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 - Składam przegrodę z warstw: materiał z listy + **grubość wpisuję sam**
 - Program liczy: `R warstwy = grubość/λ`, `U = 1/(Rsi + ΣR + Rse)`
 - **v44 — typ przegrody.** Lista 13 typów jak w ArCADia-TERMOCAD (ściana zewnętrzna/wewnętrzna/na gruncie, dach, stropy, podłoga na gruncie, okna, drzwi). Typ podstawia Rsi i Rse z PN-EN ISO 6946, a przy stropie wewnętrznym dochodzi **typ stropu** (pod nieogrzewanym poddaszem 0,10/0,10 · nad piwnicami 0,17/0,17 · międzykondygnacyjny 0,10/0,10). Opory można nadpisać ręcznie
-- **v44 — przegroda niejednorodna.** Zakładka Wycinek A / Wycinek B z szerokościami (np. rozstaw belek 0,90 m, belka 0,15 m). Liczone wg PN-EN ISO 6946: wycinki składane równolegle proporcjonalnie do szerokości; gdy oba mają ten sam układ warstw, liczona jest też granica dolna i wynik jest średnią z obu granic
+- **v49 — NAPRAWA UTRATY DANYCH.** Warstwy i typy przegród siedziały w ukrytych polach wewnątrz kontenera listy przegród, a ten jest przebudowywany przez `innerHTML` przy każdej zmianie oznaczeń. Skasowanie jednej przegrody kasowało warstwy **wszystkich pozostałych** — bez śladu i bez ostrzeżenia. Ukryte pola leżą teraz w osobnym `#envHiddenStore`, którego przebudowa nie dotyka; dodatkowo przy przebudowie odtwarzane jest wszystko, czego nie ma w nowej liście
+- **v44/v48 — przegroda niejednorodna.** Zakładka Wycinek A / Wycinek B z szerokościami (np. rozstaw belek 0,90 m, belka 0,15 m). Liczone wg PN-EN ISO 6946 jako średnia z kresu górnego i dolnego. **v48:** kres dolny liczony też wtedy, gdy wycinki mają różną liczbę warstw — przegrodę tniemy płaszczyznami wspólnymi dla obu wycinków, wystarczy zgodna grubość całkowita
+- **Rozjazd z ArCADia-TERMOCAD przy przegrodzie niejednorodnej.** Na przegrodzie STW 3 z pliku audytora nasz **kres górny 1,097 zgadza się z ich 1,10 co do drugiego miejsca**, więc wycinki i wagi liczymy identycznie. Ale ich kres dolny to **1,42**, czyli **więcej niż kres górny** — a norma wymaga R″ ≤ R′. Nasz kres dolny wychodzi 1,008. W efekcie ich U = 0,79, nasze U = 0,95 (nasze bezpieczniejsze). Trzymamy się normy; do wyjaśnienia z INTERsoftem
 - **v44 — opór pustki powietrznej z tabeli normy.** Wcześniej stałe 0,18 niezależnie od wszystkiego. Teraz zależy od grubości i kierunku strumienia (10 cm: w górę 0,16 · poziomo 0,18 · w dół 0,22). To była realna różnica — na stropie dawało U zaniżone o ok. 1,5%
 - **v45 — opory przegród gruntowych poprawione.** Sprawdzone na prawdziwym pliku `.thb` z ArCADia-TERMOCAD (plik to ZIP z danymi w Protocol Buffers — da się z niego wyciągnąć definicje przegród). Podłoga na gruncie ma **Rse = 0,00**, nie 0,17; ściana na gruncie **Rse = 0,00**, nie 0,04. Przegroda stykająca się z gruntem nie ma oporu przejmowania po stronie zewnętrznej. Wcześniej U podłogi na gruncie wychodziło zaniżone o ok. 20%
 - **Sprawdzone wzorce:** pięć przegród z pliku audytora (SZ1, SZ2, SZ3, PG, SG) liczy się teraz **co do czwartego miejsca po przecinku** tak samo jak w programie obliczeniowym. Testy trzymają te wartości na stałe
@@ -125,6 +129,7 @@ Panel pod szkicem, liczony lokalnie (bez AI, offline). Trzy poziomy: **⛔ sprze
 
 - **v42 — pasek zapełnienia pamięci.** Wszystkie audyty siedzą w `localStorage` (ok. 5 MB). Od 70% zapełnienia na pulpicie pojawia się ostrzeżenie z przyciskiem kopii zapasowej, od 85% zmienia się w czerwony alarm i raz na uruchomienie wyskakuje komunikat. Wcześniej dowiadywałeś się dopiero wtedy, gdy zapis się nie udał — w połowie audytu
 - **v42 — kolory pomieszczeń w Dokumencie Google.** Nieogrzewane na czerwono, klimatyzowane na niebiesko były tylko w karcie obiektu i w PDF; w edytowalnym Dokumencie tabela była szara
+- **v49 — szablony przegród w kopii zapasowej.** Kopia zapisuje teraz audyty **i** szablony przegród (nowy format: obiekt z polami `audyty` i `szablonyPrzegrod`). Stare kopie — sama tablica audytów — nadal się wczytują. Szablony dokładają się po nazwie, bez dublowania
 - **💾 Pobierz Kopię Zapasową** / **📂 Wczytaj Kopię** — pamięć jest przypisana do adresu, więc przy zmianie hostingu trzeba przenieść raporty tą drogą. Ponowne wczytanie nie dubluje
 
 ---
@@ -182,7 +187,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v47), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v49), żeby tablety pobrały nową wersję.
 
 ---
 

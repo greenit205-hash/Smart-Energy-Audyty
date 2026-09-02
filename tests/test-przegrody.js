@@ -123,11 +123,15 @@ console.log('--- przegroda niejednorodna (przykład z programu obliczeniowego) -
   sprawdz('udział wycinka B = 14%', blisko(w.fB, 0.143, 0.002), w.fB);
   sprawdz('udziały sumują się do 1', blisko(w.fA + w.fB, 1, 1e-9));
 
-  // 1/R = fA/RA + fB/RB
+  // kres górny: 1/R' = fA/RA + fB/RB
   const oczek = 1 / (w.fA / w.RA + w.fB / w.RB);
-  sprawdz('opór złożony liczony równolegle', blisko(w.R, oczek, 1e-9), w.R);
-  sprawdz('U wychodzi ok. 0,91 W/(m²·K)', blisko(w.U, 0.912, 0.01), w.U && w.U.toFixed(4));
-  sprawdz('różny układ warstw = tylko granica górna', w.granice === false);
+  sprawdz('kres górny liczony równolegle', blisko(w.Rgorna, oczek, 1e-9), w.Rgorna);
+  // wycinki mają tę samą grubość (22,5 cm), więc liczony jest też kres dolny
+  sprawdz('ta sama grubość wycinków = oba kresy', w.granice === true);
+  sprawdz('kres dolny nie przekracza górnego', w.Rdolna <= w.Rgorna,
+    w.Rdolna.toFixed(4) + ' vs ' + w.Rgorna.toFixed(4));
+  sprawdz('wynik to średnia z kresów', blisko(w.R, (w.Rgorna + w.Rdolna) / 2, 1e-9), w.R);
+  sprawdz('U wychodzi ok. 0,95 W/(m²·K)', blisko(w.U, 0.950, 0.01), w.U && w.U.toFixed(4));
 
   // przegroda niejednorodna musi dawać U pomiędzy wynikami obu wycinków
   sprawdz('U mieści się między wycinkami',
@@ -204,6 +208,50 @@ console.log('--- przegroda jednorodna ---');
     blisko(w.RB - 0.20 - 0.04 / 0.3, 0.50, 0.0001));
   // przy dwóch warstwach o zgodnych grubościach norma pozwala uśrednić granice
   sprawdz('liczone są obie granice', w.granice === true);
+}
+
+
+// Pełna przegroda STW 3 z pliku .thb: wycinki mają RÓŻNĄ liczbę warstw
+// (5 i 4), ale tę samą grubość - norma pozwala wtedy policzyć oba kresy,
+// tnąc przegrodę płaszczyznami wspólnymi dla obu wycinków.
+{
+  const w = app(`
+    const A = [{ mat:'Deska', gr:'4.0' },
+               { mat:'Niewentylowane warstwy powietrza', gr:'10.0' },
+               { mat:'Izolacja', gr:'5.0', l:0.09 },
+               { mat:'Deska', gr:'2.0' },
+               { mat:'Tynk lub gładź cementowo-wapienna', gr:'1.5' }];
+    const B = [{ mat:'Deska', gr:'4.0' },
+               { mat:'Bale drewniane', gr:'15.0' },
+               { mat:'Deska', gr:'2.0' },
+               { mat:'Tynk lub gładź cementowo-wapienna', gr:'1.5' }];
+    return obliczPrzegrode({ typ:'STR_WEW', typStropu:'Pod nieogrzewanym poddaszem',
+      niejednorodna:true, LA:'0.90', LB:'0.15', warstwyB:B }, A, 'S');
+  `);
+  // wzorce odczytane z pliku .thb audytora
+  sprawdz('STW 3 — opór wycinka A = 1,1338', blisko(w.RA, 1.1338, 0.001), w.RA.toFixed(4));
+  sprawdz('STW 3 — opór wycinka B = 0,9183', blisko(w.RB, 0.9183, 0.001), w.RB.toFixed(4));
+  // kres górny podany przez program obliczeniowy: 1,10
+  sprawdz('STW 3 — kres górny zgodny z programem (1,10)',
+    blisko(w.Rgorna, 1.10, 0.005), w.Rgorna.toFixed(4));
+  sprawdz('różna liczba warstw nie blokuje kresu dolnego', w.granice === true);
+  // PN-EN ISO 6946 wymaga, żeby kres dolny NIE był większy od górnego
+  sprawdz('kres dolny nie przekracza górnego', w.Rdolna <= w.Rgorna,
+    w.Rdolna.toFixed(4) + ' vs ' + w.Rgorna.toFixed(4));
+  sprawdz('wynik to średnia z obu kresów',
+    blisko(w.R, (w.Rgorna + w.Rdolna) / 2, 1e-9), w.R.toFixed(4));
+}
+
+// Wycinki o różnej grubości - nie ma wspólnych płaszczyzn cięcia,
+// więc kres dolny nie jest liczony i zostaje sam kres górny.
+{
+  const w = app(`
+    const A = [{ mat:'Deska', gr:'4.0' }, { mat:'Bale drewniane', gr:'15.0' }];
+    const B = [{ mat:'Deska', gr:'4.0' }, { mat:'Bale drewniane', gr:'20.0' }];
+    return obliczPrzegrode({ typ:'STR_WEW', niejednorodna:true, LA:'0.90', LB:'0.15', warstwyB:B }, A, 'S');
+  `);
+  sprawdz('różna grubość wycinków = tylko kres górny', w.granice === false);
+  sprawdz('wynik równy kresowi górnemu', blisko(w.R, w.Rgorna, 1e-9));
 }
 
 // ===================== OKNO WARSTW =====================

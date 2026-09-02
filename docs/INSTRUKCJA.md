@@ -415,6 +415,10 @@ Liczone tak jak w programach do audytu: opór warstwy = grubość ÷ λ, a opory
 
 > **Uwagi audytora.** W sekcji 4, pod preferencjami inwestora, jest duże pole na Twoje spostrzeżenia — wątpliwości, co sprawdzić przed obliczeniami, ustalenia z inwestorem. Przycisk **➕ Dopisz z datą** wstawia stempel czasu i przechodzi do nowego akapitu, więc możesz notować w kilku momentach wizyty i później widzieć, co kiedy zauważyłeś. Treść trafia do raportu (sekcja 8), do karty obiektu i do Dokumentu Google. Jeśli zostawisz pole puste, w raporcie zostanie wolne miejsce na dopiski odręczne — tak jak wcześniej.
 
+> **Szablony przegród są w kopii zapasowej.** Przycisk 💾 zapisuje teraz do jednego pliku zarówno audyty, jak i szablony przegród. Po awarii tabletu wczytujesz kopię i szablony wracają razem z raportami. Rób ją regularnie — szablony żyją w pamięci przeglądarki i przepadną razem z nią.
+
+> **Tekst na szkicu.** Narzędzie **abc Txt** wstawia pole tekstowe — możesz pisać w **wielu liniach**, wybrać wielkość liter (mała / zwykła / duża) i zdecydować, czy pole ma mieć białą ramkę. Przydaje się na przekrojach, gdzie opis przegrody nie mieści się w jednej linii. Kliknięcie tym samym narzędziem w **istniejące pole** otwiera je do poprawki — możesz zmienić treść, wielkość i ramkę albo usunąć pole. Wyczyszczenie treści też kasuje pole. Lista gotowych podpowiedzi (SZ1, Dach, Strop…) **dopisuje się** do tego, co już napisałeś, zamiast to zastępować.
+
 **W tabelach raportu** pomieszczenia **nieogrzewane są na czerwono**, a **klimatyzowane na niebiesko** — od razu widać, co wypada poza bryłą ogrzewaną. Dotyczy to wszystkich wersji raportu: karty obiektu, PDF-a i Dokumentu Google.
 
 > **Pamięć aplikacji.** Audyty są przechowywane w przeglądarce tabletu i miejsca jest około 5 MB. Gdy zapełni się w 70%, na pulpicie pojawia się ostrzeżenie z przyciskiem kopii zapasowej; przy 85% zmienia się w czerwony alarm. Wtedy: pobierz kopię, wyślij stare audyty na Dysk i usuń je z listy. Nie zwlekaj do wyjazdu — zapis, który się nie zmieści, przerwie pracę u klienta.

@@ -277,7 +277,7 @@
       </div>
     </div>
 
-    <div class="card audytor-only"><div class="card-header">3. Przegrody budowlane</div><div class="card-body"><p class="text-muted small">Lista poniżej wypełnia się automatycznie na podstawie oznaczeń 🏷️ Przegroda na przekroju budynku w sekcji 5 (narzędzie <strong>🏷️ Przegroda</strong>).</p><div id="dynamicEnvelopesContainer"></div></div></div>
+    <div class="card audytor-only"><div class="card-header">3. Przegrody budowlane</div><div class="card-body"><p class="text-muted small">Lista poniżej wypełnia się automatycznie na podstawie oznaczeń 🏷️ Przegroda na przekroju budynku w sekcji 5 (narzędzie <strong>🏷️ Przegroda</strong>).</p><div id="dynamicEnvelopesContainer"></div><div id="envHiddenStore"></div></div></div>
     
     <div class="card border-primary mb-4 audytor-only">
       <div class="card-header bg-primary text-white" style="border-color: var(--se-gold);">4. Podsumowanie i Preferencje</div>
@@ -684,12 +684,30 @@
 
 <div id="labelOverlay" class="modal-overlay">
   <div class="card shadow p-3" style="width: 320px;">
-    <h6 class="fw-bold mb-3 text-primary">Wstaw etykietę na szkic</h6>
-    <select id="labelSelect" class="form-select mb-3"></select>
-    <input type="text" id="labelInput" class="form-control mb-4" placeholder="np. Wyłaz dachowy...">
+    <h6 class="fw-bold mb-2 text-primary">Wstaw tekst na szkic</h6>
+    <select id="labelSelect" class="form-select form-select-sm mb-2" onchange="onLabelPresetPicked()"></select>
+    <textarea id="labelInput" class="form-control mb-2" rows="4"
+              placeholder="Możesz pisać w wielu liniach — np. opis przekroju, uwaga o stanie przegrody, notatka do siebie."></textarea>
+    <div class="row g-2 mb-3">
+      <div class="col-7">
+        <label class="form-label small mb-0">Wielkość</label>
+        <select id="labelSize" class="form-select form-select-sm">
+          <option value="14">mała</option>
+          <option value="20" selected>zwykła</option>
+          <option value="28">duża</option>
+        </select>
+      </div>
+      <div class="col-5 d-flex align-items-end">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="labelBox" checked>
+          <label class="form-check-label small" for="labelBox">ramka</label>
+        </div>
+      </div>
+    </div>
     <div class="d-flex justify-content-between">
-      <button type="button" class="btn btn-secondary" onclick="closeLabelDialog()">Anuluj</button>
-      <button type="button" class="btn btn-primary fw-bold" onclick="addTextToCanvas()">Wstaw</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeLabelDialog()">Anuluj</button>
+      <button type="button" class="btn btn-outline-danger btn-sm fw-bold" id="labelDeleteBtn" style="display:none;" onclick="deleteLabelFromDialog()">🗑️ Usuń</button>
+      <button type="button" class="btn btn-primary btn-sm fw-bold" id="labelSaveBtn" onclick="addTextToCanvas()">Wstaw</button>
     </div>
   </div>
 </div>
@@ -1221,6 +1239,49 @@
   //   1/R = f_A/R_A + f_B/R_B,   f = szerokość wycinka / szerokość razem
   // Gdy oba wycinki mają tę samą liczbę warstw o tych samych grubościach,
   // norma pozwala policzyć też granicę dolną i uśrednić - wtedy to robimy.
+  // Zamienia listę warstw na odcinki [od, do] w metrach wraz z oporem warstwy,
+  // żeby dało się znaleźć wspólne płaszczyzny cięcia obu wycinków.
+  function warstwyNaOdcinki(warstwy, kier) {
+    const out = [];
+    let pos = 0;
+    for (const w of warstwy) {
+      const gr = parseFloat(w.gr) / 100;
+      const r = oporWarstwy(w, kier);
+      if (r === null || !(gr > 0)) return null;
+      out.push({ od: pos, do: pos + gr, gr, r });
+      pos += gr;
+    }
+    return { odcinki: out, grubosc: pos };
+  }
+
+  function granicaDolna(warstwyA, warstwyB, fA, fB, kier, op) {
+    const a = warstwyNaOdcinki(warstwyA, kier);
+    const b = warstwyNaOdcinki(warstwyB, kier);
+    if (!a || !b) return null;
+    // różne grubości wycinków = nie ma wspólnych płaszczyzn, granicy dolnej nie liczymy
+    if (Math.abs(a.grubosc - b.grubosc) > 0.002) return null;
+
+    // wszystkie płaszczyzny cięcia z obu wycinków
+    const ciecia = [];
+    [...a.odcinki, ...b.odcinki].forEach(o => { ciecia.push(o.od); ciecia.push(o.do); });
+    const progi = [...new Set(ciecia.map(x => Math.round(x * 10000)))].sort((x, y) => x - y)
+                    .map(x => x / 10000);
+
+    let suma = 0;
+    for (let i = 1; i < progi.length; i++) {
+      const od = progi[i - 1], doo = progi[i], gr = doo - od;
+      if (gr <= 0) return null;
+      const wA = a.odcinki.find(o => o.od <= od + 1e-9 && o.do >= doo - 1e-9);
+      const wB = b.odcinki.find(o => o.od <= od + 1e-9 && o.do >= doo - 1e-9);
+      if (!wA || !wB) return null;
+      // opór odcinka warstwy proporcjonalnie do jego grubości
+      const rA = wA.r * (gr / wA.gr), rB = wB.r * (gr / wB.gr);
+      if (!(rA > 0) || !(rB > 0)) return null;
+      suma += 1 / (fA / rA + fB / rB);
+    }
+    return op.rsi + suma + op.rse;
+  }
+
   function obliczPrzegrode(meta, warstwyA, cat) {
     const op = oporyPrzegrody(meta, cat);
     const kier = kierunekStrumienia(meta, cat);
@@ -1242,18 +1303,10 @@
     // granica górna - wycinki równolegle
     const Rgorna = 1 / (fA / RA + fB / RB);
 
-    // granica dolna - tylko gdy warstwy da się zestawić parami
-    let Rdolna = null;
-    if (warstwyA.length === warstwyB.length) {
-      let zgodne = true, suma = 0;
-      for (let i = 0; i < warstwyA.length; i++) {
-        const ra = oporWarstwy(warstwyA[i], kier), rb = oporWarstwy(warstwyB[i], kier);
-        if (ra === null || rb === null) { zgodne = false; break; }
-        if (Math.abs(parseFloat(warstwyA[i].gr) - parseFloat(warstwyB[i].gr)) > 0.05) { zgodne = false; break; }
-        suma += 1 / (fA / ra + fB / rb);
-      }
-      if (zgodne) Rdolna = op.rsi + suma + op.rse;
-    }
+    // Granica dolna wg PN-EN ISO 6946: przegrodę tniemy płaszczyznami równoległymi
+    // do powierzchni na warstwy, w których oba wycinki są jednorodne. Nie wymaga to
+    // równej liczby warstw - wystarczy, że łączne grubości wycinków się zgadzają.
+    const Rdolna = granicaDolna(warstwyA, warstwyB, fA, fB, kier, op);
 
     const R = (Rdolna !== null) ? (Rgorna + Rdolna) / 2 : Rgorna;
     return { U: 1 / R, R, RA, RB, fA, fB, rsi: op.rsi, rse: op.rse,
@@ -1363,14 +1416,8 @@
   }
 
   function writeMeta(key, meta) {
-    let el = document.querySelector('[name="' + key + '_przegroda"]');
-    if (!el) {
-      el = document.createElement('input');
-      el.type = 'hidden'; el.name = key + '_przegroda';
-      const cont = document.getElementById('dynamicEnvelopesContainer');
-      if (cont) cont.appendChild(el);
-    }
-    el.value = (meta && Object.keys(meta).length) ? JSON.stringify(meta) : '';
+    envHiddenInput(key + '_przegroda').value =
+      (meta && Object.keys(meta).length) ? JSON.stringify(meta) : '';
   }
 
   // ================= SZABLONY PRZEGRÓD =================
@@ -1517,15 +1564,25 @@
     try { const v = JSON.parse(el.value); return Array.isArray(v) ? v : []; } catch (e) { return []; }
   }
 
-  function writeLayers(key, arr) {
-    let el = document.querySelector('[name="' + key + '_layers"]');
+  // Warstwy i metadane przegrod trzymamy w UKRYTYCH polach. Kontener z listą
+  // przegrod jest przebudowywany przy kazdej zmianie oznaczen (innerHTML), wiec
+  // ukryte pola MUSZA lezec poza nim - inaczej znikaja razem z nim i przepadaja
+  // warstwy wszystkich przegrod. To wlasnie sie stalo przy kasowaniu przegrody.
+  function envHiddenInput(name) {
+    let el = document.querySelector('[name="' + name + '"]');
     if (!el) {
       el = document.createElement('input');
-      el.type = 'hidden'; el.name = key + '_layers';
-      const cont = document.getElementById('dynamicEnvelopesContainer');
-      if (cont) cont.appendChild(el);
+      el.type = 'hidden';
+      el.name = name;
+      const store = document.getElementById('envHiddenStore') ||
+                    document.getElementById('dynamicEnvelopesContainer');
+      if (store) store.appendChild(el);
     }
-    el.value = arr.length ? JSON.stringify(arr) : '';
+    return el;
+  }
+
+  function writeLayers(key, arr) {
+    envHiddenInput(key + '_layers').value = arr.length ? JSON.stringify(arr) : '';
   }
 
   // Pozwala dopisać materiał spoza bazy. Bez lambdy nie da sie policzyc U,
@@ -1697,11 +1754,10 @@
       if (niejed) {
         dod = `<div class="small fw-normal mt-1">
           R<sub>A</sub> = ${wynik.RA.toFixed(3)} (${(wynik.fA * 100).toFixed(0)}%) ·
-          R<sub>B</sub> = ${wynik.RB.toFixed(3)} (${(wynik.fB * 100).toFixed(0)}%) ·
-          R = ${wynik.R.toFixed(3)} m²K/W<br>
+          R<sub>B</sub> = ${wynik.RB.toFixed(3)} (${(wynik.fB * 100).toFixed(0)}%)<br>
           ${wynik.granice
-            ? 'średnia z granicy górnej i dolnej wg PN-EN ISO 6946'
-            : 'wycinki mają różny układ warstw — liczone równolegle (granica górna)'}
+            ? `kres górny R' = ${wynik.Rgorna.toFixed(3)} · kres dolny R'' = ${wynik.Rdolna.toFixed(3)} · R = ${wynik.R.toFixed(3)} m²K/W<br>średnia z obu kresów wg PN-EN ISO 6946`
+            : `R = ${wynik.R.toFixed(3)} m²K/W<br>wycinki mają różną grubość — liczony sam kres górny`}
         </div>`;
       }
       res.innerHTML = `U = ${wynik.U.toFixed(3)} W/(m²·K) ` + dod;
@@ -1897,7 +1953,10 @@
       : `<div class="alert alert-info small mb-0">Brak oznaczonych przegród. Narysuj przekrój budynku w sekcji szkicu (zakładka np. „Przekrój") i oznacz na nim ściany / stropy / dachy / podłogi narzędziem 🏷️ Przegroda.</div>`;
 
     Object.keys(preserved).forEach(name => {
-      const el = container.querySelector(`[name="${name}"]`);
+      let el = container.querySelector(`[name="${name}"]`);
+      // Pole, którego nie ma w odbudowanej liście, odtwarzamy jako ukryte
+      // w magazynie obok - dzięki temu nic wpisanego nie ginie przy przebudowie.
+      if (!el && preserved[name] !== '' && preserved[name] !== false) el = envHiddenInput(name);
       if (el) { if (el.type === 'checkbox') el.checked = preserved[name]; else el.value = preserved[name]; }
     });
   }
@@ -3040,7 +3099,14 @@ ${sketchBlocks}
   }
 
   function downloadBackup() {
-    const data = localStorage.getItem('auditsDB'); if (!data || data === '[]') return alert('Brak danych do pobrania. Baza jest pusta.');
+    const audyty = getLocalAudits();
+    const szablony = getSzablony();
+    if (!audyty.length && !szablony.length) return alert('Brak danych do pobrania. Baza jest pusta.');
+    // Nowy format: obiekt z audytami i szablonami. Stary (sama tablica audytów)
+    // nadal się wczytuje - patrz importBackup.
+    const data = JSON.stringify({ format: 'smart-energy-backup', wersja: 2,
+                                  data: new Date().toISOString(),
+                                  audyty: audyty, szablonyPrzegrod: szablony });
     const blob = new Blob([data], { type: 'application/json' }); const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `Kopia_Audytow_${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
@@ -3056,15 +3122,37 @@ ${sketchBlocks}
 
     const reader = new FileReader();
     reader.onload = () => {
-      let incoming;
+      let incoming, szablonyZKopii = [];
       try {
-        incoming = JSON.parse(reader.result);
-        if (!Array.isArray(incoming)) throw new Error('zły format');
+        const wczytane = JSON.parse(reader.result);
+        if (Array.isArray(wczytane)) {
+          incoming = wczytane;                       // stary format - sama lista audytów
+        } else if (wczytane && Array.isArray(wczytane.audyty)) {
+          incoming = wczytane.audyty;
+          szablonyZKopii = Array.isArray(wczytane.szablonyPrzegrod) ? wczytane.szablonyPrzegrod : [];
+        } else throw new Error('zły format');
       } catch (e) {
         alert('To nie wygląda na kopię zapasową audytów.\n\nWybierz plik „Kopia_Audytow_….json" pobrany przyciskiem 💾.');
         return;
       }
-      if (!incoming.length) { alert('Ta kopia jest pusta.'); return; }
+
+      // Szablony dorzucamy niezależnie od audytów - po nazwie, bez dublowania.
+      let dodaneSzablony = 0;
+      if (szablonyZKopii.length) {
+        const arr = getSzablony();
+        const maja = new Set(arr.map(t => String(t.nazwa).toLowerCase()));
+        szablonyZKopii.forEach(t => {
+          if (t && t.nazwa && !maja.has(String(t.nazwa).toLowerCase())) { arr.push(t); dodaneSzablony++; }
+        });
+        if (dodaneSzablony) saveSzablony(arr);
+      }
+
+      if (!incoming.length) {
+        alert(dodaneSzablony
+          ? 'Dodano szablonów przegród: ' + dodaneSzablony + '.\n\nW kopii nie było audytów.'
+          : 'Ta kopia jest pusta.');
+        return;
+      }
 
       const current = getLocalAudits();
       // ten sam raport rozpoznajemy po kliencie, adresie i dacie utworzenia
@@ -3074,7 +3162,8 @@ ${sketchBlocks}
       const dup = incoming.length - fresh.length;
 
       if (!fresh.length) {
-        alert(`Wszystkie raporty z tej kopii (${incoming.length}) już są na tym urządzeniu — nic nie dodano.`);
+        alert(`Wszystkie raporty z tej kopii (${incoming.length}) już są na tym urządzeniu — nic nie dodano.` +
+              (dodaneSzablony ? `\n\nDodano za to szablonów przegród: ${dodaneSzablony}.` : ''));
         return;
       }
       const msg = `Kopia zawiera ${incoming.length} ${incoming.length === 1 ? 'raport' : 'raportów'}.\n\n` +
@@ -3085,7 +3174,8 @@ ${sketchBlocks}
       const merged = current.concat(fresh);
       if (!saveLocalAudits(merged)) return;
       renderDashboard();
-      alert(`Dodano ${fresh.length} ${fresh.length === 1 ? 'raport' : 'raportów'}.\n\nSzkice, pomiary i podpisy przeszły razem z nimi.`);
+      alert(`Dodano ${fresh.length} ${fresh.length === 1 ? 'raport' : 'raportów'}.\n\nSzkice, pomiary i podpisy przeszły razem z nimi.` +
+            (dodaneSzablony ? `\nSzablonów przegród: ${dodaneSzablony}.` : ''));
     };
     reader.onerror = () => alert('Nie udało się odczytać pliku.');
     reader.readAsText(file);
@@ -6028,8 +6118,26 @@ ${sketchBlocks}
 
     if(objects.labels) {
       objects.labels.forEach((lbl) => {
-        ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        let metrics = ctx.measureText(lbl.text); ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; ctx.fillRect(lbl.x - (metrics.width/2) - 4, lbl.y - 14, metrics.width + 8, 28); ctx.fillStyle = "#dc3545"; ctx.fillText(lbl.text, lbl.x, lbl.y);
+        // Tekst moze byc wielolinijkowy - rysujemy linia po linii, a tlo
+        // dopasowujemy do najszerszej z nich.
+        const size = lbl.size || 20;
+        const linie = String(lbl.text || '').split('\n');
+        const wys = size * 1.35;
+        ctx.font = "bold " + size + "px Arial";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        let szer = 0;
+        linie.forEach(t => { szer = Math.max(szer, ctx.measureText(t).width); });
+        const blokH = linie.length * wys;
+        const gora = lbl.y - blokH / 2;
+        if (lbl.box !== false) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+          ctx.fillRect(lbl.x - szer / 2 - 6, gora - 4, szer + 12, blokH + 8);
+          ctx.strokeStyle = "rgba(220, 53, 69, 0.45)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(lbl.x - szer / 2 - 6, gora - 4, szer + 12, blokH + 8);
+        }
+        ctx.fillStyle = "#dc3545";
+        linie.forEach((t, i) => { ctx.fillText(t, lbl.x, gora + wys * (i + 0.5)); });
       });
     }
 
@@ -6199,6 +6307,42 @@ ${sketchBlocks}
       if (dSeg < minDistance) { minDistance = dSeg; bestPoint = closest; snapType='line'; snappedLine = line; }
     }
     return { pt: bestPoint || pos, line: snappedLine, type: snapType }; 
+  }
+
+  // Przyciaganie do wezla mialo bezwzgledne pierwszenstwo przed prostowaniem.
+  // Skutek: gdy koniec sciany trafial w promien 30 px dowolnego istniejacego
+  // wezla, linia "przyklejala sie" do niego UKOSNIE i nie dalo sie jej wyprostowac,
+  // bo drobny ruch palcem nadal miescil sie w tym promieniu.
+  // Teraz najpierw prostujemy, a do wezla dociagamy tylko wtedy, gdy lezy on
+  // blisko juz WYPROSTOWANEJ linii - czyli w praktyce w narozniku, o ktory chodzi.
+  const ORTHO_NODE_TOL = 12;   // px
+
+  function kierunekProsty(od, doo) {
+    const kat = Math.atan2(doo.y - od.y, doo.x - od.x) * 180 / Math.PI;
+    if (Math.abs(kat) <= ORTHO_ANGLE_TOLERANCE || Math.abs(kat) >= 180 - ORTHO_ANGLE_TOLERANCE) return 'poziom';
+    if (Math.abs(kat - 90) <= ORTHO_ANGLE_TOLERANCE || Math.abs(kat + 90) <= ORTHO_ANGLE_TOLERANCE) return 'pion';
+    return null;
+  }
+
+  // Zwraca koncowy punkt sciany rysowanej od `od` w kierunku `raw`.
+  function koniecSciany(od, raw) {
+    const prosto = kierunekProsty(od, raw);
+    if (prosto) {
+      const cel = (prosto === 'poziom') ? { x: raw.x, y: od.y } : { x: od.x, y: raw.y };
+      // wezel tuz przy wyprostowanej linii - domykamy naroznik
+      const przy = findSnapPoint(cel);
+      if (przy.type === 'node' && Math.hypot(przy.pt.x - cel.x, przy.pt.y - cel.y) <= ORTHO_NODE_TOL / zoomLevel) {
+        return { pt: przy.pt, prosto: true };
+      }
+      if (przy.type === 'line') return { pt: przy.pt, prosto: true };
+      checkAlignmentGuides(cel, od);
+      return { pt: cel, prosto: true };
+    }
+    // kierunek wyraznie ukosny - przyciaganie dziala jak dotad
+    const snap = findSnapPoint(raw);
+    if (snap.type !== 'none') return { pt: snap.pt, prosto: false };
+    checkAlignmentGuides(raw, od);
+    return { pt: { x: raw.x, y: raw.y }, prosto: false };
   }
 
   function checkAlignmentGuides(target, basePos) {
@@ -6880,7 +7024,25 @@ ${sketchBlocks}
       return;
     }
 
-    if(currentMode === 'text') { labelPosCanvas = rawPos; document.getElementById('labelOverlay').style.display = 'flex'; document.getElementById('labelInput').value = ''; populateLabelSelect(); return; }
+    if(currentMode === 'text') {
+      // klikniecie w istniejace pole otwiera je do poprawki
+      let hit = -1, hitD = 40 / zoomLevel;
+      (objects.labels || []).forEach((l, i) => {
+        const d = Math.hypot(rawPos.x - l.x, rawPos.y - l.y);
+        if (d < hitD) { hitD = d; hit = i; }
+      });
+      if (hit !== -1) { openLabelForEdit(hit); return; }
+      editingLabelIndex = -1;
+      labelPosCanvas = rawPos;
+      document.getElementById('labelInput').value = '';
+      document.getElementById('labelSize').value = '20';
+      document.getElementById('labelBox').checked = true;
+      document.getElementById('labelSaveBtn').innerText = 'Wstaw';
+      document.getElementById('labelDeleteBtn').style.display = 'none';
+      populateLabelSelect();
+      document.getElementById('labelOverlay').style.display = 'flex';
+      return;
+    }
     if(currentMode === 'opening') {
       // Klikniecie w JUZ WSTAWIONY otwor = poprawka, nie drugi otwor obok.
       // Bez tego pomylka (okno zamiast drzwi) wymagala cofania calej pracy.
@@ -6991,25 +7153,18 @@ ${sketchBlocks}
       let targetPos = {x: rawPos.x, y: rawPos.y}; targetPos.x = snapTo1cm(targetPos.x); targetPos.y = snapTo1cm(targetPos.y);
       let otherEnd = draggingNode.isP1 ? {x: objects.lines[draggingNode.index].x2, y: objects.lines[draggingNode.index].y2} : {x: objects.lines[draggingNode.index].x1, y: objects.lines[draggingNode.index].y1};
       let tempLines = objects.lines; objects.lines = objects.lines.filter((_, i) => i !== draggingNode.index);
-      let snapInfo = findSnapPoint(targetPos); objects.lines = tempLines;
       guideLines = [];
-      if (snapInfo.type === 'node') { targetPos = snapInfo.pt; } else {
-        let dx = rawPos.x - otherEnd.x; let dy = rawPos.y - otherEnd.y; let angle = Math.atan2(dy, dx) * 180 / Math.PI; let isOrtho = false;
-        if (Math.abs(angle) <= ORTHO_ANGLE_TOLERANCE || Math.abs(angle) >= 180 - ORTHO_ANGLE_TOLERANCE) { targetPos.y = otherEnd.y; isOrtho = true; } else if (Math.abs(angle - 90) <= ORTHO_ANGLE_TOLERANCE || Math.abs(angle + 90) <= ORTHO_ANGLE_TOLERANCE) { targetPos.x = otherEnd.x; isOrtho = true; }
-        if (isOrtho) { let orthoSnap = findSnapPoint(targetPos); if (orthoSnap.type === 'line') targetPos = orthoSnap.pt; else checkAlignmentGuides(targetPos, otherEnd); } else { if (snapInfo.type === 'line') targetPos = snapInfo.pt; else checkAlignmentGuides(targetPos, otherEnd); }
-      }
+      targetPos = koniecSciany(otherEnd, rawPos).pt;
+      objects.lines = tempLines;
       currentPos = { x: snapTo1cm(targetPos.x), y: snapTo1cm(targetPos.y) };
       draggedLines.forEach(item => { if(item.isP1) { item.line.x1 = currentPos.x; item.line.y1 = currentPos.y; } else { item.line.x2 = currentPos.x; item.line.y2 = currentPos.y; } });
       renderCanvas();
     }
     else if (currentMode === 'line') {
-      let targetPos = {x: rawPos.x, y: rawPos.y}; let snapInfo = findSnapPoint(targetPos); guideLines = []; 
-      if (snapInfo.type === 'node') { targetPos = snapInfo.pt; } else {
-        let dx = rawPos.x - startPos.x; let dy = rawPos.y - startPos.y; let angle = Math.atan2(dy, dx) * 180 / Math.PI; let isOrtho = false;
-        if (Math.abs(angle) <= ORTHO_ANGLE_TOLERANCE || Math.abs(angle) >= 180 - ORTHO_ANGLE_TOLERANCE) { targetPos.y = startPos.y; isOrtho = true; } else if (Math.abs(angle - 90) <= ORTHO_ANGLE_TOLERANCE || Math.abs(angle + 90) <= ORTHO_ANGLE_TOLERANCE) { targetPos.x = startPos.x; isOrtho = true; }
-        if (isOrtho) { let orthoSnap = findSnapPoint(targetPos); if (orthoSnap.type === 'line') { targetPos = orthoSnap.pt; } else { checkAlignmentGuides(targetPos, startPos); } } else { if (snapInfo.type === 'line') { targetPos = snapInfo.pt; } else { checkAlignmentGuides(targetPos, startPos); } }
-      }
-      currentPos = { x: snapTo1cm(targetPos.x), y: snapTo1cm(targetPos.y) }; renderCanvas();
+      guideLines = [];
+      const wynik = koniecSciany(startPos, rawPos);
+      currentPos = { x: snapTo1cm(wynik.pt.x), y: snapTo1cm(wynik.pt.y) };
+      renderCanvas();
     }
     else if (currentMode === 'noteline' || currentMode === 'slope') {
       let t = { x: rawPos.x, y: rawPos.y };
@@ -7128,15 +7283,64 @@ ${sketchBlocks}
     setTimeout(() => { resetView(); renderCanvas(); }, 150);
   }
 
-  function closeLabelDialog() { document.getElementById('labelOverlay').style.display = 'none'; }
+  function closeLabelDialog() {
+    document.getElementById('labelOverlay').style.display = 'none';
+    editingLabelIndex = -1;
+    const b = document.getElementById('labelSaveBtn'); if (b) b.innerText = 'Wstaw';
+    const d = document.getElementById('labelDeleteBtn'); if (d) d.style.display = 'none';
+  }
   function populateLabelSelect() {
     const sel = document.getElementById('labelSelect'); sel.innerHTML = '<option value="">-- wybierz gotowe --</option>'; sel.innerHTML += '<option value="Ściana zewnętrzna">Ściana zewnętrzna</option>'; sel.innerHTML += '<option value="Ściana wewnętrzna">Ściana wewnętrzna</option>'; sel.innerHTML += '<option value="Strop">Strop</option>'; sel.innerHTML += '<option value="Dach">Dach</option>'; sel.innerHTML += '<option value="Podłoga">Podłoga</option>';
     getAllEnvTags().forEach(t => { sel.innerHTML += `<option value="${t.label}">${t.label} (${ENV_TAG_NAMES[t.cat] || t.cat})</option>`; });
   }
+  // Gotowa pozycja z listy dopisuje sie do tekstu, zamiast go zastepowac -
+  // dzieki temu da sie zaczac od "SZ1" i dopisac wlasny komentarz.
+  function onLabelPresetPicked() {
+    const sel = document.getElementById('labelSelect');
+    const ta = document.getElementById('labelInput');
+    if (!sel.value) return;
+    ta.value = ta.value.trim() ? (ta.value.replace(/\s+$/, '') + '\n' + sel.value) : sel.value;
+    sel.value = '';
+    ta.focus();
+  }
+
+  let editingLabelIndex = -1;
+
+  function openLabelForEdit(idx) {
+    const l = objects.labels[idx];
+    if (!l) return;
+    editingLabelIndex = idx;
+    populateLabelSelect();
+    document.getElementById('labelInput').value = l.text || '';
+    document.getElementById('labelSize').value = String(l.size || 20);
+    document.getElementById('labelBox').checked = (l.box !== false);
+    document.getElementById('labelSaveBtn').innerText = 'Zapisz';
+    document.getElementById('labelDeleteBtn').style.display = 'inline-block';
+    document.getElementById('labelOverlay').style.display = 'flex';
+  }
+
+  function deleteLabelFromDialog() {
+    if (editingLabelIndex === -1) return;
+    objects.labels.splice(editingLabelIndex, 1);
+    saveStateToHistory(); renderCanvas(); closeLabelDialog();
+  }
+
   function addTextToCanvas() {
-    let text = document.getElementById('labelInput').value; let sel = document.getElementById('labelSelect').value; let finalTxt = sel ? sel : text; 
-    if(!finalTxt) { closeLabelDialog(); return; }
-    objects.labels.push({x: labelPosCanvas.x, y: labelPosCanvas.y, text: finalTxt}); saveStateToHistory(); renderCanvas(); closeLabelDialog();
+    const text = document.getElementById('labelInput').value.replace(/\s+$/, '');
+    const size = parseInt(document.getElementById('labelSize').value, 10) || 20;
+    const box = document.getElementById('labelBox').checked;
+    if (!text) {
+      // pusty tekst przy edycji = kasowanie pola
+      if (editingLabelIndex !== -1) { objects.labels.splice(editingLabelIndex, 1); saveStateToHistory(); renderCanvas(); }
+      closeLabelDialog();
+      return;
+    }
+    if (editingLabelIndex !== -1) {
+      Object.assign(objects.labels[editingLabelIndex], { text, size, box });
+    } else {
+      objects.labels.push({ x: labelPosCanvas.x, y: labelPosCanvas.y, text, size, box });
+    }
+    saveStateToHistory(); renderCanvas(); closeLabelDialog();
   }
 
   function clearCanvas() {
