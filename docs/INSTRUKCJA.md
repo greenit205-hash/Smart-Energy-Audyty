@@ -395,7 +395,9 @@ Przy każdej przegrodzie jest przycisk **🧱 Warstwy**. Składasz przegrodę z 
 
 **Przegroda niejednorodna** — zaznacz pole, gdy przegrodę przecinają elementy o innym oporze, np. belki stropowe. Pojawią się dwie zakładki: **Wycinek A** (wypełnienie między belkami) i **Wycinek B** (belka), plus pola na szerokości powtarzalnego fragmentu — na przykład rozstaw 0,90 m i belka 0,15 m. Program składa oba wycinki wg normy i pokazuje opór każdego z osobna, żeby dało się to porównać z programem obliczeniowym.
 
-**⭐ Zapisz jako szablon** — zapamiętuje całą przegrodę: warstwy, typ, opory i oba wycinki. Przy następnym audycie wybierasz ją z listy zamiast składać od nowa. Szablony zostają w pamięci tabletu.
+**Poprawianie warstw.** Materiał i grubość każdej warstwy możesz zmienić wprost na liście — nie musisz kasować warstwy i wpisywać jej od nowa. Kliknij w nazwę materiału i wybierz inny z listy albo wpisz własny (program dopyta o λ). Grubość poprawiasz w polu obok; przecinek dziesiętny jest przyjmowany. Wynik U przelicza się od razu.
+
+**⭐ Zapisz jako szablon** — zapamiętuje całą przegrodę: warstwy, typ, opory i oba wycinki. Przy następnym audycie wybierasz ją z listy zamiast składać od nowa. Szablony zostają w pamięci tabletu. Po wstawieniu szablonu program przypomni, żeby **sprawdzić grubości** — niesie je z budynku, w którym szablon powstał, więc prawie zawsze trzeba je poprawić.
 
 1. Wybierz materiał z listy (ponad 60 pozycji: izolacje, konstrukcja, wykończenia, podkłady, pustki powietrzne).
 2. **Wpisz grubość w centymetrach** — sam, materiał jej nie narzuca.
@@ -416,6 +418,10 @@ Liczone tak jak w programach do audytu: opór warstwy = grubość ÷ λ, a opory
 > **Uwagi audytora.** W sekcji 4, pod preferencjami inwestora, jest duże pole na Twoje spostrzeżenia — wątpliwości, co sprawdzić przed obliczeniami, ustalenia z inwestorem. Przycisk **➕ Dopisz z datą** wstawia stempel czasu i przechodzi do nowego akapitu, więc możesz notować w kilku momentach wizyty i później widzieć, co kiedy zauważyłeś. Treść trafia do raportu (sekcja 8), do karty obiektu i do Dokumentu Google. Jeśli zostawisz pole puste, w raporcie zostanie wolne miejsce na dopiski odręczne — tak jak wcześniej.
 
 > **Szablony przegród są w kopii zapasowej.** Przycisk 💾 zapisuje teraz do jednego pliku zarówno audyty, jak i szablony przegród. Po awarii tabletu wczytujesz kopię i szablony wracają razem z raportami. Rób ją regularnie — szablony żyją w pamięci przeglądarki i przepadną razem z nią.
+
+> **Kilka przegród na jednej ścianie.** Jeśli wzdłuż jednej narysowanej linii masz kilka rodzajów przegrody — na przykład dwa różne układy podłogi na gruncie — dotknij tej ściany narzędziem 🏷️ Przegroda jeszcze raz. Okno pokaże oznaczenia, które już na niej są, a pod nimi możesz **dodać kolejne**. Przy każdym oznaczeniu masz przycisk **zmień** (rodzaj) i 🗑️ (skasuj). Na rysunku oznaczenia układają się jedno pod drugim, prostopadle do ściany.
+
+> **💬 Komentarz ze strzałką.** Narzędzie **💬 Komentarz** stawia chmurkę z tekstem i strzałką wskazującą opisywane miejsce. Dotykasz miejsca, które chcesz opisać — tam trafia grot strzałki — a chmurka pojawia się obok, żeby nie zasłaniać rysunku. Potem: **chmurkę przeciągasz palcem** w dowolne miejsce, **grot strzałki przeciągasz osobno**, a krótkie dotknięcie chmurki otwiera ją do poprawki. Skasujesz ją przyciskiem 🗑️ w oknie albo gumką 🧽. Komentarze mogą mieć kilka linii i zapisują się razem ze szkicem.
 
 > **Tekst na szkicu.** Narzędzie **abc Txt** wstawia pole tekstowe — możesz pisać w **wielu liniach**, wybrać wielkość liter (mała / zwykła / duża) i zdecydować, czy pole ma mieć białą ramkę. Przydaje się na przekrojach, gdzie opis przegrody nie mieści się w jednej linii. Kliknięcie tym samym narzędziem w **istniejące pole** otwiera je do poprawki — możesz zmienić treść, wielkość i ramkę albo usunąć pole. Wyczyszczenie treści też kasuje pole. Lista gotowych podpowiedzi (SZ1, Dach, Strop…) **dopisuje się** do tego, co już napisałeś, zamiast to zastępować.
 

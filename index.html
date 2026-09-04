@@ -356,6 +356,7 @@
               </div>
               <button type="button" id="btnModeErase" class="btn btn-outline-danger btn-sm fw-bold" onclick="setMode('erase')">🧽 Usuń</button>
               <button type="button" id="btnModeText" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('text')">🔤 Txt</button>
+              <button type="button" id="btnModeCallout" class="btn btn-outline-info btn-sm fw-bold" onclick="setMode('callout')">💬 Komentarz</button>
             </div>
             <div class="btn-group flex-wrap ms-auto mt-2 mt-md-0">
               <button type="button" id="btnModePan" class="btn btn-outline-success btn-sm fw-bold" onclick="setMode('pan')">✋ Przesuń</button>
@@ -597,6 +598,7 @@
 
     <p class="text-muted small mb-2">Kolejność od wewnątrz na zewnątrz. Materiał z listy, <b>grubość wpisujesz sam</b>.</p>
 
+    <div id="layerTemplateHint" class="alert alert-warning py-2 small mb-2" style="display:none;"></div>
     <div id="layersList" class="mb-2"></div>
 
     <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
@@ -678,6 +680,20 @@
     <div class="d-flex justify-content-between">
       <button type="button" class="btn btn-secondary btn-sm" onclick="closeDimEditDialog()">Anuluj</button>
       <button type="button" class="btn btn-success btn-sm fw-bold px-4" onclick="applyMeasureDimension()">Zapisz wymiar</button>
+    </div>
+  </div>
+</div>
+
+<div id="calloutOverlay" class="modal-overlay">
+  <div class="card shadow p-3" style="width: min(460px, 94vw);">
+    <h6 class="fw-bold mb-2 text-info">💬 Komentarz ze strzałką</h6>
+    <p class="small text-muted mb-2" id="calloutHint">Napisz komentarz — strzałka wskaże miejsce, które właśnie dotknąłeś.</p>
+    <textarea id="calloutInput" class="form-control mb-2" rows="3"
+              placeholder="np. ślady zawilgocenia w narożniku, do sprawdzenia"></textarea>
+    <div class="d-flex justify-content-between">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeCalloutDialog()">Anuluj</button>
+      <button type="button" class="btn btn-outline-danger btn-sm fw-bold" id="calloutDeleteBtn" style="display:none;" onclick="deleteCalloutFromDialog()">🗑️ Usuń</button>
+      <button type="button" class="btn btn-info btn-sm fw-bold text-white" id="calloutSaveBtn" onclick="saveCallout()">Wstaw</button>
     </div>
   </div>
 </div>
@@ -1384,7 +1400,7 @@
       if (!keys.length) return;
       const alive = envTagKeysOnSketch(sk);
       keys.forEach(k => {
-        if (!alive.has(k)) out.push({ sketchIdx: si, sketchName: sk.name, key: k, label: tags[k].cat + tags[k].num, cat: tags[k].cat, num: tags[k].num });
+        if (!alive.has(envSegBaseKey(k))) out.push({ sketchIdx: si, sketchName: sk.name, key: k, label: tags[k].cat + tags[k].num, cat: tags[k].cat, num: tags[k].num });
       });
     });
     return out;
@@ -1526,6 +1542,14 @@
     if (t.typStropu) document.getElementById('layerTypStropu').value = t.typStropu;
     onNiejednorodnaChange();
     renderLayers();
+    // Szablon niesie grubości z innego budynku - przypominamy, że trzeba je
+    // sprawdzić, zamiast pozwolić im po cichu wejść do obliczeń.
+    const info = document.getElementById('layerTemplateHint');
+    if (info) {
+      info.style.display = 'block';
+      info.innerHTML = '⚠️ Wstawiono szablon <b>' + escAttr(t.nazwa) + '</b>. ' +
+                       'Sprawdź grubości — możesz je poprawić wprost na liście warstw.';
+    }
   }
 
   function deleteTemplate(i) {
@@ -1705,6 +1729,8 @@
     document.getElementById('layerMatInput').value = '';
     document.getElementById('layerThickInput').value = '';
     renderTemplateList();
+    const hint = document.getElementById('layerTemplateHint');
+    if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
     renderLayers();
     document.getElementById('layersOverlay').style.display = 'flex';
   }
@@ -1712,6 +1738,55 @@
   function closeLayersDialog() {
     document.getElementById('layersOverlay').style.display = 'none';
     layersKey = null; layersDraft = []; layersDraftB = []; aktywnyWycinek = 'A';
+  }
+
+  function escAttr(v) {
+    return String(v === undefined || v === null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function opisWarstwy(w, kier) {
+    const mat = materialByName(w.mat);
+    const r = oporWarstwy(w, kier);
+    if (mat && mat.R !== undefined) return 'pustka · R = ' + (r !== null ? r.toFixed(3) : '?');
+    if (r !== null) return 'R = ' + r.toFixed(3);
+    if (w.l > 0) return 'λ = ' + w.l + ' · podaj grubość';
+    return 'brak λ — materiał spoza bazy';
+  }
+
+  function zmienGruboscWarstwy(i, wartosc) {
+    const lista = biezaceWarstwy();
+    if (!lista[i]) return;
+    const g = parseFloat(String(wartosc).replace(',', '.'));
+    lista[i].gr = (g > 0) ? g.toFixed(1) : '';
+    renderLayers();
+  }
+
+  // Zmiana materiału istniejącej warstwy. Materiał spoza bazy pyta o lambdę -
+  // tak samo jak przy dodawaniu warstwy przez "Inny (wpisz własny)".
+  function zmienMaterialWarstwy(i, nazwa) {
+    const lista = biezaceWarstwy();
+    if (!lista[i]) return;
+    const n = String(nazwa || '').trim();
+    if (!n) { renderLayers(); return; }
+    if (n === MATERIAL_INNY) { renderLayers(); return; }
+
+    if (materialByName(n)) {
+      lista[i].mat = n;
+      delete lista[i].wlasny;
+      delete lista[i].l;                 // materiał z bazy ma własną lambdę
+    } else {
+      const domyslna = lista[i].l !== undefined ? String(lista[i].l) : '';
+      const l = prompt('Materiał „' + n + '" nie jest w bazie.\n\n' +
+                       'Podaj λ [W/(m·K)] albo zostaw puste — warstwa policzy się tylko do grubości i opisu:',
+                       domyslna);
+      if (l === null) { renderLayers(); return; }   // anulowano - zostaje stary materiał
+      lista[i].mat = n;
+      lista[i].wlasny = true;
+      const lv = parseFloat(String(l).replace(',', '.'));
+      if (lv > 0) lista[i].l = lv; else delete lista[i].l;
+    }
+    renderLayers();
   }
 
   function renderLayers() {
@@ -1723,19 +1798,32 @@
         (niejed ? ' w wycinku ' + aktywnyWycinek : '') +
         '. Dodaj pierwszą poniżej — zacznij od warstwy wewnętrznej (np. tynk).</p>';
     } else {
+      // Materiał i grubość są edytowalne wprost na liście - po wstawieniu
+      // szablonu grubości prawie zawsze trzeba poprawić pod konkretny budynek.
+      const kier = kierunekStrumienia(zbierzMetaZDialogu(), layersCat);
       let html = '';
       lista.forEach((w, i) => {
-        const r = oporWarstwy(w);
-        const mat = materialByName(w.mat);
-        const opis = mat && mat.R !== undefined ? 'pustka powietrzna' : (r !== null ? 'R = ' + r.toFixed(3) : 'brak λ');
-        html += `<div class="d-flex align-items-center border-bottom py-1">
-          <span class="text-muted small me-2" style="width:1.2rem;">${i + 1}.</span>
-          <span class="small flex-fill">${w.mat}<br><span class="text-muted">${w.gr} cm · ${opis}</span></span>
-          <span class="text-nowrap">
-            <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
-            <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},1)" ${i === lista.length - 1 ? 'disabled' : ''}>▼</button>
-            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeLayer(${i})">🗑️</button>
-          </span></div>`;
+        html += `<div class="border-bottom py-1">
+          <div class="d-flex align-items-center gap-1">
+            <span class="text-muted small" style="width:1.2rem;">${i + 1}.</span>
+            <input type="text" class="form-control form-control-sm" list="layerMatOptions"
+                   value="${escAttr(w.mat)}" onchange="zmienMaterialWarstwy(${i}, this.value)"
+                   style="flex:1 1 auto; min-width:0;">
+          </div>
+          <div class="d-flex align-items-center gap-1 mt-1 ms-4">
+            <div class="input-group input-group-sm" style="width:8rem;">
+              <input type="number" step="0.1" inputmode="decimal" class="form-control"
+                     value="${escAttr(w.gr)}" onchange="zmienGruboscWarstwy(${i}, this.value)">
+              <span class="input-group-text">cm</span>
+            </div>
+            <span class="small text-muted flex-fill" id="warstwaOpis_${i}">${opisWarstwy(w, kier)}</span>
+            <span class="text-nowrap">
+              <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+              <button class="btn btn-sm btn-outline-secondary py-0 px-1" onclick="moveLayer(${i},1)" ${i === lista.length - 1 ? 'disabled' : ''}>▼</button>
+              <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeLayer(${i})">🗑️</button>
+            </span>
+          </div>
+        </div>`;
       });
       box.innerHTML = html;
     }
@@ -2116,7 +2204,7 @@
     globalOpeningsMemory = {};
     let t = document.getElementById('editorTitle'); if(t) t.innerText = "Tworzenie: Nowy Raport";
     currentSketchIndex = 0; panX = -750; panY = -750; zoomLevel = 1;
-    sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
+    sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [], callouts: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
     objects = sketches[0].objects;
     undoStack = []; saveStateToHistory(); deselectObjects(); renderTabs(); updateCanvasTransform(); renderCanvas();
     renderEnvelopeFields();
@@ -2141,7 +2229,7 @@
     if(audit.sketchesJSON) { 
         sketches = JSON.parse(audit.sketchesJSON); currentSketchIndex = 0; objects = sketches[0].objects;
         // starsze raporty nie mialy jeszcze miarek/oznaczen - uzupelniamy, zeby nic sie nie wywrocilo
-        sketches.forEach(sk => { if (!sk.objects.noteLines) sk.objects.noteLines = []; if (!sk.objects.envTags) sk.objects.envTags = {}; if (!sk.objects.apexDims) sk.objects.apexDims = {}; if (!sk.objects.hatches) sk.objects.hatches = []; if (!sk.objects.slopes) sk.objects.slopes = []; if (!sk.objects.customDims) sk.objects.customDims = {}; });
+        sketches.forEach(sk => { if (!sk.objects.noteLines) sk.objects.noteLines = []; if (!sk.objects.envTags) sk.objects.envTags = {}; if (!sk.objects.apexDims) sk.objects.apexDims = {}; if (!sk.objects.hatches) sk.objects.hatches = []; if (!sk.objects.slopes) sk.objects.slopes = []; if (!sk.objects.callouts) sk.objects.callouts = []; if (!sk.objects.customDims) sk.objects.customDims = {}; });
         sketches.forEach(sk => { (sk.objects.openings || []).forEach(op => { globalOpeningsMemory[op.id] = { w: op.width, h: op.height, u: op.uValue }; }); if (!sk.objects.envTags) sk.objects.envTags = {}; });
         if(!objects.customDims) objects.customDims = {};
     }
@@ -4075,6 +4163,7 @@ ${sketchBlocks}
     objects.apexDims = {};
     objects.hatches = [];
     objects.slopes = [];
+    objects.callouts = [];
     recalculateRooms(); saveStateToHistory(); renderTablesPerSketch(); renderEnvelopeFields(); renderCanvas();
     alert('Gotowe — został sam rysunek ścian.');
   }
@@ -4472,29 +4561,106 @@ ${sketchBlocks}
   const ENV_TAG_NAMES = { SZ: 'Ściana zewnętrzna', S: 'Strop', PG: 'Podłoga na gruncie', D: 'Dach' };
   let envTagSelectedKey = null;
 
-  function openEnvTagDialog(key) {
-    envTagSelectedKey = key;
-    const existing = objects.envTags[key];
-    const labelEl = document.getElementById('envTagCurrentLabel');
-    const removeBtn = document.getElementById('envTagRemoveBtn');
-    if (existing) {
-      labelEl.innerHTML = `Obecnie oznaczone jako <b>${existing.cat}${existing.num}</b> (${ENV_TAG_NAMES[existing.cat]}). Wybierz inny rodzaj, aby zmienić:`;
-      removeBtn.style.display = 'block';
-    } else {
-      labelEl.innerText = 'Wybierz rodzaj przegrody dla tej ściany:';
-      removeBtn.style.display = 'none';
+  // Jedna narysowana ściana może nieść KILKA oznaczeń - np. przekrój, na którym
+  // podłoga na gruncie ma dwa różne układy warstw. Pierwsze oznaczenie ma klucz
+  // równy kluczowi odcinka (jak dotąd, dzięki czemu stare szkice działają),
+  // kolejne dostają sufiks "#2", "#3"...
+  function envSegBaseKey(key) { return String(key).split('#')[0]; }
+
+  function envTagKeysForSegment(tags, segKey) {
+    const baza = envSegBaseKey(segKey);
+    return Object.keys(tags || {})
+      .filter(k => envSegBaseKey(k) === baza)
+      .sort((a, b) => (a.length - b.length) || a.localeCompare(b));
+  }
+
+  function envNextKeyForSegment(tags, segKey) {
+    const baza = envSegBaseKey(segKey);
+    if (!tags[baza]) return baza;
+    for (let n = 2; n < 100; n++) {
+      const k = baza + '#' + n;
+      if (!tags[k]) return k;
     }
+    return baza + '#' + Date.now();
+  }
+
+
+  // Klucz oznaczenia, ktore poprawiamy; null = dodajemy nowe do tej sciany.
+  let envTagEditKey = null;
+
+  function openEnvTagDialog(key) {
+    envTagSelectedKey = envSegBaseKey(key);
+    envTagEditKey = null;
+    renderEnvTagDialog();
     document.getElementById('envTagOverlay').style.display = 'flex';
   }
 
-  function closeEnvTagDialog() { envTagSelectedKey = null; document.getElementById('envTagOverlay').style.display = 'none'; }
+  function renderEnvTagDialog() {
+    const tags = objects.envTags || {};
+    const naSciane = envTagKeysForSegment(tags, envTagSelectedKey);
+    const labelEl = document.getElementById('envTagCurrentLabel');
+    const removeBtn = document.getElementById('envTagRemoveBtn');
+
+    if (!naSciane.length) {
+      labelEl.innerText = 'Wybierz rodzaj przegrody dla tej ściany:';
+      removeBtn.style.display = 'none';
+      envTagEditKey = null;
+      return;
+    }
+
+    let html = '<div class="mb-2">Ta ściana ma już oznaczenia:</div>';
+    naSciane.forEach(k => {
+      const t = tags[k];
+      const wybrane = (k === envTagEditKey);
+      html += `<div class="d-flex align-items-center border-bottom py-1">
+        <span class="badge me-2" style="background:${ENV_TAG_COLORS[t.cat] || '#495057'}">${t.cat}${t.num}</span>
+        <span class="small flex-fill text-start">${ENV_TAG_NAMES[t.cat] || t.cat}</span>
+        <button class="btn btn-sm ${wybrane ? 'btn-primary' : 'btn-outline-primary'} py-0 px-2 me-1"
+                onclick="wybierzEnvTagDoZmiany('${k}')">${wybrane ? 'zmieniasz' : 'zmień'}</button>
+        <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="usunEnvTagZOkna('${k}')">🗑️</button>
+      </div>`;
+    });
+    html += `<div class="mt-2 fw-bold">${envTagEditKey
+      ? 'Wybierz nowy rodzaj dla zaznaczonego oznaczenia:'
+      : 'Albo dodaj <u>kolejne</u> oznaczenie do tej samej ściany — wybierz rodzaj:'}</div>`;
+    labelEl.innerHTML = html;
+    removeBtn.style.display = 'none';
+  }
+
+  function wybierzEnvTagDoZmiany(k) {
+    envTagEditKey = (envTagEditKey === k) ? null : k;
+    renderEnvTagDialog();
+  }
+
+  function usunEnvTagZOkna(k) {
+    const t = (objects.envTags || {})[k];
+    if (!t) return;
+    if (!confirm(`Usunąć oznaczenie ${t.cat}${t.num}?\n\nZniknie z przekroju i z sekcji 3 razem z wpisanym opisem. Ściana zostaje na rysunku.`)) return;
+    removeEnvTagByKey(currentSketchIndex, k);
+    if (envTagEditKey === k) envTagEditKey = null;
+    if (!envTagKeysForSegment(objects.envTags || {}, envTagSelectedKey).length) { closeEnvTagDialog(); return; }
+    renderEnvTagDialog();
+  }
+
+  function closeEnvTagDialog() {
+    envTagSelectedKey = null; envTagEditKey = null;
+    document.getElementById('envTagOverlay').style.display = 'none';
+  }
 
   function assignEnvTag(cat) {
     if (!envTagSelectedKey) return;
-    const existing = objects.envTags[envTagSelectedKey];
-    if (existing && existing.cat === cat) { closeEnvTagDialog(); return; } // bez zmian
-    const num = nextEnvNumber(cat);
-    objects.envTags[envTagSelectedKey] = { cat, num };
+    if (!objects.envTags) objects.envTags = {};
+    if (envTagEditKey) {
+      const existing = objects.envTags[envTagEditKey];
+      if (existing && existing.cat === cat) { closeEnvTagDialog(); return; }   // bez zmian
+      // Zmiana rodzaju to nowe oznaczenie - stare kasujemy razem z jego opisem,
+      // żeby warstwy ściany nie zostały podpisane pod dachem.
+      removeEnvTagByKey(currentSketchIndex, envTagEditKey);
+      objects.envTags[envTagEditKey] = { cat, num: nextEnvNumber(cat) };
+    } else {
+      const nowyKlucz = envNextKeyForSegment(objects.envTags, envTagSelectedKey);
+      objects.envTags[nowyKlucz] = { cat, num: nextEnvNumber(cat) };
+    }
     saveStateToHistory(); renderCanvas(); renderEnvelopeFields();
     closeEnvTagDialog();
   }
@@ -4534,7 +4700,7 @@ ${sketchBlocks}
       objects = sk.objects;
       (objects.lines || []).forEach(line => {
         getSegmentsForLine(line).forEach(sg => {
-          if (getSegKey(sg.x1, sg.y1, sg.x2, sg.y2) === key) pos = { x: (sg.x1 + sg.x2) / 2, y: (sg.y1 + sg.y2) / 2 };
+          if (getSegKey(sg.x1, sg.y1, sg.x2, sg.y2) === envSegBaseKey(key)) pos = { x: (sg.x1 + sg.x2) / 2, y: (sg.y1 + sg.y2) / 2 };
         });
       });
     } catch (e) {} finally { objects = saved; }
@@ -4788,7 +4954,7 @@ ${sketchBlocks}
 
   function addNewSketch() {
     let name = prompt("Podaj nazwę dla nowego szkicu:", "Nowy Szkic"); if(!name) return;
-    sketches.push({ id: Date.now(), name: name, objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true });
+    sketches.push({ id: Date.now(), name: name, objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [], callouts: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true });
     switchSketch(sketches.length - 1);
   }
 
@@ -5459,6 +5625,7 @@ ${sketchBlocks}
     noteline: ['btnModeNote',     'btn-outline-info',    'btn-info'],
     erase:    ['btnModeErase',    'btn-outline-danger',  'btn-danger'],
     text:     ['btnModeText',     'btn-outline-primary', 'btn-primary'],
+    callout:  ['btnModeCallout',  'btn-outline-info',    'btn-info'],
     pan:      ['btnModePan',      'btn-outline-success', 'btn-success']
   };
 
@@ -6080,20 +6247,30 @@ ${sketchBlocks}
         const segs = getSegmentsForLine(line);
         (segs.length > 1 ? segs : [{x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2}]).forEach(seg => {
           const key = getSegKey(seg.x1, seg.y1, seg.x2, seg.y2);
-          const tag = objects.envTags[key];
-          if (!tag) return;
+          const klucze = envTagKeysForSegment(objects.envTags, key);
+          if (!klucze.length) return;
           const mx = (seg.x1 + seg.x2) / 2, my = (seg.y1 + seg.y2) / 2;
-          const label = tag.cat + tag.num;
-          const color = ENV_TAG_COLORS[tag.cat] || '#495057';
-          ctx.save();
-          ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          const metrics = ctx.measureText(label);
-          const w = metrics.width + 12, h = 18;
-          ctx.fillStyle = color; ctx.beginPath();
-          if (ctx.roundRect) ctx.roundRect(mx - w / 2, my - h / 2, w, h, 8); else ctx.rect(mx - w / 2, my - h / 2, w, h);
-          ctx.fill();
-          ctx.fillStyle = '#ffffff'; ctx.fillText(label, mx, my + 1);
-          ctx.restore();
+          // Kilka oznaczeń tej samej ściany układamy jedno pod drugim,
+          // prostopadle do niej, żeby żadne nie zasłaniało pozostałych.
+          const dl = Math.hypot(seg.x2 - seg.x1, seg.y2 - seg.y1) || 1;
+          const nx = -(seg.y2 - seg.y1) / dl, ny = (seg.x2 - seg.x1) / dl;
+          klucze.forEach((k, idx) => {
+            const tag = objects.envTags[k];
+            if (!tag) return;
+            const odsun = (idx - (klucze.length - 1) / 2) * 22;
+            const tx = mx + nx * odsun, ty = my + ny * odsun;
+            const label = tag.cat + tag.num;
+            const color = ENV_TAG_COLORS[tag.cat] || '#495057';
+            ctx.save();
+            ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const metrics = ctx.measureText(label);
+            const w = metrics.width + 12, h = 18;
+            ctx.fillStyle = color; ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(tx - w / 2, ty - h / 2, w, h, 8); else ctx.rect(tx - w / 2, ty - h / 2, w, h);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.fillText(label, tx, ty + 1);
+            ctx.restore();
+          });
         });
       });
     }
@@ -6138,6 +6315,35 @@ ${sketchBlocks}
         }
         ctx.fillStyle = "#dc3545";
         linie.forEach((t, i) => { ctx.fillText(t, lbl.x, gora + wys * (i + 0.5)); });
+      });
+    }
+
+    // KOMENTARZE ZE STRZAŁKĄ
+    if (objects.callouts && objects.callouts.length) {
+      objects.callouts.forEach(c => {
+        const b = calloutBox(ctx, c);
+        ctx.save();
+        // strzałka od krawędzi chmurki do wskazanego punktu
+        ctx.strokeStyle = '#0dcaf0'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.tx, c.ty); ctx.stroke();
+        const kat = Math.atan2(c.ty - c.y, c.tx - c.x);
+        ctx.fillStyle = '#0dcaf0';
+        ctx.beginPath();
+        ctx.moveTo(c.tx, c.ty);
+        ctx.lineTo(c.tx - 12 * Math.cos(kat - 0.4), c.ty - 12 * Math.sin(kat - 0.4));
+        ctx.lineTo(c.tx - 12 * Math.cos(kat + 0.4), c.ty - 12 * Math.sin(kat + 0.4));
+        ctx.closePath(); ctx.fill();
+        // chmurka
+        ctx.fillStyle = 'rgba(255,255,255,0.96)';
+        ctx.strokeStyle = '#0dcaf0'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(b.lewo, b.gora, b.w, b.h, 12);
+        else ctx.rect(b.lewo, b.gora, b.w, b.h);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#0b5563';
+        ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        b.linie.forEach((t, i) => { ctx.fillText(t, c.x, b.gora + 7 + 20 * (i + 0.5)); });
+        ctx.restore();
       });
     }
 
@@ -7024,6 +7230,16 @@ ${sketchBlocks}
       return;
     }
 
+    if(currentMode === 'callout') {
+      // najpierw sprawdzamy, czy palec trafil w istniejacy komentarz albo w grot
+      const tip = calloutTipHit(rawPos);
+      if (tip !== -1) { draggingCalloutTip = tip; return; }
+      const hit = calloutHit(rawPos);
+      if (hit !== -1) { draggingCallout = hit; calloutDragStart = { x: rawPos.x, y: rawPos.y, moved: false }; return; }
+      openCalloutDialog({ x: rawPos.x, y: rawPos.y });
+      return;
+    }
+
     if(currentMode === 'text') {
       // klikniecie w istniejace pole otwiera je do poprawki
       let hit = -1, hitD = 40 / zoomLevel;
@@ -7076,6 +7292,8 @@ ${sketchBlocks}
     if (currentMode === 'erase') {
         let clickedLineIndex = -1; let minD = 20 / zoomLevel; 
         objects.lines.forEach((line, index) => { let pt = getClosestPointOnSegment(rawPos, {x: line.x1, y: line.y1}, {x: line.x2, y: line.y2}); if (Math.hypot(rawPos.x - pt.x, rawPos.y - pt.y) < minD) { minD = Math.hypot(rawPos.x - pt.x, rawPos.y - pt.y); clickedLineIndex = index; } });
+        const calloutDel = calloutHit(rawPos);
+        if (calloutDel !== -1) { objects.callouts.splice(calloutDel, 1); saveStateToHistory(); renderCanvas(); return; }
         let slopeHit = findSlopeAt(rawPos);
         if (slopeHit !== -1) { objects.slopes.splice(slopeHit, 1); saveStateToHistory(); renderTablesPerSketch(); renderCanvas(); return; }
         let hatchHit = findHatchAt(rawPos);
@@ -7141,6 +7359,24 @@ ${sketchBlocks}
 
     let rawPos = getPos(e); rawPos.x = snapTo1cm(rawPos.x); rawPos.y = snapTo1cm(rawPos.y);
 
+    // przeciąganie komentarza albo samego grotu strzałki
+    if (draggingCalloutTip !== -1) {
+      const c = objects.callouts[draggingCalloutTip];
+      if (c) { c.tx = rawPos.x; c.ty = rawPos.y; renderCanvas(); }
+      return;
+    }
+    if (draggingCallout !== -1) {
+      const c = objects.callouts[draggingCallout];
+      if (c && calloutDragStart) {
+        c.x += rawPos.x - calloutDragStart.x;
+        c.y += rawPos.y - calloutDragStart.y;
+        if (Math.hypot(rawPos.x - calloutDragStart.x, rawPos.y - calloutDragStart.y) > 3) calloutDragStart.moved = true;
+        calloutDragStart.x = rawPos.x; calloutDragStart.y = rawPos.y;
+        renderCanvas();
+      }
+      return;
+    }
+
     if (!drawing) {
         hoverPos = null; hoverLine = null;
         if (currentMode === 'line') { let snapInfo = findSnapPoint(rawPos); if (snapInfo.type !== 'none') { hoverPos = snapInfo.pt; if (snapInfo.type === 'line') hoverLine = snapInfo.line; } }
@@ -7177,6 +7413,14 @@ ${sketchBlocks}
   }
 
   function stopDraw(e) {
+    // koniec przeciągania komentarza; krótkie dotknięcie bez ruchu = edycja
+    if (draggingCalloutTip !== -1) { draggingCalloutTip = -1; saveStateToHistory(); renderCanvas(); return; }
+    if (draggingCallout !== -1) {
+      const i = draggingCallout, ruszony = calloutDragStart && calloutDragStart.moved;
+      draggingCallout = -1; calloutDragStart = null;
+      if (ruszony) { saveStateToHistory(); renderCanvas(); } else { openCalloutForEdit(i); }
+      return;
+    }
     if(currentMode === 'pan') { isPanning = false; canvas.style.cursor = 'grab'; return; }
     if(!drawing) return;
     
@@ -7304,6 +7548,103 @@ ${sketchBlocks}
     ta.focus();
   }
 
+  // ================= KOMENTARZE ZE STRZAŁKĄ =================
+  // Chmurka z tekstem plus strzałka wskazująca opisywane miejsce. Grot siedzi
+  // tam, gdzie audytor dotknął rysunku; samą chmurkę można przeciągnąć w bok,
+  // żeby nie zasłaniała tego, co opisuje.
+  let editingCalloutIndex = -1;
+  let calloutTarget = null;      // punkt wskazywany przez strzałkę
+  let draggingCallout = -1;      // przeciąganie chmurki
+  let draggingCalloutTip = -1;   // przeciąganie samego grotu
+  let calloutDragStart = null;
+
+  function ensureCallouts() {
+    if (!objects.callouts) objects.callouts = [];
+    return objects.callouts;
+  }
+
+  function openCalloutDialog(target) {
+    editingCalloutIndex = -1;
+    calloutTarget = target;
+    document.getElementById('calloutInput').value = '';
+    document.getElementById('calloutHint').innerText =
+      'Napisz komentarz — strzałka wskaże miejsce, które właśnie dotknąłeś.';
+    document.getElementById('calloutSaveBtn').innerText = 'Wstaw';
+    document.getElementById('calloutDeleteBtn').style.display = 'none';
+    document.getElementById('calloutOverlay').style.display = 'flex';
+  }
+
+  function openCalloutForEdit(i) {
+    const c = ensureCallouts()[i];
+    if (!c) return;
+    editingCalloutIndex = i;
+    calloutTarget = { x: c.tx, y: c.ty };
+    document.getElementById('calloutInput').value = c.text || '';
+    document.getElementById('calloutHint').innerText =
+      'Możesz poprawić treść. Chmurkę i grot strzałki przesuwasz palcem na rysunku.';
+    document.getElementById('calloutSaveBtn').innerText = 'Zapisz';
+    document.getElementById('calloutDeleteBtn').style.display = 'inline-block';
+    document.getElementById('calloutOverlay').style.display = 'flex';
+  }
+
+  function closeCalloutDialog() {
+    document.getElementById('calloutOverlay').style.display = 'none';
+    editingCalloutIndex = -1; calloutTarget = null;
+  }
+
+  function deleteCalloutFromDialog() {
+    if (editingCalloutIndex === -1) return;
+    ensureCallouts().splice(editingCalloutIndex, 1);
+    saveStateToHistory(); renderCanvas(); closeCalloutDialog();
+  }
+
+  function saveCallout() {
+    const text = document.getElementById('calloutInput').value.replace(/\s+$/, '');
+    const lista = ensureCallouts();
+    if (!text) {
+      if (editingCalloutIndex !== -1) { lista.splice(editingCalloutIndex, 1); saveStateToHistory(); renderCanvas(); }
+      closeCalloutDialog();
+      return;
+    }
+    if (editingCalloutIndex !== -1) {
+      lista[editingCalloutIndex].text = text;
+    } else {
+      // chmurka domyślnie nad i w prawo od wskazanego punktu
+      lista.push({ tx: calloutTarget.x, ty: calloutTarget.y,
+                   x: calloutTarget.x + 90, y: calloutTarget.y - 70, text });
+    }
+    saveStateToHistory(); renderCanvas(); closeCalloutDialog();
+  }
+
+  // Wymiary chmurki liczymy tak samo przy rysowaniu i przy trafianiu palcem.
+  function calloutBox(ctx, c) {
+    const linie = String(c.text || '').split('\n');
+    ctx.font = 'bold 15px Arial';
+    let szer = 0;
+    linie.forEach(t => { szer = Math.max(szer, ctx.measureText(t).width); });
+    const w = Math.min(Math.max(szer + 20, 60), 420);
+    const h = linie.length * 20 + 14;
+    return { w, h, linie, lewo: c.x - w / 2, gora: c.y - h / 2 };
+  }
+
+  function calloutHit(pos) {
+    const lista = objects.callouts || [];
+    const ctx = canvas.getContext('2d');
+    for (let i = lista.length - 1; i >= 0; i--) {
+      const b = calloutBox(ctx, lista[i]);
+      if (pos.x >= b.lewo && pos.x <= b.lewo + b.w && pos.y >= b.gora && pos.y <= b.gora + b.h) return i;
+    }
+    return -1;
+  }
+
+  function calloutTipHit(pos) {
+    const lista = objects.callouts || [];
+    for (let i = lista.length - 1; i >= 0; i--) {
+      if (Math.hypot(pos.x - lista[i].tx, pos.y - lista[i].ty) < 24 / zoomLevel) return i;
+    }
+    return -1;
+  }
+
   let editingLabelIndex = -1;
 
   function openLabelForEdit(idx) {
@@ -7345,7 +7686,7 @@ ${sketchBlocks}
 
   function clearCanvas() {
     if(!confirm("Czy na pewno chcesz wyczyścić cały bieżący szkic?")) return;
-    objects = { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }; sketches[currentSketchIndex].objects = objects; undoStack = []; saveStateToHistory(); resetView(); renderCanvas(); renderTablesPerSketch();
+    objects = { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [], callouts: [] }; sketches[currentSketchIndex].objects = objects; undoStack = []; saveStateToHistory(); resetView(); renderCanvas(); renderTablesPerSketch();
   }
 
   canvas.addEventListener('pointerdown', startDraw); canvas.addEventListener('pointermove', draw); canvas.addEventListener('pointerup', stopDraw);
@@ -7358,7 +7699,7 @@ ${sketchBlocks}
 
   window.onload = () => {
     if (!sketches.length) {
-      sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
+      sketches = [{ id: Date.now(), name: "Szkic 1 (Parter)", objects: { lines: [], freehand: [], labels: [], rooms: [], openings: [], customDims: {}, envTags: {}, noteLines: [], apexDims: {}, hatches: [], slopes: [], callouts: [] }, panX: -750, panY: -750, zoomLevel: 1, showDimensions: true }];
       objects = sketches[0].objects;
     }
     fillTemplateOptions();

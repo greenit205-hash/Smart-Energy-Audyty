@@ -320,6 +320,98 @@ console.log('--- okno warstw ---');
   sprawdz('U trafiło do formularza', parseFloat(uPole) > 0, uPole);
 }
 
+
+// ===================== POPRAWIANIE WARSTW =====================
+console.log('--- poprawianie materiału i grubości warstwy ---');
+{
+  app(`
+    sketches = [{ id:1, name:'P', kind:'przekroj', panX:0, panY:0, zoomLevel:1, showDimensions:true,
+      objects: { lines:[], freehand:[], labels:[], rooms:[], openings:[], customDims:{},
+                 envTags:{ a:{cat:'SZ',num:1} }, noteLines:[], apexDims:{}, hatches:[], slopes:[] } }];
+    currentSketchIndex = 0; objects = sketches[0].objects;
+    renderEnvelopeFields();
+    openLayersDialog('SZ1', 'SZ');
+    layersDraft = [{ mat:'Cegła pełna zwykła', gr:'25.0' }, { mat:'Płyta GK', gr:'1.3' }];
+    renderLayers();
+  `);
+
+  // każda warstwa ma edytowalne pole materiału i grubości
+  const pola = doc.querySelectorAll('#layersList input');
+  sprawdz('każda warstwa ma dwa pola do poprawki', pola.length === 4, pola.length);
+  sprawdz('pole materiału jest podpięte do listy materiałów',
+    [...pola].some(p => p.getAttribute('list') === 'layerMatOptions'));
+  sprawdz('pole grubości jest liczbowe',
+    [...pola].filter(p => p.type === 'number').length === 2);
+
+  // zmiana grubości
+  app("zmienGruboscWarstwy(0, '38');");
+  sprawdz('grubość da się poprawić', app("return layersDraft[0].gr;") === '38.0',
+    app("return layersDraft[0].gr;"));
+  sprawdz('poprawiona grubość wchodzi do obliczeń',
+    blisko(app("return gruboscCalkowita(layersDraft);"), 39.3, 0.01),
+    app("return gruboscCalkowita(layersDraft);"));
+
+  // przecinek zamiast kropki - na tablecie łatwo o to
+  app("zmienGruboscWarstwy(1, '2,5');");
+  sprawdz('przecinek dziesiętny jest przyjmowany', app("return layersDraft[1].gr;") === '2.5',
+    app("return layersDraft[1].gr;"));
+
+  // zmiana materiału na inny z bazy
+  app("zmienMaterialWarstwy(1, 'Tynk mineralny');");
+  sprawdz('materiał da się zmienić na inny z bazy',
+    app("return layersDraft[1].mat;") === 'Tynk mineralny');
+  sprawdz('po zmianie materiału z bazy znika własna λ',
+    app("return layersDraft[1].l === undefined;") === true);
+
+  // materiał spoza bazy pyta o λ
+  app("window.__prompt = '0.45'; zmienMaterialWarstwy(1, 'Płyta z konopi');");
+  const wlasny = app("return JSON.stringify(layersDraft[1]);");
+  sprawdz('materiał spoza bazy jest zapamiętany z własną λ',
+    JSON.parse(wlasny).l === 0.45 && JSON.parse(wlasny).wlasny === true, wlasny);
+  sprawdz('warstwa z własną λ liczy się do U',
+    app("return oporWarstwy(layersDraft[1], 'poziomy') > 0;") === true);
+
+  // anulowanie pytania o λ zostawia poprzedni materiał
+  app("window.__prompt = null; zmienMaterialWarstwy(1, 'Coś zupełnie innego');");
+  sprawdz('anulowanie nie podmienia materiału',
+    app("return layersDraft[1].mat;") === 'Płyta z konopi', app("return layersDraft[1].mat;"));
+
+  // pusta nazwa niczego nie psuje
+  app("zmienMaterialWarstwy(0, '   ');");
+  sprawdz('pusta nazwa zostawia materiał bez zmian',
+    app("return layersDraft[0].mat;") === 'Cegła pełna zwykła');
+}
+
+// Szablon z innego budynku - grubości trzeba poprawić, więc program o tym mówi
+console.log('--- szablon a grubości ---');
+{
+  app(`
+    localStorage.removeItem('przegrodySzablony');
+    saveSzablony([{ nazwa:'Ściana z ociepleniem', typ:'SC_ZEW', niejednorodna:false,
+      warstwy:[{ mat:'Cegła pełna zwykła', gr:'25.0' },
+               { mat:'Płyta styropianowa EPS 70-038 FASADA', gr:'12.0' }], warstwyB:[] }]);
+    openLayersDialog('SZ1', 'SZ');
+  `);
+  sprawdz('przy otwarciu okna nie ma ostrzeżenia o szablonie',
+    doc.getElementById('layerTemplateHint').style.display === 'none');
+
+  app("applyTemplate(0);");
+  sprawdz('szablon wstawia warstwy', app("return layersDraft.length;") === 2);
+  sprawdz('po wstawieniu szablonu program przypomina o grubościach',
+    doc.getElementById('layerTemplateHint').style.display === 'block' &&
+    doc.getElementById('layerTemplateHint').innerHTML.includes('Sprawdź grubości'),
+    doc.getElementById('layerTemplateHint').innerHTML);
+
+  // i faktycznie da się je poprawić bez kasowania warstwy
+  app("zmienGruboscWarstwy(1, '20');");
+  sprawdz('grubość ze szablonu da się poprawić',
+    app("return layersDraft[1].gr;") === '20.0', app("return layersDraft[1].gr;"));
+  const u = app("return obliczPrzegrode({ typ:'SC_ZEW' }, layersDraft, 'SZ').U;");
+  const oczek = 1 / (0.13 + 0.25 / 0.78 + 0.20 / 0.038 + 0.04);
+  sprawdz('poprawiona grubość zmienia U', blisko(u, oczek, 1e-9), u);
+  app("localStorage.removeItem('przegrodySzablony');");
+}
+
 // ===================== SZABLONY =====================
 console.log('--- szablony przegród ---');
 {

@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 02.09.2026 · wersja aplikacji `smart-energy-v49`
+**Stan na:** 04.09.2026 · wersja aplikacji `smart-energy-v51`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -48,7 +48,8 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 - Typy pomieszczeń: v43 dokłada **Piwnica**, **Garaż** i **Strych / poddasze nieużytkowe**
 - **🎯 Pomiar** — prowadzony pomiar: program podświetla ścianę („MIERZ TĘ ŚCIANĘ"), czeka na odczyt, przechodzi do następnej
 - **🚪 Otwór** — okna/drzwi z podpowiedziami wcześniejszych wymiarów, kategorie i zestawienia. **v43: kliknięcie w już wstawiony otwór otwiera go do poprawki** (rodzaj, numer, wymiary, U) zamiast wstawiać drugi obok; zmiana rodzaju podpowiada nowy numer, ale nie kasuje wpisanych wymiarów. Pod tabelą otworów jest wykaz pojedynczych sztuk z przyciskiem ✏️
-- **🏷️ Przegroda** — oznaczanie przegród na przekroju (SZ/S/PG/D + numer); **📋 Lista przegród** do zarządzania
+- **🏷️ Przegroda** — oznaczanie przegród na przekroju (SZ/S/PG/D + numer); **📋 Lista przegród** do zarządzania. **v51: jedna ściana może nieść kilka oznaczeń** — np. dwa układy podłogi na gruncie wzdłuż tej samej linii. Pierwsze ma klucz równy kluczowi odcinka (stare szkice bez zmian), kolejne dostają sufiks `#2`, `#3`. W oknie widać listę oznaczeń tej ściany z możliwością zmiany rodzaju i skasowania każdego z osobna; na rysunku układają się jedno pod drugim, prostopadle do ściany
+- **💬 Komentarz** (v51) — chmurka z tekstem i strzałką wskazującą opisywane miejsce. Dotknięcie rysunku stawia grot, chmurka pojawia się obok. Chmurkę przeciągasz palcem, grot osobno; krótkie dotknięcie chmurki otwiera ją do poprawki, gumka kasuje. Komentarze są wielolinijkowe i zapisują się razem ze szkicem
 - **📐 Skos** — skosy poddasza z wymiarami (osobny rodzaj szkicu)
 - **abc Txt** — v48: pole **wielolinijkowe** z wyborem wielkości liter i ramki. Kliknięcie w istniejące pole otwiera je do poprawki; wyczyszczenie treści kasuje pole. Podpowiedź z listy (SZ1, Dach…) **dopisuje się** do tekstu, zamiast go zastępować
 - **▨ obszary kreskowane**, **📐 Miarka**, **✏️ Ołówek**, **abc Txt**, **🧽 Usuń**, **🩺 Diagnostyka**
@@ -85,6 +86,7 @@ To jest serce aplikacji i najczęstsze źródło problemów, więc opisuję dok�
 - **Sprawdzone wzorce:** pięć przegród z pliku audytora (SZ1, SZ2, SZ3, PG, SG) liczy się teraz **co do czwartego miejsca po przecinku** tak samo jak w programie obliczeniowym. Testy trzymają te wartości na stałe
 - **v44 — szablony przegród.** ⭐ Zapisz jako szablon zapamiętuje warstwy, typ, opory i oba wycinki; przy kolejnej przegrodzie wybierasz z listy zamiast składać od nowa. Szablony żyją w pamięci tabletu, między audytami
 - **Inny (wpisz własny)** — materiał spoza bazy; pyta o nazwę i λ. Bez λ liczy się tylko do opisu
+- **v50 — poprawianie warstw.** Materiał i grubość są edytowalne **wprost na liście warstw**, bez kasowania i wpisywania od nowa. Zmiana materiału na taki spoza bazy pyta o λ; anulowanie zostawia poprzedni. Po wstawieniu szablonu pojawia się żółte przypomnienie „Sprawdź grubości" — szablon niesie wymiary z innego budynku
 - **📋 Kopiuj z innej** — bo SZ2 zwykle różni się od SZ1 tylko grubością ocieplenia
 - Stary sposób opisu przegród (listy „wybierz budowę" / „wybierz izolację") **został usunięty w v40**. W sekcji 3 przy każdej przegrodzie są tylko: **🧱 Warstwy**, **opis własny**, **grubość** i **U**. Grubość i U wypełniają się po złożeniu warstw, obie można nadpisać ręcznie
 - Archiwalne kopie zapasowe zrobione starszą wersją **nadal się drukują** — pola starego modelu są czytane przy generowaniu raportu (i w `Kod.gs`), ale nigdzie już nie są zapisywane
@@ -187,7 +189,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v49), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v51), żeby tablety pobrały nową wersję.
 
 ---
 

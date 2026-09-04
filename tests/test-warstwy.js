@@ -210,7 +210,7 @@ const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const wersja = /CACHE_NAME\s*=\s*'smart-energy-v(\d+)'/.exec(sw);
 sprawdz('sw.js ma numer wersji cache', !!wersja);
 if (wersja) {
-  sprawdz('numer wersji podbity ponad v48', parseInt(wersja[1], 10) >= 49, 'v' + wersja[1]);
+  sprawdz('numer wersji podbity ponad v50', parseInt(wersja[1], 10) >= 51, 'v' + wersja[1]);
   console.log('    wersja cache: v' + wersja[1]);
 }
 

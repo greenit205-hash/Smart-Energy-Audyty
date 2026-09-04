@@ -496,6 +496,160 @@ nowySzkic();
     pion.prosto === true && Math.abs(pion.pt.x - 200) < 0.001, JSON.stringify(pion));
 }
 
+
+
+// ===================== KILKA OZNACZEŃ NA JEDNEJ ŚCIANIE =====================
+// Na przekroju bywa kilka rodzajów podłogi na gruncie wzdłuż jednej linii.
+console.log('--- kilka przegród na jednej ścianie ---');
+nowySzkic();
+{
+  app(`
+    sketches[0].kind = 'przekroj';
+    const P = PIXELS_PER_METER, O = 200;
+    objects.lines = [{ x1:O, y1:O, x2:O+6*P, y2:O }];
+    objects.envTags = {};
+    envTagSelectedKey = getSegKey(O, O, O+6*P, O);
+    envTagEditKey = null;
+    assignEnvTag('PG');
+  `);
+  sprawdz('pierwsze oznaczenie ma zwykły klucz odcinka',
+    app("return Object.keys(objects.envTags).length;") === 1);
+  const pierwszy = app("return Object.keys(objects.envTags)[0];");
+  sprawdz('klucz pierwszego oznaczenia jest bez sufiksu', pierwszy.indexOf('#') === -1, pierwszy);
+
+  // drugie oznaczenie na tej samej ścianie
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    envTagSelectedKey = getSegKey(O, O, O+6*P, O);
+    envTagEditKey = null;
+    assignEnvTag('PG');
+  `);
+  const klucze = app("return Object.keys(objects.envTags);");
+  sprawdz('da się dodać drugie oznaczenie do tej samej ściany', klucze.length === 2, klucze.join(', '));
+  sprawdz('drugie oznaczenie dostaje sufiks', klucze.some(k => k.indexOf('#2') !== -1), klucze.join(', '));
+
+  const tagi = app("return Object.values(objects.envTags).map(t => t.cat + t.num).sort();");
+  sprawdz('oba oznaczenia mają różne numery', tagi[0] !== tagi[1], tagi.join(', '));
+  sprawdz('oba są podłogami na gruncie', tagi.every(t => t.startsWith('PG')), tagi.join(', '));
+
+  // trzecie, innego rodzaju
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    envTagSelectedKey = getSegKey(O, O, O+6*P, O);
+    envTagEditKey = null;
+    assignEnvTag('S');
+  `);
+  sprawdz('trzecie oznaczenie też wchodzi', app("return Object.keys(objects.envTags).length;") === 3);
+
+  // wszystkie trafiają do sekcji 3
+  app("renderEnvelopeFields();");
+  const pola = app("return Object.values(objects.envTags).map(t => t.cat + t.num).filter(l => !!document.querySelector('[name=\"' + l + '_desc\"]')).length;");
+  sprawdz('każde oznaczenie dostaje swoje pola w sekcji 3', pola === 3, pola);
+
+  // żadne nie jest uznane za osierocone
+  sprawdz('oznaczenia z sufiksem nie są zgłaszane jako osierocone',
+    app("return envTagOrphans().length;") === 0, JSON.stringify(app("return envTagOrphans();")));
+
+  // kasowanie jednego zostawia pozostałe
+  const doUsuniecia = app("return Object.keys(objects.envTags).filter(k => k.indexOf('#2') !== -1)[0];");
+  app(`removeEnvTagByKey(0, ${JSON.stringify(doUsuniecia)});`);
+  sprawdz('kasowanie jednego oznaczenia zostawia pozostałe',
+    app("return Object.keys(objects.envTags).length;") === 2);
+
+  // dodane po kasowaniu odzyskuje wolny klucz
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    envTagSelectedKey = getSegKey(O, O, O+6*P, O);
+    envTagEditKey = null;
+    assignEnvTag('D');
+  `);
+  sprawdz('po skasowaniu wolny klucz wraca do użycia',
+    app("return Object.keys(objects.envTags).length;") === 3);
+
+  // odnalezienie oznaczenia na rysunku działa też dla klucza z sufiksem
+  const zSufiksem = app("return Object.keys(objects.envTags).find(k => k.indexOf('#') !== -1);");
+  sprawdz('oznaczenie z sufiksem da się odnaleźć na rysunku',
+    app(`return !!envTagMidpoint(sketches[0], ${JSON.stringify(zSufiksem)});`) === true);
+}
+
+// ===================== KOMENTARZ ZE STRZAŁKĄ =====================
+console.log('--- komentarz ze strzałką ---');
+nowySzkic();
+{
+  const d = dom.window.document;
+  app(`
+    currentMode = 'callout';
+    openCalloutDialog({ x: 400, y: 300 });
+    document.getElementById('calloutInput').value = 'ślady zawilgocenia';
+    saveCallout();
+  `);
+  const lista = app("return objects.callouts;");
+  sprawdz('komentarz trafia na szkic', lista.length === 1, lista.length);
+  sprawdz('grot strzałki stoi we wskazanym punkcie',
+    lista[0].tx === 400 && lista[0].ty === 300, JSON.stringify(lista[0]));
+  sprawdz('chmurka stoi obok, żeby nie zasłaniać',
+    lista[0].x !== lista[0].tx || lista[0].y !== lista[0].ty);
+  sprawdz('treść komentarza jest zapisana', lista[0].text === 'ślady zawilgocenia');
+
+  // trafianie palcem w chmurkę i w grot
+  sprawdz('dotknięcie chmurki ją znajduje',
+    app("return calloutHit({ x: objects.callouts[0].x, y: objects.callouts[0].y });") === 0);
+  sprawdz('dotknięcie grotu znajduje strzałkę',
+    app("return calloutTipHit({ x: 400, y: 300 });") === 0);
+  sprawdz('dotknięcie z boku nie trafia w nic',
+    app("return calloutHit({ x: 40, y: 900 });") === -1);
+
+  // przesunięcie grotu w inne miejsce
+  app("objects.callouts[0].tx = 250; objects.callouts[0].ty = 500;");
+  sprawdz('grot da się przestawić',
+    app("return objects.callouts[0].tx;") === 250);
+
+  // poprawianie treści
+  app(`
+    openCalloutForEdit(0);
+    document.getElementById('calloutInput').value = 'zawilgocenie — sprawdzić izolację';
+    saveCallout();
+  `);
+  const po = app("return objects.callouts;");
+  sprawdz('poprawka nie tworzy drugiego komentarza', po.length === 1, po.length);
+  sprawdz('treść została poprawiona', po[0].text.includes('sprawdzić izolację'), po[0].text);
+  sprawdz('grot został na przestawionym miejscu', po[0].tx === 250 && po[0].ty === 500);
+
+  // wielolinijkowy komentarz
+  app(`
+    openCalloutDialog({ x: 100, y: 100 });
+    document.getElementById('calloutInput').value = ['pierwsza linia','druga linia'].join(String.fromCharCode(10));
+    saveCallout();
+  `);
+  sprawdz('komentarz może mieć kilka linii',
+    app("return objects.callouts[1].text.split(String.fromCharCode(10)).length;") === 2);
+
+  // pusta treść usuwa komentarz
+  app(`
+    openCalloutForEdit(1);
+    document.getElementById('calloutInput').value = '  ';
+    saveCallout();
+  `);
+  sprawdz('wyczyszczenie treści usuwa komentarz', app("return objects.callouts.length;") === 1);
+
+  // usuwanie z okna i gumką
+  app("openCalloutForEdit(0); deleteCalloutFromDialog();");
+  sprawdz('komentarz da się usunąć z okna', app("return objects.callouts.length;") === 0);
+
+  // rysowanie nie wywraca się na komentarzach
+  app(`
+    objects.callouts = [{ tx:300, ty:300, x:400, y:250, text:'test' }];
+    renderCanvas();
+  `);
+  sprawdz('rysowanie z komentarzem nie wywraca płótna',
+    app("return objects.callouts.length;") === 1);
+
+  // szkic bez pola callouts (stary zapis) nie może psuć rysowania
+  app("delete objects.callouts; renderCanvas();");
+  sprawdz('stary szkic bez komentarzy rysuje się normalnie',
+    app("return objects.callouts === undefined;") === true);
+}
+
 console.log('');
 if (bledy.length) {
   console.log('BŁĘDY (' + bledy.length + '):');
