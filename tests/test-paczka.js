@@ -88,6 +88,7 @@ console.log('--- repozytorium ---');
   'apps-script/Kod.gs',
   'docs/INSTRUKCJA.md',
   'docs/PRZEKAZANIE-PROJEKTU.md',
+  'docs/KOPIA-AUTOMATYCZNA.md',
   'materialy.json',
   'zrodla.json'
 ].forEach(f => sprawdz('plik w repozytorium: ' + f, fs.existsSync(path.join(ROOT, f))));

@@ -1,4 +1,7 @@
 // Smart Energy Audyty - Service Worker
+// v54: zdjecia z rysowaniem, odleglosc od naroznika bez przeskoku, sumowanie pomiarow z dalmierza, otwor budowlany, odleglosc otworu od rogu, wymiary otworow na szkicu
+// v53: przeszkody z kolorami, kolor sciany, lamanie dlugich opisow, odsuwanie nachodzacych opisow, zawijanie w raporcie
+// v52: automatyczna kopia zapasowa bazy na Dysk Google (co 6h, 20 ostatnich wersji)
 // v51: kilka oznaczen przegrod na jednej scianie + komentarz w chmurce ze strzalka
 // v50: poprawianie materialu i gruboscI warstwy wprost na liscie + przypomnienie o gruboscIach po wstawieniu szablonu
 // v49: NAPRAWA - kasowanie przegrody kasowalo warstwy wszystkich pozostalych; prostowanie scian; szablony w kopii zapasowej
@@ -14,7 +17,7 @@
 // v39: dopisano 4 materialy (zuzel paleniskowy, papa, plyta pilsniowa miekka, eternit)
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v51';
+const CACHE_NAME = 'smart-energy-v54';
 
 const APP_SHELL = [
   './',

@@ -78,7 +78,7 @@
       <button class="btn btn-sm btn-outline-primary fw-bold" onclick="document.getElementById('backupFileInput').click()">📂 Wczytaj Kopię</button>
       <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="importBackup(this)">
     </div>
-    <div class="card-body"><div id="storageBar"></div><div id="savedAuditsList"></div></div>
+    <div class="card-body"><div id="storageBar"></div><div id="backupStatus" class="mb-2"></div><div id="savedAuditsList"></div></div>
   </div>
 
   <div class="card border-0 shadow-sm mt-4">
@@ -336,6 +336,23 @@
               <button type="button" class="btn btn-outline-dark btn-sm fw-bold" onclick="openEnvListDialog()">📋 Lista przegród</button>
               <button type="button" id="btnModeRoomTag" class="btn btn-outline-success btn-sm fw-bold" onclick="setMode('roomtag')">🏠 Pomieszcz.</button>
               <button type="button" id="btnModeSlope" class="btn btn-outline-danger btn-sm fw-bold" onclick="setMode('slope')">📐 Skos</button>
+              <button type="button" id="btnModeHatch" class="btn btn-outline-secondary btn-sm fw-bold" onclick="setMode('hatch')">▨ Przeszkoda</button>
+              <div class="d-flex align-items-center bg-white border px-1" id="wallColors" style="display:none !important;">
+                  <span class="small text-muted me-1">ściana:</span>
+                  <div class="color-btn active" onclick="setWallColor('#212529', this)" style="background:#212529"></div>
+                  <div class="color-btn" onclick="setWallColor('#dc3545', this)" style="background:#dc3545"></div>
+                  <div class="color-btn" onclick="setWallColor('#0d6efd', this)" style="background:#0d6efd"></div>
+                  <div class="color-btn" onclick="setWallColor('#198754', this)" style="background:#198754"></div>
+                  <div class="color-btn" onclick="setWallColor('#fd7e14', this)" style="background:#fd7e14"></div>
+              </div>
+              <div class="d-flex align-items-center bg-white border px-1" id="hatchColors" style="display:none !important;">
+                  <span class="small text-muted me-1">przeszkoda:</span>
+                  <div class="color-btn active" onclick="setHatchColor('#6c757d', this)" style="background:#6c757d"></div>
+                  <div class="color-btn" onclick="setHatchColor('#dc3545', this)" style="background:#dc3545"></div>
+                  <div class="color-btn" onclick="setHatchColor('#0d6efd', this)" style="background:#0d6efd"></div>
+                  <div class="color-btn" onclick="setHatchColor('#198754', this)" style="background:#198754"></div>
+                  <div class="color-btn" onclick="setHatchColor('#6f42c1', this)" style="background:#6f42c1"></div>
+              </div>
               <div class="btn-group" role="group">
                   <button type="button" id="btnModeDraw" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('draw')">✏️ Ołówek</button>
                   <div class="d-flex align-items-center bg-white border px-1" id="penColors" style="display:none !important;">
@@ -510,10 +527,24 @@
       <input class="form-check-input" type="checkbox" id="distoAutoChk" checked onchange="setDistoAuto(this.checked)">
       <label class="form-check-label small fw-bold" for="distoAutoChk">W prowadzonym pomiarze zapisuj i przechodź dalej automatycznie</label>
     </div>
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="distoSumaChk" onchange="setDistoSuma(this.checked)">
+      <label class="form-check-label small fw-bold" for="distoSumaChk">Sumuj kolejne pomiary (ściana mierzona na raty)</label>
+    </div>
 
     <div class="border rounded p-2 mb-2" style="background:#f8f9fa;">
       <div class="small fw-bold text-muted">Ostatnia ramka z urządzenia</div>
-      <div id="distoRaw" class="small text-break" style="font-family:monospace;">—</div>
+      <div id="distoSumaBox" class="border rounded p-2 mb-2" style="display:none; background:#f8f9fa;">
+      <div class="small fw-bold text-muted mb-1">Suma odcinków</div>
+      <div id="distoSumaLista" class="mb-2"></div>
+      <div class="d-flex gap-1 flex-wrap">
+        <button type="button" class="btn btn-sm btn-success fw-bold flex-fill" onclick="distoZatwierdzSume()">✔️ Zatwierdź sumę</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="distoCofnijSkladnik()">↩️ Cofnij odcinek</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="distoWyczyscSume()">Wyczyść</button>
+      </div>
+    </div>
+
+    <div id="distoRaw" class="small text-break" style="font-family:monospace;">—</div>
     </div>
 
     <details class="mb-2" open>
@@ -791,8 +822,24 @@
       <option value="DZ">Drzwi Zewnętrzne (DZ)</option>
       <option value="DW">Drzwi Wewnętrzne (DW)</option>
       <option value="OPZ">Okna Połaciowe (OPZ)</option>
+      <option value="OB">Otwór budowlany — przejście (OB)</option>
     </select>
     <input type="text" id="openingIdInput" class="form-control form-control-sm mb-2" placeholder="Identyfikator" onkeyup="checkOpeningMemory()">
+    <div class="row g-1 mb-2">
+      <div class="col-7">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">od rogu</span>
+          <input type="number" step="1" id="openingOffset" class="form-control" placeholder="cm (opcjonalnie)">
+          <span class="input-group-text">cm</span>
+        </div>
+      </div>
+      <div class="col-5">
+        <select id="openingOffsetSide" class="form-select form-select-sm">
+          <option value="A">lewy / górny</option>
+          <option value="B">prawy / dolny</option>
+        </select>
+      </div>
+    </div>
     <div class="row mb-2">
       <div class="col-6"><input type="number" id="openingWidth" class="form-control form-control-sm" placeholder="Szer. (cm)" oninput="checkOpeningDuplicate()"></div>
       <div class="col-6"><input type="number" id="openingHeight" class="form-control form-control-sm" placeholder="Wys. (cm)" oninput="checkOpeningDuplicate()"></div>
@@ -962,6 +1009,445 @@
   }
 
   // Automatyczne sprawdzenie po wejściu na pulpit, gdy jest internet
+  // ================= ZDJĘCIA Z WIZJI LOKALNEJ =================
+  // Zdjęcia NIE mieszczą się w localStorage - tam jest ok. 5 MB na wszystkie
+  // audyty razem. Trzymamy je w IndexedDB, przeskalowane przy wgrywaniu.
+  // Na zdjęciu można rysować: linia z wymiarem, strzałka, tekst, ołówek.
+  // Rysunki są zapisywane jako WARSTWA (wektor), nie wpalane w piksele -
+  // dzięki temu da się je poprawić albo skasować.
+  const FOTO_DB = 'smartEnergyFoto';
+  const FOTO_STORE = 'zdjecia';
+  const FOTO_MAX_PX = 1600;     // dłuższy bok po przeskalowaniu
+  const FOTO_JAKOSC = 0.72;
+  const FOTO_RAPORT_PX = 1000;  // zdjęcia w raporcie mniejsze, żeby PDF nie puchł
+
+  function fotoDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(FOTO_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(FOTO_STORE)) db.createObjectStore(FOTO_STORE, { keyPath: 'id' });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function fotoTx(tryb, fn) {
+    return fotoDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(FOTO_STORE, tryb);
+      const st = tx.objectStore(FOTO_STORE);
+      const r = fn(st);
+      tx.oncomplete = () => resolve(r && r.result !== undefined ? r.result : r);
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
+  const fotoZapisz  = (rec) => fotoTx('readwrite', st => st.put(rec));
+  const fotoUsun    = (id)  => fotoTx('readwrite', st => st.delete(id));
+  const fotoWszystkie = ()  => fotoTx('readonly',  st => st.getAll());
+  const fotoPobierz = (id)  => fotoTx('readonly',  st => st.get(id));
+
+  // Zmniejszenie zdjęcia z aparatu. Bez tego jeden plik potrafi mieć 5 MB.
+  function przeskalujZdjecie(file, maxPx, jakosc) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const skala = Math.min(1, maxPx / Math.max(img.width, img.height));
+          const w = Math.round(img.width * skala), h = Math.round(img.height * skala);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve({ dataUrl: c.toDataURL('image/jpeg', jakosc), w, h });
+        };
+        img.onerror = () => reject(new Error('Nie udało się odczytać zdjęcia.'));
+        img.src = fr.result;
+      };
+      fr.onerror = () => reject(new Error('Nie udało się wczytać pliku.'));
+      fr.readAsDataURL(file);
+    });
+  }
+
+  async function dodajZdjecia(input) {
+    const pliki = [...(input.files || [])];
+    input.value = '';
+    if (!pliki.length) return;
+    const kod = document.querySelector('[name="jobCode"]');
+    const audyt = kod ? kod.value : '';
+    for (const f of pliki) {
+      try {
+        const im = await przeskalujZdjecie(f, FOTO_MAX_PX, FOTO_JAKOSC);
+        await fotoZapisz({
+          id: 'f' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          audyt, dataUrl: im.dataUrl, w: im.w, h: im.h,
+          opis: '', przypisanie: '', wRaporcie: true, rysunki: [],
+          dodano: new Date().toISOString()
+        });
+      } catch (e) {
+        alert('Nie udało się dodać zdjęcia „' + f.name + '": ' + e.message);
+      }
+    }
+    await renderFotoLista();
+  }
+
+  // Lista przypisań: pomieszczenia ze szkiców i oznaczenia przegród.
+  function fotoPrzypisania() {
+    const out = [''];
+    (typeof sketches !== 'undefined' ? sketches : []).forEach(sk => {
+      (sk.objects && sk.objects.rooms || []).forEach(r => {
+        out.push('Pom. ' + r.num + (r.name ? ' — ' + r.name : ''));
+      });
+    });
+    getAllEnvTags().forEach(t => out.push(t.label + (ENV_TAG_NAMES[t.cat] ? ' — ' + ENV_TAG_NAMES[t.cat] : '')));
+    return [...new Set(out)];
+  }
+
+  async function renderFotoLista() {
+    const box = document.getElementById('fotoLista');
+    if (!box) return;
+    let lista = [];
+    try { lista = await fotoWszystkie(); } catch (e) { box.innerHTML = '<span class="text-danger small">Nie udało się odczytać zdjęć.</span>'; return; }
+    const kod = document.querySelector('[name="jobCode"]');
+    const audyt = kod ? kod.value : '';
+    lista = lista.filter(f => !f.audyt || !audyt || f.audyt === audyt);
+    if (!lista.length) { box.innerHTML = '<span class="text-muted small">Brak zdjęć. Dodaj je przyciskiem powyżej.</span>'; return; }
+    const opcje = fotoPrzypisania();
+    box.innerHTML = lista.map(f => `
+      <div class="d-flex gap-2 border-bottom py-2 align-items-start">
+        <img src="${f.dataUrl}" style="width:88px;height:66px;object-fit:cover;border-radius:6px;cursor:pointer"
+             onclick="otworzRysowanieNaZdjeciu('${f.id}')">
+        <div class="flex-fill">
+          <input type="text" class="form-control form-control-sm mb-1" placeholder="opis zdjęcia"
+                 value="${escAttr(f.opis || '')}" onchange="zapiszOpisZdjecia('${f.id}', this.value)">
+          <div class="d-flex gap-1 flex-wrap align-items-center">
+            <select class="form-select form-select-sm" style="max-width:14rem;"
+                    onchange="zapiszPrzypisanieZdjecia('${f.id}', this.value)">
+              ${opcje.map(o => `<option value="${escAttr(o)}" ${o === (f.przypisanie || '') ? 'selected' : ''}>${o || '— bez przypisania —'}</option>`).join('')}
+            </select>
+            <div class="form-check form-check-inline mb-0">
+              <input class="form-check-input" type="checkbox" ${f.wRaporcie !== false ? 'checked' : ''}
+                     onchange="zapiszWRaporcie('${f.id}', this.checked)" id="wr_${f.id}">
+              <label class="form-check-label small" for="wr_${f.id}">w raporcie</label>
+            </div>
+            <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="otworzRysowanieNaZdjeciu('${f.id}')">✏️ Rysuj / opisz</button>
+            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="usunZdjecie('${f.id}')">🗑️</button>
+            ${(f.rysunki || []).length ? `<span class="badge bg-secondary">${f.rysunki.length} oznaczeń</span>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  async function zapiszOpisZdjecia(id, v) { const f = await fotoPobierz(id); if (f) { f.opis = v; await fotoZapisz(f); } }
+  async function zapiszPrzypisanieZdjecia(id, v) { const f = await fotoPobierz(id); if (f) { f.przypisanie = v; await fotoZapisz(f); } }
+  async function zapiszWRaporcie(id, v) { const f = await fotoPobierz(id); if (f) { f.wRaporcie = !!v; await fotoZapisz(f); } }
+
+  async function usunZdjecie(id) {
+    if (!confirm('Usunąć to zdjęcie razem z naniesionymi opisami?')) return;
+    await fotoUsun(id);
+    await renderFotoLista();
+  }
+
+  // ================= RYSOWANIE PO ZDJĘCIU =================
+  // Narzędzia: linia prosta (z opcjonalnym wymiarem), strzałka, tekst, ołówek.
+  // Wszystko trzymane jako warstwa wektorowa we współrzędnych 0..1 względem
+  // zdjęcia - dzięki temu skaluje się razem z nim i da się poprawić.
+  let fotoBiezace = null;          // rekord edytowanego zdjęcia
+  let fotoNarzedzie = 'linia';
+  let fotoKolor = '#dc3545';
+  let fotoRysuje = false;
+  let fotoStart = null;
+  let fotoSlad = [];
+
+  function setFotoNarzedzie(n, btn) {
+    fotoNarzedzie = n;
+    [...document.querySelectorAll('#fotoTools .btn')].forEach(b => {
+      b.classList.remove('btn-primary', 'text-white'); b.classList.add('btn-outline-primary');
+    });
+    if (btn) { btn.classList.remove('btn-outline-primary'); btn.classList.add('btn-primary', 'text-white'); }
+  }
+
+  function setFotoKolor(k, btn) { fotoKolor = k; zaznaczKolor(btn); }
+
+  async function otworzRysowanieNaZdjeciu(id) {
+    const f = await fotoPobierz(id);
+    if (!f) return;
+    fotoBiezace = f;
+    if (!fotoBiezace.rysunki) fotoBiezace.rysunki = [];
+    document.getElementById('fotoOverlay').style.display = 'flex';
+    document.getElementById('fotoOpisEdit').value = f.opis || '';
+    rysujZdjecie();
+  }
+
+  function zamknijRysowanieNaZdjeciu() {
+    document.getElementById('fotoOverlay').style.display = 'none';
+    fotoBiezace = null; fotoRysuje = false; fotoStart = null; fotoSlad = [];
+  }
+
+  async function zapiszRysunkiZdjecia() {
+    if (!fotoBiezace) return;
+    fotoBiezace.opis = document.getElementById('fotoOpisEdit').value;
+    await fotoZapisz(fotoBiezace);
+    zamknijRysowanieNaZdjeciu();
+    await renderFotoLista();
+  }
+
+  function cofnijRysunekZdjecia() {
+    if (!fotoBiezace || !fotoBiezace.rysunki.length) return;
+    fotoBiezace.rysunki.pop();
+    rysujZdjecie();
+  }
+
+  async function wyczyscRysunkiZdjecia() {
+    if (!fotoBiezace || !fotoBiezace.rysunki.length) return;
+    if (!confirm('Usunąć wszystkie oznaczenia z tego zdjęcia? Samo zdjęcie zostaje.')) return;
+    fotoBiezace.rysunki = [];
+    rysujZdjecie();
+  }
+
+  // Rysuje zdjęcie razem z warstwą oznaczeń na wskazanym kontekście.
+  // skala = szerokość docelowa w pikselach.
+  function rysujWarstweNaZdjeciu(ctxF, szer, wys, rysunki) {
+    const jed = Math.max(szer, wys) / 900;      // grubości niezależne od rozmiaru
+    (rysunki || []).forEach(r => {
+      ctxF.save();
+      ctxF.strokeStyle = r.kolor || '#dc3545';
+      ctxF.fillStyle = r.kolor || '#dc3545';
+      ctxF.lineWidth = Math.max(2, 3 * jed);
+      ctxF.lineCap = 'round'; ctxF.lineJoin = 'round';
+      const X = v => v * szer, Y = v => v * wys;
+      if (r.typ === 'olowek' && r.punkty && r.punkty.length > 1) {
+        ctxF.beginPath();
+        ctxF.moveTo(X(r.punkty[0].x), Y(r.punkty[0].y));
+        r.punkty.forEach(p => ctxF.lineTo(X(p.x), Y(p.y)));
+        ctxF.stroke();
+      } else if (r.typ === 'linia' || r.typ === 'strzalka') {
+        ctxF.beginPath();
+        ctxF.moveTo(X(r.x1), Y(r.y1)); ctxF.lineTo(X(r.x2), Y(r.y2));
+        ctxF.stroke();
+        if (r.typ === 'strzalka') {
+          const kat = Math.atan2(Y(r.y2) - Y(r.y1), X(r.x2) - X(r.x1));
+          const g = 16 * jed;
+          ctxF.beginPath();
+          ctxF.moveTo(X(r.x2), Y(r.y2));
+          ctxF.lineTo(X(r.x2) - g * Math.cos(kat - 0.4), Y(r.y2) - g * Math.sin(kat - 0.4));
+          ctxF.lineTo(X(r.x2) - g * Math.cos(kat + 0.4), Y(r.y2) - g * Math.sin(kat + 0.4));
+          ctxF.closePath(); ctxF.fill();
+        } else {
+          // kreski końcowe jak przy wymiarze budowlanym
+          const kat = Math.atan2(Y(r.y2) - Y(r.y1), X(r.x2) - X(r.x1)) + Math.PI / 2;
+          const g = 9 * jed;
+          [[r.x1, r.y1], [r.x2, r.y2]].forEach(([px, py]) => {
+            ctxF.beginPath();
+            ctxF.moveTo(X(px) - g * Math.cos(kat), Y(py) - g * Math.sin(kat));
+            ctxF.lineTo(X(px) + g * Math.cos(kat), Y(py) + g * Math.sin(kat));
+            ctxF.stroke();
+          });
+        }
+        if (r.tekst) {
+          const mx = (X(r.x1) + X(r.x2)) / 2, my = (Y(r.y1) + Y(r.y2)) / 2;
+          ctxF.font = 'bold ' + Math.round(20 * jed) + 'px Arial';
+          ctxF.textAlign = 'center'; ctxF.textBaseline = 'middle';
+          const w = ctxF.measureText(r.tekst).width;
+          ctxF.fillStyle = 'rgba(255,255,255,0.9)';
+          ctxF.fillRect(mx - w / 2 - 5 * jed, my - 14 * jed, w + 10 * jed, 26 * jed);
+          ctxF.fillStyle = r.kolor || '#dc3545';
+          ctxF.fillText(r.tekst, mx, my);
+        }
+      } else if (r.typ === 'tekst' && r.tekst) {
+        ctxF.font = 'bold ' + Math.round(22 * jed) + 'px Arial';
+        ctxF.textAlign = 'left'; ctxF.textBaseline = 'top';
+        const linie = String(r.tekst).split('\n');
+        let w = 0;
+        linie.forEach(t => { w = Math.max(w, ctxF.measureText(t).width); });
+        const h = linie.length * 26 * jed;
+        ctxF.fillStyle = 'rgba(255,255,255,0.9)';
+        ctxF.fillRect(X(r.x1) - 4 * jed, Y(r.y1) - 4 * jed, w + 12 * jed, h + 8 * jed);
+        ctxF.fillStyle = r.kolor || '#dc3545';
+        linie.forEach((t, i) => ctxF.fillText(t, X(r.x1) + 2 * jed, Y(r.y1) + i * 26 * jed));
+      }
+      ctxF.restore();
+    });
+  }
+
+  function rysujZdjecie() {
+    if (!fotoBiezace) return;
+    const c = document.getElementById('fotoCanvas');
+    if (!c) return;
+    const img = new Image();
+    img.onload = () => {
+      c.width = img.width; c.height = img.height;
+      const cx = c.getContext('2d');
+      cx.drawImage(img, 0, 0);
+      rysujWarstweNaZdjeciu(cx, c.width, c.height, fotoBiezace.rysunki);
+      // podgląd rysowanej właśnie kreski
+      if (fotoRysuje && fotoStart && fotoOstatni) {
+        rysujWarstweNaZdjeciu(cx, c.width, c.height, [{
+          typ: (fotoNarzedzie === 'olowek') ? 'olowek' : fotoNarzedzie,
+          kolor: fotoKolor,
+          x1: fotoStart.x, y1: fotoStart.y, x2: fotoOstatni.x, y2: fotoOstatni.y,
+          punkty: fotoSlad
+        }]);
+      }
+    };
+    img.src = fotoBiezace.dataUrl;
+  }
+
+  let fotoOstatni = null;
+
+  function fotoPozycja(e) {
+    const c = document.getElementById('fotoCanvas');
+    const r = c.getBoundingClientRect();
+    const kx = (e.clientX !== undefined ? e.clientX : 0) - r.left;
+    const ky = (e.clientY !== undefined ? e.clientY : 0) - r.top;
+    return { x: Math.min(1, Math.max(0, kx / r.width)), y: Math.min(1, Math.max(0, ky / r.height)) };
+  }
+
+  function fotoStartRys(e) {
+    if (!fotoBiezace) return;
+    const p = fotoPozycja(e);
+    if (fotoNarzedzie === 'tekst') {
+      const t = prompt('Tekst do naniesienia na zdjęcie:');
+      if (t === null || !t.trim()) return;
+      fotoBiezace.rysunki.push({ typ: 'tekst', kolor: fotoKolor, x1: p.x, y1: p.y, tekst: t.trim() });
+      rysujZdjecie();
+      return;
+    }
+    fotoRysuje = true; fotoStart = p; fotoOstatni = p; fotoSlad = [p];
+  }
+
+  function fotoRuchRys(e) {
+    if (!fotoRysuje) return;
+    fotoOstatni = fotoPozycja(e);
+    if (fotoNarzedzie === 'olowek') fotoSlad.push(fotoOstatni);
+    rysujZdjecie();
+  }
+
+  function fotoKoniecRys(e) {
+    if (!fotoRysuje || !fotoBiezace) return;
+    fotoRysuje = false;
+    const p = fotoOstatni || fotoStart;
+    if (fotoNarzedzie === 'olowek') {
+      if (fotoSlad.length > 1) fotoBiezace.rysunki.push({ typ: 'olowek', kolor: fotoKolor, punkty: fotoSlad.slice() });
+    } else {
+      const dl = Math.hypot(p.x - fotoStart.x, p.y - fotoStart.y);
+      if (dl > 0.01) {
+        const wpis = { typ: fotoNarzedzie, kolor: fotoKolor, x1: fotoStart.x, y1: fotoStart.y, x2: p.x, y2: p.y };
+        if (fotoNarzedzie === 'linia') {
+          const t = prompt('Wymiar albo opis tej linii (puste = bez podpisu):', '');
+          if (t && t.trim()) wpis.tekst = t.trim();
+        }
+        fotoBiezace.rysunki.push(wpis);
+      }
+    }
+    fotoSlad = []; fotoStart = null; fotoOstatni = null;
+    rysujZdjecie();
+  }
+
+  // ================= AUTOMATYCZNA KOPIA NA DYSK =================
+  // Kopia ręczna zawodzi wtedy, gdy jest najbardziej potrzebna - bo się o niej
+  // zapomina. Aplikacja pilnuje terminu sama: przy uruchomieniu i po zapisaniu
+  // audytu, jeśli jest internet i minął ustalony odstęp. Wszystko w tle,
+  // bez okien i bez blokowania pracy u klienta.
+  const BACKUP_ODSTEP_H = 6;                 // co ile godzin próbujemy
+  const BACKUP_OSTRZEZENIE_DNI = 3;          // po ilu dniach bez kopii alarmujemy
+  const BACKUP_KEY = 'ostatniaKopiaDysk';
+  const BACKUP_AUTO_KEY = 'autoKopiaWlaczona';
+
+  function autoKopiaWlaczona() {
+    try { return localStorage.getItem(BACKUP_AUTO_KEY) !== 'nie'; } catch (e) { return true; }
+  }
+
+  function ustawAutoKopie(wl) {
+    try { localStorage.setItem(BACKUP_AUTO_KEY, wl ? 'tak' : 'nie'); } catch (e) {}
+    renderBackupStatus();
+  }
+
+  function ostatniaKopia() {
+    try {
+      const v = localStorage.getItem(BACKUP_KEY);
+      return v ? new Date(v) : null;
+    } catch (e) { return null; }
+  }
+
+  function trescKopii() {
+    return JSON.stringify({
+      format: 'smart-energy-backup', wersja: 2,
+      data: new Date().toISOString(),
+      rola: getAppRole(),
+      audyty: getLocalAudits(),
+      szablonyPrzegrod: getSzablony()
+    });
+  }
+
+  // Wysyła kopię. `cicho` = próba automatyczna: żadnych komunikatów przy błędzie,
+  // bo u klienta liczy się to, żeby nic nie przeszkadzało.
+  async function wyslijKopieNaDysk(cicho) {
+    const url = getApiUrl();
+    if (!url) {
+      if (!cicho) alert('Najpierw ustaw połączenie z Dyskiem Google (Pulpit → Połączenie z Dyskiem).');
+      return false;
+    }
+    const audyty = getLocalAudits();
+    const szablony = getSzablony();
+    if (!audyty.length && !szablony.length) {
+      if (!cicho) alert('Nie ma jeszcze czego archiwizować.');
+      return false;
+    }
+    if (!navigator.onLine) {
+      if (!cicho) alert('Brak internetu. Kopia poleci automatycznie, gdy tylko się pojawi.');
+      return false;
+    }
+    try {
+      const body = JSON.stringify({ action: 'backup', rola: getAppRole(), payload: trescKopii() });
+      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+      try { localStorage.setItem(BACKUP_KEY, new Date().toISOString()); } catch (e) {}
+      renderBackupStatus();
+      if (!cicho) alert('Kopia zapisana na Dysku, w folderze „KOPIE ZAPASOWE".');
+      return true;
+    } catch (e) {
+      if (!cicho) alert('Nie udało się wysłać kopii: ' + e.message + '\n\nSpróbuj ponownie przy lepszym zasięgu.');
+      return false;
+    }
+  }
+
+  // Próba automatyczna - odpala się przy starcie i po zapisaniu audytu.
+  async function autoKopiaJesliPora() {
+    if (!autoKopiaWlaczona() || !navigator.onLine || !getApiUrl()) return;
+    const ost = ostatniaKopia();
+    if (ost && (Date.now() - ost.getTime()) < BACKUP_ODSTEP_H * 3600000) return;
+    if (!getLocalAudits().length && !getSzablony().length) return;
+    await wyslijKopieNaDysk(true);
+  }
+
+  function renderBackupStatus() {
+    const box = document.getElementById('backupStatus');
+    if (!box) return;
+    const ost = ostatniaKopia();
+    const wl = autoKopiaWlaczona();
+    let opis, kolor;
+    if (!ost) {
+      opis = 'Kopia na Dysku: <b>jeszcze nie było</b>';
+      kolor = 'text-danger';
+    } else {
+      const dni = Math.floor((Date.now() - ost.getTime()) / 86400000);
+      const kiedy = ost.toLocaleDateString('pl-PL') + ' ' +
+                    String(ost.getHours()).padStart(2, '0') + ':' + String(ost.getMinutes()).padStart(2, '0');
+      opis = 'Kopia na Dysku: <b>' + (dni === 0 ? 'dziś ' + kiedy.split(' ')[1] : kiedy) + '</b>';
+      kolor = (dni >= BACKUP_OSTRZEZENIE_DNI) ? 'text-danger' : 'text-success';
+    }
+    box.innerHTML = `<div class="d-flex flex-wrap align-items-center gap-2 small">
+      <span class="${kolor} fw-bold">☁️ ${opis}</span>
+      <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="wyslijKopieNaDysk(false)">Wyślij teraz</button>
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" id="autoKopiaSwitch" ${wl ? 'checked' : ''}
+               onchange="ustawAutoKopie(this.checked)">
+        <label class="form-check-label small text-muted" for="autoKopiaSwitch">automatycznie co ${BACKUP_ODSTEP_H} h</label>
+      </div>
+    </div>`;
+  }
+
   async function autoFetchParts() {
     if (isHelper() || !navigator.onLine) return;
     const audits = getLocalAudits();
@@ -2082,7 +2568,10 @@
   const PIXELS_PER_METER = 50; const SNAP_RADIUS = 30; const ORTHO_ANGLE_TOLERANCE = 10; 
   let selectedLineIndex = -1; let selectedIsDim = false; let selectedSegKey = null; 
   let pendingRoomArea = 0; let pendingRoomCentroid = null; let pendingRoomPoly = []; let labelPosCanvas = null; let pendingOpeningPos = null; let pendingOpeningAngle = 0;
-  let currentPenColor = '#212529'; 
+  let currentPenColor = '#212529';
+  let currentWallColor = '#212529';    // kolor rysowanej ściany
+  let currentHatchColor = '#6c757d';   // kolor przeszkody / obszaru kreskowanego
+
 
   const COL_DARK = '#2c3e50'; const COL_GOLD = '#d4af37';
   const canvas = document.getElementById('sketchPad');
@@ -2183,6 +2672,7 @@
 
   function renderDashboard() {
     renderStorageBar();
+    renderBackupStatus();
     const audits = getLocalAudits(); const listDiv = document.getElementById('savedAuditsList'); listDiv.innerHTML = '';
     if(audits.length === 0) { listDiv.innerHTML = '<p class="text-muted text-center py-4">Brak zapisanych audytów. Kliknij "Nowy Raport".</p>'; } else {
       audits.forEach((audit, index) => {
@@ -2430,6 +2920,8 @@
       if (!saveLocalAudits(audits)) return;
       clearDraft();
       alert('✅ Zapisano na urządzeniu!'); goToDashboard();
+      // świeżo zapisany audyt to najlepszy moment na kopię - jeśli jest internet
+      setTimeout(autoKopiaJesliPora, 500);
       return;
     }
 
@@ -2923,8 +3415,14 @@
       h2 { color: #2c3e50; font-size: 13pt; margin-top: 18pt; border-left: 5px solid #d4af37; padding-left: 8px; }
       h3 { color: #6c757d; font-size: 12pt; margin-top: 12pt; }
       table { border-collapse: collapse; width: 100%; margin-bottom: 10pt; }
-      th, td { border: 1px solid #adb5bd; padding: 4pt 6pt; text-align: left; font-size: 10pt; vertical-align: top; }
+      /* Długie opisy muszą się zawijać, a nie uciekać poza kolumnę.
+         table-layout: fixed pilnuje, żeby jedna długa komórka nie rozpychała
+         całej tabeli poza szerokość strony. */
+      table { table-layout: fixed; }
+      th, td { border: 1px solid #adb5bd; padding: 4pt 6pt; text-align: left; font-size: 10pt;
+               vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
       th { background: #eceff1; }
+      .box { white-space: pre-wrap; overflow-wrap: anywhere; }
       .sub { color: #6c757d; font-size: 9pt; }
       .box { border: 1px solid #adb5bd; padding: 8pt; }
       table.hdr, table.hdr td { border: none; }
@@ -3077,8 +3575,9 @@
   .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:18px; box-shadow:0 3px 10px rgba(0,0,0,.06); }
   .card h2, .card h3 { margin:0 0 12px; color:var(--dark); border-left:5px solid var(--gold); padding-left:10px; font-size:1.1rem; }
   .card h4 { margin:18px 0 8px; color:#6c757d; font-size:.95rem; }
-  table { width:100%; border-collapse:collapse; font-size:.88rem; }
-  th, td { border-bottom:1px solid #e9ecef; padding:7px 9px; text-align:left; }
+  table { width:100%; border-collapse:collapse; font-size:.88rem; table-layout:fixed; }
+  th, td { border-bottom:1px solid #e9ecef; padding:7px 9px; text-align:left;
+           white-space:pre-wrap; overflow-wrap:anywhere; vertical-align:top; }
   th { background:#f5f7f9; color:var(--dark); font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; }
   td.num, th.num { text-align:right; }
   .kv { display:grid; grid-template-columns:190px 1fr; gap:6px 14px; font-size:.92rem; }
@@ -4022,24 +4521,26 @@ ${sketchBlocks}
   function handleHatchClick(rawPos) {
     const hit = findHatchAt(rawPos);
     if (hit !== -1) {
+      // Ponowne kliknięcie w obszar: zmiana opisu, koloru albo skasowanie.
       const h = objects.hatches[hit];
-      const label = prompt('Opis obszaru pod skosem (puste = usuń zaznaczenie):', h.label || 'Skos');
+      const label = prompt('Opis obszaru (puste = usuń zaznaczenie):', h.label || 'Przeszkoda');
       if (label === null) return;
       if (!label.trim()) objects.hatches.splice(hit, 1);
-      else h.label = label.trim();
+      else { h.label = label.trim(); h.kolor = currentHatchColor; }
       saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
       return;
     }
 
     const face = findEnclosingFace(rawPos);
     if (!face) {
-      alert('Kliknij wewnątrz obszaru zamkniętego ścianami.\n\nJeśli skos nie jest domknięty, dorysuj linię 📏 Ściana w miejscu, gdzie kończy się część pod skosem — potem kliknij tutaj ponownie.');
+      alert('Kliknij wewnątrz obszaru zamkniętego ścianami.\n\nJeśli obszar nie jest domknięty, obrysuj go linią 📏 Ściana — potem kliknij tutaj ponownie.');
       return;
     }
     if (!objects.hatches) objects.hatches = [];
-    const label = prompt('Opis obszaru pod skosem:', 'Skos');
+    const label = prompt('Opis obszaru (np. komin, słup, skos, szafa wnękowa):', 'Przeszkoda');
     if (label === null) return;
-    objects.hatches.push({ id: Date.now(), polygon: face, label: (label.trim() || 'Skos') });
+    objects.hatches.push({ id: Date.now(), polygon: face,
+                           label: (label.trim() || 'Przeszkoda'), kolor: currentHatchColor });
     saveStateToHistory(); renderTablesPerSketch(); renderCanvas();
   }
 
@@ -4479,7 +4980,70 @@ ${sketchBlocks}
     return null;
   }
 
+  // ================= SUMOWANIE POMIARÓW =================
+  // Długą ścianę mierzy się na raty (1 + 1 + 1 = 3), bo dalmierz nie ma
+  // przejścia. W trybie sumowania kolejne odczyty się dodają, a do pola
+  // trafia dopiero suma — po naciśnięciu „Zatwierdź sumę".
+  let distoSumaWl = false;
+  let distoSkladniki = [];
+
+  function setDistoSuma(wl) {
+    distoSumaWl = !!wl;
+    if (!wl) distoSkladniki = [];
+    renderDistoSuma();
+  }
+
+  function distoSumaWartosc() {
+    return distoSkladniki.reduce((a, b) => a + b, 0);
+  }
+
+  function renderDistoSuma() {
+    const box = document.getElementById('distoSumaBox');
+    if (!box) return;
+    box.style.display = distoSumaWl ? 'block' : 'none';
+    const lista = document.getElementById('distoSumaLista');
+    if (!lista) return;
+    if (!distoSkladniki.length) {
+      lista.innerHTML = '<span class="text-muted small">Mierz kolejne odcinki — będą się dodawać.</span>';
+    } else {
+      lista.innerHTML = '<span class="small">' + distoSkladniki.map(v => v.toFixed(2)).join(' + ') +
+        '</span> <span class="fw-bold text-success">= ' + distoSumaWartosc().toFixed(2) + ' m</span>';
+    }
+  }
+
+  function distoCofnijSkladnik() {
+    distoSkladniki.pop();
+    renderDistoSuma();
+  }
+
+  function distoWyczyscSume() {
+    distoSkladniki = [];
+    renderDistoSuma();
+  }
+
+  // Zatwierdzenie sumy: wpisujemy ją tam, gdzie trafiłby pojedynczy pomiar.
+  function distoZatwierdzSume() {
+    if (!distoSkladniki.length) return;
+    const suma = distoSumaWartosc();
+    distoSkladniki = [];
+    renderDistoSuma();
+    distoWpiszDoPola(suma);
+  }
+
   function distoDeliverMeasurement(meters) {
+    // W trybie sumowania odczyt nie idzie do pola, tylko dokłada się do sumy.
+    if (distoSumaWl) {
+      distoSkladniki.push(meters);
+      renderDistoSuma();
+      distoLogAdd('do sumy: ' + meters.toFixed(2) + ' m (razem ' + distoSumaWartosc().toFixed(2) + ')');
+      const el = document.getElementById('distoLastValue');
+      if (el) el.innerText = meters.toFixed(2) + ' m  (Σ ' + distoSumaWartosc().toFixed(2) + ')';
+      return;
+    }
+    distoWpiszDoPola(meters);
+  }
+
+  function distoWpiszDoPola(meters) {
     const target = distoActiveTarget();
     if (!target) {
       // nic nie czeka na wartość — pokazujemy ją, żeby nie przepadła
@@ -5177,7 +5741,7 @@ ${sketchBlocks}
           if (d < bestD) { bestD = d; best = sg; }
         });
       });
-      if (!best) return;
+      if (!best) { wallHoverKotwica = null; return; }
       const wallLen = resolvedLen(getSegKey(best.x1, best.y1, best.x2, best.y2));
       if (wallLen !== null && Number(op.width) / 100 > wallLen + CHECK_TOL) {
         add('error', `Otwór ${op.id} (${op.width} cm) jest szerszy niż ściana, w której siedzi (${wallLen.toFixed(2)} m).`, { x: op.x, y: op.y });
@@ -5609,7 +6173,16 @@ ${sketchBlocks}
     return -1;
   }
 
-  function setPenColor(color, btnElem) { currentPenColor = color; document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active')); btnElem.classList.add('active'); }
+  function setPenColor(color, btnElem) { currentPenColor = color; zaznaczKolor(btnElem); }
+  function setWallColor(color, btnElem) { currentWallColor = color; zaznaczKolor(btnElem); }
+  function setHatchColor(color, btnElem) { currentHatchColor = color; zaznaczKolor(btnElem); }
+
+  // Każda paleta ma własne zaznaczenie - odznaczamy tylko rodzeństwo.
+  function zaznaczKolor(btnElem) {
+    if (!btnElem || !btnElem.parentElement) return;
+    [...btnElem.parentElement.querySelectorAll('.color-btn')].forEach(b => b.classList.remove('active'));
+    btnElem.classList.add('active');
+  }
 
   // mapa: tryb -> [id przycisku, klasa nieaktywna, klasa aktywna]
   const MODE_BUTTONS = {
@@ -5621,6 +6194,7 @@ ${sketchBlocks}
     envtag:   ['btnModeEnvTag',   'btn-outline-dark',    'btn-dark'],
     roomtag:  ['btnModeRoomTag',  'btn-outline-success', 'btn-success'],
     slope:    ['btnModeSlope',    'btn-outline-danger', 'btn-danger'],
+    hatch:    ['btnModeHatch',    'btn-outline-secondary', 'btn-secondary'],
     draw:     ['btnModeDraw',     'btn-outline-primary', 'btn-primary'],
     noteline: ['btnModeNote',     'btn-outline-info',    'btn-info'],
     erase:    ['btnModeErase',    'btn-outline-danger',  'btn-danger'],
@@ -5639,6 +6213,8 @@ ${sketchBlocks}
       else { b.classList.add(offCls); if (m === 'hide_dim') b.classList.add('text-dark'); }
     }
     document.getElementById('penColors').style.setProperty('display', (mode === 'draw') ? 'flex' : 'none', 'important');
+    document.getElementById('wallColors').style.setProperty('display', (mode === 'line') ? 'flex' : 'none', 'important');
+    document.getElementById('hatchColors').style.setProperty('display', (mode === 'hatch') ? 'flex' : 'none', 'important');
     document.getElementById('noteColors').style.setProperty('display', (mode === 'noteline') ? 'flex' : 'none', 'important');
     if(mode==='text') canvas.style.cursor = 'text'; else if(mode==='pan') canvas.style.cursor = 'grab'; else if(mode==='hide_dim' || mode==='measure' || mode==='select' || mode==='erase') canvas.style.cursor = 'pointer'; else canvas.style.cursor = 'crosshair';
   }
@@ -5665,6 +6241,7 @@ ${sketchBlocks}
   // Kategorie otworow - wspolne dla listy podpowiedzi i podsumowan
   const OPENING_CATS = [
     { pref: 'OPZ', name: 'Okna połaciowe' },
+    { pref: 'OB',  name: 'Otwory budowlane (przejścia)' },
     { pref: 'DZ',  name: 'Drzwi zewnętrzne' },
     { pref: 'DW',  name: 'Drzwi wewnętrzne' },
     { pref: 'O',   name: 'Okna' }
@@ -5760,6 +6337,7 @@ ${sketchBlocks}
 
   // Indeks poprawianego otworu; -1 = wstawiamy nowy.
   let editingOpeningIndex = -1;
+  let pendingOpeningSeg = null;
 
   function closeOpeningDialog() {
     document.getElementById('openingOverlay').style.display = 'none';
@@ -5837,14 +6415,38 @@ ${sketchBlocks}
   }
 
   function addOpeningToCanvas() {
-    let id = document.getElementById('openingIdInput').value.trim().toUpperCase(); let w = parseFloat(document.getElementById('openingWidth').value); let h = parseFloat(document.getElementById('openingHeight').value); let u = parseFloat(document.getElementById('openingUValue').value);
+    let id = document.getElementById('openingIdInput').value.trim().toUpperCase();
+    let w = parseFloat(document.getElementById('openingWidth').value);
+    let h = parseFloat(document.getElementById('openingHeight').value);
+    let u = parseFloat(document.getElementById('openingUValue').value);
+    const czyOB = openingCatOf(id).pref === 'OB';
+    // Otwór budowlany to przejście w ścianie - wysokość nie jest potrzebna.
+    if (czyOB && isNaN(h)) h = 0;
     if(!id || isNaN(w) || isNaN(h)) { alert("Proszę poprawnie uzupełnić ID, szerokość oraz wysokość!"); return; }
+
+    // Opcjonalna odległość od narożnika - przesuwa otwór dokładnie tam,
+    // gdzie go zmierzyłeś, zamiast zostawiać na oko.
+    const odl = parseFloat(document.getElementById('openingOffset').value);
+    const strona = document.getElementById('openingOffsetSide').value;
+    const seg = pendingOpeningSeg;
+    if (odl > 0 && seg && editingOpeningIndex === -1) {
+      const dl = Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y);
+      if (dl > 1) {
+        const odPx = (odl / 100) * PIXELS_PER_METER + (w / 100) * PIXELS_PER_METER / 2;
+        const t = Math.min(Math.max(odPx / dl, 0), 1);
+        const od = (strona === 'A') ? seg.a : seg.b;
+        const doo = (strona === 'A') ? seg.b : seg.a;
+        pendingOpeningPos = { x: od.x + (doo.x - od.x) * t, y: od.y + (doo.y - od.y) * t };
+      }
+    }
     globalOpeningsMemory[id] = {w: w, h: h, u: (isNaN(u) ? null : u)};
     if (editingOpeningIndex !== -1) {
       const op = objects.openings[editingOpeningIndex];
       op.id = id; op.width = w; op.height = h; op.uValue = (isNaN(u) ? null : u);
     } else {
-      objects.openings.push({ x: pendingOpeningPos.x, y: pendingOpeningPos.y, angle: pendingOpeningAngle, id: id, width: w, height: h, uValue: (isNaN(u) ? null : u) });
+      objects.openings.push({ x: pendingOpeningPos.x, y: pendingOpeningPos.y, angle: pendingOpeningAngle,
+                              id: id, width: w, height: h, uValue: (isNaN(u) ? null : u),
+                              odlOdRogu: (odl > 0 ? odl : null), stronaRogu: (odl > 0 ? strona : null) });
     }
     saveStateToHistory(); renderCanvas(); renderTablesPerSketch(); closeOpeningDialog();
   }
@@ -5881,6 +6483,27 @@ ${sketchBlocks}
 
   function rectsOverlap(a, b) {
     return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+  }
+
+  // Długi opis wpisany jednym ciągiem nie mieści się na ekranie i wychodzi poza
+  // rysunek. Łamiemy go na linie po ok. 260 px, respektując ręczne przejścia
+  // do nowej linii wpisane przez audytora.
+  const MAX_TEKST_PX = 260;
+
+  function lamTekst(ctx, tekst, maxSzer) {
+    const wynik = [];
+    String(tekst || '').split('\n').forEach(akapit => {
+      const slowa = akapit.split(/\s+/).filter(Boolean);
+      if (!slowa.length) { wynik.push(''); return; }
+      let linia = slowa[0];
+      for (let i = 1; i < slowa.length; i++) {
+        const proba = linia + ' ' + slowa[i];
+        if (ctx.measureText(proba).width <= maxSzer) linia = proba;
+        else { wynik.push(linia); linia = slowa[i]; }
+      }
+      wynik.push(linia);
+    });
+    return wynik.length ? wynik : [''];
   }
 
   function reserveLabelRect(cx, cy, w, h) {
@@ -6030,10 +6653,12 @@ ${sketchBlocks}
   // od bliższego jej narożnika. Pomoc przy szkicowaniu — jak podgląd długości
   // podczas rysowania, nic tu się nie zapisuje.
   let wallHover = null;
+  // Zapamiętany narożnik odniesienia dla podpowiedzi „odległość od rogu".
+  let wallHoverKotwica = null;
 
   function updateWallHover(pos) {
     wallHover = null;
-    if (currentMode !== 'line' && currentMode !== 'select' && currentMode !== 'measure') return;
+    if (currentMode !== 'line' && currentMode !== 'select' && currentMode !== 'measure') { wallHoverKotwica = null; return; }
 
     const tol = 16 / zoomLevel;
     let best = null, bestD = tol;
@@ -6045,7 +6670,7 @@ ${sketchBlocks}
         if (d < bestD) { bestD = d; best = { a, b, pt, key: getSegKey(a.x, a.y, b.x, b.y) }; }
       });
     });
-    if (!best) return;
+    if (!best) { wallHoverKotwica = null; return; }
 
     const total = Math.hypot(best.b.x - best.a.x, best.b.y - best.a.y);
     if (total < 8) return;
@@ -6057,9 +6682,24 @@ ${sketchBlocks}
     const mA = (fromA / PIXELS_PER_METER) * scale;
     const mB = ((total - fromA) / PIXELS_PER_METER) * scale;
 
-    // mierzymy od bliższego narożnika - tak jak przy taśmie
-    const nearA = fromA <= total - fromA;
-    wallHover = { pt: best.pt, corner: nearA ? best.a : best.b, dist: nearA ? mA : mB, other: nearA ? mB : mA };
+    // Narożnik odniesienia ZOSTAJE ten, od którego zacząłeś jechać palcem.
+    // Wcześniej program przeskakiwał na drugi róg po minięciu połowy ściany,
+    // przez co nie dało się wyznaczyć punktu na dalszej połowie.
+    // Zmiana rogu następuje dopiero, gdy zejdziesz ze ściany albo dotkniesz
+    // jej bliżej przeciwnego końca niż 15% długości.
+    // Róg odniesienia ustala się przy PIERWSZYM dotknięciu tej ściany i trzyma
+    // aż do zejścia z niej. Dzięki temu, jadąc palcem od lewego rogu, widzisz
+    // odległość od lewego aż do samego końca ściany. Żeby mierzyć od drugiej
+    // strony, wystarczy zejść ze ściany i najechać przy przeciwnym rogu.
+    const kluczTen = best.key;
+    const odA = (wallHoverKotwica && wallHoverKotwica.key === kluczTen)
+      ? wallHoverKotwica.odA
+      : (fromA <= total - fromA);
+    wallHoverKotwica = { key: kluczTen, odA };
+
+    wallHover = { pt: best.pt, corner: odA ? best.a : best.b,
+                  dist: odA ? mA : mB, other: odA ? mB : mA,
+                  odA, seg: best };
   }
 
   function drawScene() {
@@ -6106,7 +6746,8 @@ ${sketchBlocks}
       ctx.closePath();
       ctx.clip();
 
-      ctx.strokeStyle = 'rgba(108,117,125,0.55)';
+      const kol = h.kolor || '#6c757d';
+      ctx.strokeStyle = kol; ctx.globalAlpha = 0.55;
       ctx.lineWidth = 1.4;
       const step = 14;
       ctx.beginPath();
@@ -6123,13 +6764,14 @@ ${sketchBlocks}
       ctx.moveTo(h.polygon[0].x, h.polygon[0].y);
       for (let i = 1; i < h.polygon.length; i++) ctx.lineTo(h.polygon[i].x, h.polygon[i].y);
       ctx.closePath();
-      ctx.strokeStyle = 'rgba(108,117,125,0.8)';
+      ctx.strokeStyle = (h.kolor || '#6c757d'); ctx.globalAlpha = 0.85;
       ctx.setLineDash([8, 5]); ctx.lineWidth = 2; ctx.stroke();
+      ctx.globalAlpha = 1;
       ctx.setLineDash([]);
 
       // podpis na środku
       const c = getVisualCenter(h.polygon);
-      const txt = h.label || 'Skos';
+      const txt = h.label || 'Przeszkoda';
       ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const w = ctx.measureText(txt).width + 12;
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -6237,7 +6879,8 @@ ${sketchBlocks}
 
     if(objects.lines) {
       objects.lines.forEach((line) => {
-        ctx.beginPath(); ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.moveTo(line.x1, line.y1); ctx.lineTo(line.x2, line.y2); ctx.stroke();
+        // kolor ściany ustawiany przy rysowaniu; stare szkice bez koloru = jak dotąd
+        ctx.beginPath(); ctx.strokeStyle = line.kolor || '#2c3e50'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.moveTo(line.x1, line.y1); ctx.lineTo(line.x2, line.y2); ctx.stroke();
         drawDimensionKoty(line, false);
       });
     }
@@ -6285,36 +6928,74 @@ ${sketchBlocks}
 
     if(objects.openings) {
       objects.openings.forEach((op) => {
+        const czyOB = openingCatOf(op.id).pref === 'OB';
+        const widthPx = (op.width / 100) * PIXELS_PER_METER;
         ctx.save(); ctx.translate(op.x, op.y); ctx.rotate(op.angle);
-        let widthPx = (op.width / 100) * PIXELS_PER_METER;
-        ctx.fillStyle = "white"; ctx.fillRect(-widthPx/2, -8, widthPx, 16); ctx.strokeStyle = "#0dcaf0"; ctx.lineWidth = 2; ctx.strokeRect(-widthPx/2, -6, widthPx, 12); ctx.restore();
-        ctx.font = "bold 14px Arial"; ctx.fillStyle = "#0dcaf0"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        let txtBgWidth = ctx.measureText(op.id).width + 6; ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(op.x - txtBgWidth/2, op.y - 25, txtBgWidth, 18); ctx.fillStyle = "#0dcaf0"; ctx.fillText(op.id, op.x, op.y - 15);
+        if (czyOB) {
+          // Otwór budowlany = przerwa w ścianie. Zamazujemy ścianę na jego
+          // szerokości i zaznaczamy krawędzie przejścia.
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-widthPx / 2, -9, widthPx, 18);
+          ctx.strokeStyle = '#6f42c1'; ctx.lineWidth = 3; ctx.lineCap = 'butt';
+          ctx.beginPath();
+          ctx.moveTo(-widthPx / 2, -9); ctx.lineTo(-widthPx / 2, 9);
+          ctx.moveTo(widthPx / 2, -9); ctx.lineTo(widthPx / 2, 9);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = "white"; ctx.fillRect(-widthPx/2, -8, widthPx, 16);
+          ctx.strokeStyle = "#0dcaf0"; ctx.lineWidth = 2; ctx.strokeRect(-widthPx/2, -6, widthPx, 12);
+        }
+        ctx.restore();
+
+        // Podpis: numer, a pod nim wymiary — na szkicu ma być widać, co to za otwór
+        // bez zaglądania do tabeli.
+        const wym = czyOB ? (op.width + ' cm')
+                          : (op.width + '×' + op.height + ' cm');
+        ctx.font = "bold 13px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const w1 = ctx.measureText(op.id).width, w2 = ctx.measureText(wym).width;
+        const bw = Math.max(w1, w2) + 10;
+        const spot = findFreeLabelSpot(op.x, op.y - 26, bw, 32, 0, 1) || { x: op.x, y: op.y - 26 };
+        const kolor = czyOB ? '#6f42c1' : '#0dcaf0';
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.fillRect(spot.x - bw / 2, spot.y - 16, bw, 32);
+        ctx.fillStyle = kolor;
+        ctx.fillText(op.id, spot.x, spot.y - 7);
+        ctx.font = "600 12px Arial";
+        ctx.fillText(wym, spot.x, spot.y + 8);
       });
     }
 
     if(objects.labels) {
       objects.labels.forEach((lbl) => {
-        // Tekst moze byc wielolinijkowy - rysujemy linia po linii, a tlo
-        // dopasowujemy do najszerszej z nich.
+        // Tekst łamiemy na linie, żeby długi opis nie uciekał poza rysunek,
+        // a całą ramkę odsuwamy, jeśli wpadłaby na wymiar albo inny opis.
         const size = lbl.size || 20;
-        const linie = String(lbl.text || '').split('\n');
-        const wys = size * 1.35;
         ctx.font = "bold " + size + "px Arial";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const linie = lamTekst(ctx, lbl.text, MAX_TEKST_PX);
+        const wys = size * 1.35;
         let szer = 0;
         linie.forEach(t => { szer = Math.max(szer, ctx.measureText(t).width); });
         const blokH = linie.length * wys;
-        const gora = lbl.y - blokH / 2;
+        const bw = szer + 12, bh = blokH + 8;
+        const spot = findFreeLabelSpot(lbl.x, lbl.y, bw, bh, 0, 1) || { x: lbl.x, y: lbl.y };
+        const gora = spot.y - blokH / 2;
         if (lbl.box !== false) {
           ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-          ctx.fillRect(lbl.x - szer / 2 - 6, gora - 4, szer + 12, blokH + 8);
+          ctx.fillRect(spot.x - bw / 2, gora - 4, bw, bh);
           ctx.strokeStyle = "rgba(220, 53, 69, 0.45)";
           ctx.lineWidth = 1;
-          ctx.strokeRect(lbl.x - szer / 2 - 6, gora - 4, szer + 12, blokH + 8);
+          ctx.strokeRect(spot.x - bw / 2, gora - 4, bw, bh);
+        }
+        // gdy opis musiał odjechać, prowadzimy do niego cienką kreskę
+        if (Math.hypot(spot.x - lbl.x, spot.y - lbl.y) > 4) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(220,53,69,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(lbl.x, lbl.y); ctx.lineTo(spot.x, spot.y); ctx.stroke();
+          ctx.restore();
         }
         ctx.fillStyle = "#dc3545";
-        linie.forEach((t, i) => { ctx.fillText(t, lbl.x, gora + wys * (i + 0.5)); });
+        linie.forEach((t, i) => { ctx.fillText(t, spot.x, gora + wys * (i + 0.5)); });
       });
     }
 
@@ -7230,6 +7911,8 @@ ${sketchBlocks}
       return;
     }
 
+    if(currentMode === 'hatch') { handleHatchClick(rawPos); return; }
+
     if(currentMode === 'callout') {
       // najpierw sprawdzamy, czy palec trafil w istniejacy komentarz albo w grot
       const tip = calloutTipHit(rawPos);
@@ -7271,7 +7954,17 @@ ${sketchBlocks}
 
       let minD = 30 / zoomLevel; let foundLine = null; let exactPt = null;
       objects.lines.forEach((line) => { let pt = getClosestPointOnSegment(rawPos, {x: line.x1, y: line.y1}, {x: line.x2, y: line.y2}); let dist = Math.hypot(rawPos.x - pt.x, rawPos.y - pt.y); if (dist < minD) { minD = dist; foundLine = line; exactPt = pt; } });
-      if(foundLine) { editingOpeningIndex = -1; setOpeningDialogMode(false); pendingOpeningPos = exactPt; pendingOpeningAngle = Math.atan2(foundLine.y2 - foundLine.y1, foundLine.x2 - foundLine.x1); document.getElementById('openingOverlay').style.display = 'flex'; autoFillOpeningId(); }
+      if(foundLine) {
+        editingOpeningIndex = -1; setOpeningDialogMode(false);
+        pendingOpeningPos = exactPt;
+        pendingOpeningAngle = Math.atan2(foundLine.y2 - foundLine.y1, foundLine.x2 - foundLine.x1);
+        // zapamiętujemy ścianę, żeby dało się ustawić otwór na podanej
+        // odległości od wybranego narożnika
+        pendingOpeningSeg = { a: { x: foundLine.x1, y: foundLine.y1 }, b: { x: foundLine.x2, y: foundLine.y2 } };
+        document.getElementById('openingOverlay').style.display = 'flex';
+        document.getElementById('openingOffset').value = '';
+        autoFillOpeningId();
+      }
       return;
     }
 
@@ -7432,7 +8125,7 @@ ${sketchBlocks}
     drawing = false; guideLines = [];
     if(currentMode === 'draw') { objects.freehand.push({color: currentPenColor, path: currentStroke}); currentStroke = []; saveStateToHistory(); renderCanvas(); } 
     else if (currentMode === 'line') {
-      let newLine = { x1: snapTo1cm(startPos.x), y1: snapTo1cm(startPos.y), x2: snapTo1cm(currentPos.x), y2: snapTo1cm(currentPos.y), hiddenDim: false, customDim: null, needsDim: false };
+      let newLine = { x1: snapTo1cm(startPos.x), y1: snapTo1cm(startPos.y), x2: snapTo1cm(currentPos.x), y2: snapTo1cm(currentPos.y), hiddenDim: false, customDim: null, needsDim: false, kolor: currentWallColor };
       if(Math.hypot(newLine.x2 - newLine.x1, newLine.y2 - newLine.y1) > 5) {
           let dupe = objects.lines.find(l => linesNearlyOverlap(l, newLine));
           if (dupe) {
@@ -7618,11 +8311,11 @@ ${sketchBlocks}
 
   // Wymiary chmurki liczymy tak samo przy rysowaniu i przy trafianiu palcem.
   function calloutBox(ctx, c) {
-    const linie = String(c.text || '').split('\n');
     ctx.font = 'bold 15px Arial';
+    const linie = lamTekst(ctx, c.text, 300);
     let szer = 0;
     linie.forEach(t => { szer = Math.max(szer, ctx.measureText(t).width); });
-    const w = Math.min(Math.max(szer + 20, 60), 420);
+    const w = Math.min(Math.max(szer + 20, 60), 340);
     const h = linie.length * 20 + 14;
     return { w, h, linie, lewo: c.x - w / 2, gora: c.y - h / 2 };
   }
@@ -7690,7 +8383,7 @@ ${sketchBlocks}
   }
 
   canvas.addEventListener('pointerdown', startDraw); canvas.addEventListener('pointermove', draw); canvas.addEventListener('pointerup', stopDraw);
-  canvas.addEventListener('pointerleave', () => { if (wallHover) { wallHover = null; renderCanvas(); } });
+  canvas.addEventListener('pointerleave', () => { wallHoverKotwica = null; if (wallHover) { wallHover = null; renderCanvas(); } });
   canvas.addEventListener('pointercancel', stopDraw); canvas.addEventListener('pointerout', stopDraw); canvas.addEventListener('touchstart', (e) => e.preventDefault(), {passive: false});
 
   window.addEventListener('beforeunload', (e) => {
@@ -7710,6 +8403,18 @@ ${sketchBlocks}
     applyRoleToUi();
     setTimeout(checkDraft, 400);
     setTimeout(autoFetchParts, 1500);
+    setTimeout(autoKopiaJesliPora, 4000);
+    const fc = document.getElementById('fotoCanvas');
+    if (fc) {
+      fc.addEventListener('pointerdown', fotoStartRys);
+      fc.addEventListener('pointermove', fotoRuchRys);
+      fc.addEventListener('pointerup', fotoKoniecRys);
+      fc.addEventListener('pointerleave', fotoKoniecRys);
+      fc.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+    }
+    renderFotoLista();
+    // internet potrafi się pojawić dopiero w aucie w drodze powrotnej
+    window.addEventListener('online', () => { setTimeout(autoKopiaJesliPora, 2000); });
   };
 
 </script>

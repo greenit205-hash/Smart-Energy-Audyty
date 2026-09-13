@@ -20,7 +20,10 @@ catch (e) {
 
 function pustyKontekst2D() {
   const nic = () => {};
-  const ctx = { canvas: { width: 3000, height: 3000 }, measureText: () => ({ width: 10 }),
+  // Szerokość tekstu przybliżamy długością napisu - inaczej nie da się
+  // sprawdzić łamania długich opisów.
+  const ctx = { canvas: { width: 3000, height: 3000 },
+    measureText: (t) => ({ width: String(t || '').length * 8 }),
     createLinearGradient: () => ({ addColorStop: nic }), createPattern: () => null,
     getImageData: () => ({ data: [] }), setLineDash: nic };
   return new Proxy(ctx, { get: (t, p) => (p in t ? t[p] : nic), set: () => true });
@@ -33,7 +36,7 @@ const dom = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), {
     w.HTMLCanvasElement.prototype.toDataURL = () => 'data:,';
     w.alert = m => { w.__alert = m; };
     w.confirm = () => true;
-    w.prompt = () => null;
+    w.prompt = () => (w.__prompt !== undefined ? w.__prompt : null);
     w.scrollTo = () => {};
   }
 });
@@ -650,14 +653,412 @@ nowySzkic();
     app("return objects.callouts === undefined;") === true);
 }
 
-console.log('');
-if (bledy.length) {
-  console.log('BŁĘDY (' + bledy.length + '):');
-  bledy.forEach(b => console.log('  ✗ ' + b));
-  console.log('\nPrzeszło: ' + ok + ', nie przeszło: ' + bledy.length);
+
+
+// ===================== OPISY, KOLORY, PRZESZKODY =====================
+console.log('--- czytelność opisów i kolory ---');
+nowySzkic();
+{
+  const ctx = app("return canvas.getContext('2d');") ? null : null;
+
+  // łamanie długiego opisu na linie
+  const linie = app(`
+    const c = canvas.getContext('2d');
+    c.font = 'bold 20px Arial';
+    return lamTekst(c, 'bardzo długi opis przegrody który nie mieści się w jednej linii na ekranie tabletu', MAX_TEKST_PX);
+  `);
+  sprawdz('długi opis jest łamany na kilka linii', linie.length > 1, linie.length);
+  sprawdz('łamanie nie gubi treści',
+    linie.join(' ').includes('nie mieści się') && linie.join(' ').includes('tabletu'), linie.join(' | '));
+
+  const zRecznymi = app(`
+    const c = canvas.getContext('2d');
+    c.font = 'bold 20px Arial';
+    return lamTekst(c, ['pierwsza','druga'].join(String.fromCharCode(10)), MAX_TEKST_PX);
+  `);
+  sprawdz('ręczne przejścia do nowej linii są respektowane', zRecznymi.length === 2, zRecznymi.join(' | '));
+
+  const krotki = app(`
+    const c = canvas.getContext('2d');
+    c.font = 'bold 20px Arial';
+    return lamTekst(c, 'krótki', MAX_TEKST_PX);
+  `);
+  sprawdz('krótki opis zostaje w jednej linii', krotki.length === 1);
+
+  // odsuwanie nachodzących opisów
+  const wolne = app(`
+    dimLabelRects = [{ x: 90, y: 90, w: 100, h: 40 }];
+    return findFreeLabelSpot(140, 110, 100, 40, 0, 1);
+  `);
+  sprawdz('opis wpadający na zajęte miejsce jest odsuwany',
+    wolne && Math.abs(wolne.y - 110) > 1, JSON.stringify(wolne));
+  const bezKolizji = app(`
+    dimLabelRects = [];
+    return findFreeLabelSpot(500, 500, 100, 40, 0, 1);
+  `);
+  sprawdz('gdy jest wolno, opis zostaje na swoim miejscu',
+    bezKolizji && bezKolizji.x === 500 && bezKolizji.y === 500, JSON.stringify(bezKolizji));
+
+  // kolor ściany
+  app("setWallColor('#dc3545', null);");
+  sprawdz('kolor ściany da się ustawić', app("return currentWallColor;") === '#dc3545');
+  app(`
+    objects.lines = [];
+    startPos = { x:200, y:200 }; currentPos = { x:400, y:200 };
+    drawing = true; currentMode = 'line';
+    stopDraw({ pointerType:'mouse', isPrimary:true });
+  `);
+  sprawdz('narysowana ściana zapamiętuje kolor',
+    app("return objects.lines[0] && objects.lines[0].kolor;") === '#dc3545',
+    app("return JSON.stringify(objects.lines[0]);"));
+  app("setWallColor('#212529', null);");
+
+  // przeszkoda jako obszar kreskowany z kolorem
+  app("setHatchColor('#6f42c1', null);");
+  sprawdz('kolor przeszkody da się ustawić', app("return currentHatchColor;") === '#6f42c1');
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    const L = (x1,y1,x2,y2) => objects.lines.push({x1:O+x1*P, y1:O+y1*P, x2:O+x2*P, y2:O+y2*P});
+    objects.lines = []; objects.hatches = [];
+    L(0,0, 2,0); L(2,0, 2,2); L(2,2, 0,2); L(0,2, 0,0);
+    window.__prompt = 'Komin';
+    handleHatchClick({ x:O+1*P, y:O+1*P });
+    window.__prompt = undefined;
+  `);
+  const przeszkody = app("return objects.hatches;");
+  sprawdz('przeszkoda zostaje dodana', przeszkody.length === 1, przeszkody.length);
+  sprawdz('przeszkoda ma własny opis', przeszkody[0].label === 'Komin', przeszkody[0].label);
+  sprawdz('przeszkoda zapamiętuje kolor', przeszkody[0].kolor === '#6f42c1', przeszkody[0].kolor);
+  sprawdz('przeszkoda ma obrys', (przeszkody[0].polygon || []).length >= 3);
+
+  // rysowanie z przeszkodą i kolorową ścianą nie wywraca płótna
+  app("renderCanvas();");
+  sprawdz('rysunek z przeszkodą się renderuje', app("return objects.hatches.length;") === 1);
+
+  // narzędzie jest dostępne w pasku
+  sprawdz('jest przycisk narzędzia przeszkody',
+    !!dom.window.document.getElementById('btnModeHatch'));
+  sprawdz('paleta kolorów ściany istnieje',
+    !!dom.window.document.getElementById('wallColors'));
+  sprawdz('paleta kolorów przeszkody istnieje',
+    !!dom.window.document.getElementById('hatchColors'));
+
+  // stare szkice bez kolorów muszą działać
+  app(`
+    objects.lines = [{ x1:100, y1:100, x2:300, y2:100 }];
+    objects.hatches = [{ id:1, polygon:[{x:100,y:100},{x:200,y:100},{x:200,y:200}], label:'Skos' }];
+    renderCanvas();
+  `);
+  sprawdz('szkic bez zapisanych kolorów rysuje się normalnie',
+    app("return objects.lines[0].kolor === undefined && objects.hatches[0].kolor === undefined;") === true);
+}
+
+// Raport nie może ucinać długich opisów
+console.log('--- długie opisy w raporcie ---');
+{
+  const dlugi = 'Bardzo długi opis przegrody, który wcześniej był ucinany w tabeli raportu i nie dawało się go przeczytać do końca.';
+  const raport = app(`return buildReportHtml({ fullName:'X', auditorNotes:${JSON.stringify(dlugi)} }, [], []);`);
+  sprawdz('raport zawiera cały długi opis', raport.includes('nie dawało się go przeczytać do końca'));
+  sprawdz('tabele raportu zawijają tekst', raport.includes('overflow-wrap: anywhere'));
+  sprawdz('tabele raportu mają stałą szerokość kolumn', raport.includes('table-layout: fixed'));
+
+  const karta = app(`return buildObjectCardHtml({ fullName:'X', preferences:${JSON.stringify(dlugi)} }, [], []);`);
+  sprawdz('karta obiektu też zawija tekst', karta.includes('overflow-wrap:anywhere'));
+}
+
+
+// ===================== ODLEGŁOŚĆ OD NAROŻNIKA =====================
+// Podpowiedź musi trzymać się rogu, od którego zacząłeś jechać palcem.
+// Wcześniej przeskakiwała na drugi róg po minięciu połowy ściany.
+console.log('--- odległość od narożnika ---');
+nowySzkic();
+{
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    objects.lines = [{ x1:O, y1:O, x2:O+6*P, y2:O }];
+    currentMode = 'line'; zoomLevel = 1; wallHoverKotwica = null;
+  `);
+  const przy = m => app(`
+    const P = PIXELS_PER_METER, O = 200;
+    updateWallHover({ x: O + ${m}*P, y: O });
+    return wallHover ? { dist: +wallHover.dist.toFixed(2), odA: wallHover.odA } : null;
+  `);
+
+  // wjazd od lewej strony
+  let r = przy(1);
+  sprawdz('start przy lewym rogu mierzy od lewego', r && r.odA === true, JSON.stringify(r));
+  sprawdz('przy 1 m od lewego pokazuje 1,00', r && Math.abs(r.dist - 1) < 0.01, r && r.dist);
+
+  r = przy(4);
+  sprawdz('po minięciu połowy nadal mierzy od lewego rogu', r && r.odA === true, JSON.stringify(r));
+  sprawdz('przy 4 m od lewego pokazuje 4,00 (nie 2,00)',
+    r && Math.abs(r.dist - 4) < 0.01, r && r.dist);
+
+  r = przy(5.5);
+  sprawdz('przy końcu ściany nadal liczy od lewego', r && Math.abs(r.dist - 5.5) < 0.01, r && r.dist);
+
+  r = przy(5.95);
+  sprawdz('tuż przy prawym rogu nadal liczy od lewego (bez przeskoku)',
+    r && r.odA === true && Math.abs(r.dist - 5.95) < 0.01, JSON.stringify(r));
+
+  // żeby mierzyć od drugiej strony, schodzimy ze ściany i wracamy przy prawym rogu
+  app("updateWallHover({ x: 50, y: 900 });");
+  r = przy(5.8);
+  sprawdz('po zejściu i najechaniu przy prawym rogu mierzy od prawego',
+    r && r.odA === false && Math.abs(r.dist - 0.2) < 0.01, JSON.stringify(r));
+  r = przy(2);
+  sprawdz('i trzyma prawy róg aż do końca ściany',
+    r && r.odA === false && Math.abs(r.dist - 4) < 0.01, JSON.stringify(r));
+
+  // zejście ze ściany kasuje zapamiętany róg
+  app("updateWallHover({ x: 50, y: 900 });");
+  sprawdz('zejście ze ściany kasuje zapamiętany róg',
+    app("return wallHoverKotwica;") === null);
+  r = przy(1);
+  sprawdz('po ponownym najechaniu znowu bierze bliższy róg', r && r.odA === true, JSON.stringify(r));
+}
+
+// ===================== SUMOWANIE POMIARÓW Z DALMIERZA =====================
+console.log('--- sumowanie pomiarów ---');
+{
+  app("setDistoSuma(true);");
+  sprawdz('tryb sumowania da się włączyć', app("return distoSumaWl;") === true);
+  app("distoDeliverMeasurement(1.0); distoDeliverMeasurement(1.0); distoDeliverMeasurement(1.0);");
+  sprawdz('trzy pomiary po 1 m dają sumę 3 m',
+    Math.abs(app("return distoSumaWartosc();") - 3) < 0.001, app("return distoSumaWartosc();"));
+  sprawdz('składniki są zapamiętane osobno', app("return distoSkladniki.length;") === 3);
+
+  app("distoCofnijSkladnik();");
+  sprawdz('cofnięcie odcinka zmniejsza sumę',
+    Math.abs(app("return distoSumaWartosc();") - 2) < 0.001);
+
+  // w trybie sumowania pojedynczy odczyt NIE trafia do pola
+  app(`
+    window.__wpisane = null;
+    distoWpiszDoPolaOrg = distoWpiszDoPola;
+    distoWpiszDoPola = function (m) { window.__wpisane = m; };
+    distoDeliverMeasurement(0.5);
+  `);
+  sprawdz('pojedynczy pomiar nie wchodzi do pola, tylko do sumy',
+    app("return window.__wpisane;") === null);
+
+  app("distoZatwierdzSume();");
+  sprawdz('zatwierdzenie wpisuje sumę',
+    Math.abs(app("return window.__wpisane;") - 2.5) < 0.001, app("return window.__wpisane;"));
+  sprawdz('po zatwierdzeniu suma jest czyszczona', app("return distoSkladniki.length;") === 0);
+
+  // wyłączenie trybu wraca do zachowania jak dotąd
+  app("setDistoSuma(false); window.__wpisane = null; distoDeliverMeasurement(2.2);");
+  sprawdz('bez sumowania pomiar idzie wprost do pola',
+    Math.abs(app("return window.__wpisane;") - 2.2) < 0.001);
+  app("distoWpiszDoPola = distoWpiszDoPolaOrg;");
+}
+
+// ===================== OTWORY =====================
+console.log('--- otwory: typy, wymiary, odległość od rogu ---');
+nowySzkic();
+{
+  const d = dom.window.document;
+  const typy = [...d.querySelectorAll('#openingTypeSelect option')].map(o => o.value);
+  sprawdz('jest typ drzwi wewnętrznych', typy.includes('DW'), typy.join(', '));
+  sprawdz('jest typ otworu budowlanego', typy.includes('OB'), typy.join(', '));
+  sprawdz('otwór budowlany ma własną kategorię w zestawieniach',
+    app("return openingCatOf('OB1').pref;") === 'OB');
+  sprawdz('DZ nie jest mylone z DW',
+    app("return openingCatOf('DW2').pref;") === 'DW');
+
+  sprawdz('jest pole odległości od narożnika', !!d.getElementById('openingOffset'));
+  sprawdz('da się wybrać, od którego narożnika', !!d.getElementById('openingOffsetSide'));
+
+  // wstawienie otworu 90 cm w odległości 100 cm od lewego rogu ściany 6 m
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    objects.lines = [{ x1:O, y1:O, x2:O+6*P, y2:O }];
+    objects.openings = [];
+    editingOpeningIndex = -1;
+    pendingOpeningSeg = { a:{x:O,y:O}, b:{x:O+6*P,y:O} };
+    pendingOpeningPos = { x:O+3*P, y:O };
+    pendingOpeningAngle = 0;
+    document.getElementById('openingIdInput').value = 'DW1';
+    document.getElementById('openingWidth').value = '90';
+    document.getElementById('openingHeight').value = '200';
+    document.getElementById('openingOffset').value = '100';
+    document.getElementById('openingOffsetSide').value = 'A';
+    addOpeningToCanvas();
+  `);
+  const op = app("return objects.openings[0];");
+  sprawdz('otwór został wstawiony', !!op);
+  // środek otworu = 100 cm + połowa z 90 cm = 145 cm od lewego rogu
+  sprawdz('otwór stoi 1,45 m od lewego rogu (100 cm + pół szerokości)',
+    op && Math.abs((op.x - 200) / 50 - 1.45) < 0.01, op && ((op.x - 200) / 50).toFixed(3));
+  sprawdz('odległość od rogu jest zapamiętana', op && op.odlOdRogu === 100, op && op.odlOdRogu);
+  sprawdz('zapamiętano, od którego rogu', op && op.stronaRogu === 'A');
+
+  // to samo od prawego rogu
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    objects.openings = [];
+    editingOpeningIndex = -1;
+    pendingOpeningSeg = { a:{x:O,y:O}, b:{x:O+6*P,y:O} };
+    pendingOpeningPos = { x:O+3*P, y:O }; pendingOpeningAngle = 0;
+    document.getElementById('openingIdInput').value = 'DW2';
+    document.getElementById('openingWidth').value = '90';
+    document.getElementById('openingHeight').value = '200';
+    document.getElementById('openingOffset').value = '100';
+    document.getElementById('openingOffsetSide').value = 'B';
+    addOpeningToCanvas();
+  `);
+  const op2 = app("return objects.openings[0];");
+  sprawdz('od prawego rogu liczone jest lustrzanie',
+    op2 && Math.abs((op2.x - 200) / 50 - (6 - 1.45)) < 0.01, op2 && ((op2.x - 200) / 50).toFixed(3));
+
+  // otwór budowlany nie wymaga wysokości
+  app(`
+    const P = PIXELS_PER_METER, O = 200;
+    objects.openings = [];
+    editingOpeningIndex = -1;
+    pendingOpeningSeg = { a:{x:O,y:O}, b:{x:O+6*P,y:O} };
+    pendingOpeningPos = { x:O+3*P, y:O }; pendingOpeningAngle = 0;
+    document.getElementById('openingIdInput').value = 'OB1';
+    document.getElementById('openingWidth').value = '120';
+    document.getElementById('openingHeight').value = '';
+    document.getElementById('openingOffset').value = '';
+    addOpeningToCanvas();
+  `);
+  sprawdz('otwór budowlany wstawia się bez podawania wysokości',
+    app("return objects.openings.length;") === 1, app("return objects.openings.length;"));
+  sprawdz('otwór budowlany ma szerokość', app("return objects.openings[0].width;") === 120);
+
+  // rysunek z otworami się renderuje
+  app("renderCanvas();");
+  sprawdz('szkic z otworem budowlanym się rysuje', app("return objects.openings.length;") === 1);
+}
+
+console.log('--- automatyczna kopia na Dysk ---');
+// ===================== AUTOMATYCZNA KOPIA NA DYSK =====================
+async function testyKopii() {
+  const _ = 0;
+  const d = dom.window.document;
+  // podstawiamy fetch, żeby nie ruszać sieci i sprawdzić, co naprawdę leci
+  app(`
+    window.__wyslane = [];
+    window.fetch = function (url, opts) {
+      window.__wyslane.push({ url: url, body: opts && opts.body });
+      return Promise.resolve({ ok: true, text: () => Promise.resolve('SUCCESS|kopia.json') });
+    };
+    localStorage.setItem('apiUrl', 'https://example.org/exec');
+    localStorage.removeItem('ostatniaKopiaDysk');
+    localStorage.removeItem('autoKopiaWlaczona');
+    saveLocalAudits([{ fullName:'Jan Kowalski', address:'Testowa 1' }]);
+    saveSzablony([{ nazwa:'Ściana testowa', warstwy:[{mat:'Cegła pełna zwykła',gr:'25'}], warstwyB:[] }]);
+  `);
+
+  sprawdz('kopia automatyczna jest domyślnie włączona', app("return autoKopiaWlaczona();") === true);
+  sprawdz('na starcie nie ma jeszcze żadnej kopii', app("return ostatniaKopia();") === null);
+
+  // treść kopii
+  const tresc = JSON.parse(app("return trescKopii();"));
+  sprawdz('kopia zawiera audyty', tresc.audyty.length === 1);
+  sprawdz('kopia zawiera szablony przegród', tresc.szablonyPrzegrod.length === 1);
+  sprawdz('kopia niesie informację o roli tabletu', !!tresc.rola, tresc.rola);
+  sprawdz('kopia ma znacznik formatu', tresc.format === 'smart-energy-backup');
+
+  // pierwsza próba automatyczna - powinna wysłać
+  await app("return autoKopiaJesliPora();");
+  const wyslane = app("return window.__wyslane;");
+  sprawdz('kopia poleciała na Dysk', wyslane.length === 1, wyslane.length);
+  if (wyslane.length) {
+    const paczka = JSON.parse(wyslane[0].body);
+    sprawdz('paczka ma akcję "backup"', paczka.action === 'backup', paczka.action);
+    sprawdz('paczka niesie treść kopii', !!paczka.payload && paczka.payload.includes('Jan Kowalski'));
+  }
+  sprawdz('data ostatniej kopii została zapamiętana', app("return ostatniaKopia() !== null;") === true);
+
+  // druga próba od razu po pierwszej - odstęp nie minął, nic nie wysyłamy
+  await app("return autoKopiaJesliPora();");
+  sprawdz('przed upływem odstępu kopia się nie powtarza',
+    app("return window.__wyslane.length;") === 1);
+
+  // po upływie odstępu - znowu wysyła
+  app(`
+    const dawno = new Date(Date.now() - (BACKUP_ODSTEP_H + 1) * 3600000);
+    localStorage.setItem('ostatniaKopiaDysk', dawno.toISOString());
+  `);
+  await app("return autoKopiaJesliPora();");
+  sprawdz('po upływie odstępu kopia leci ponownie',
+    app("return window.__wyslane.length;") === 2);
+
+  // wyłącznik
+  app(`
+    ustawAutoKopie(false);
+    localStorage.setItem('ostatniaKopiaDysk', new Date(Date.now() - 48 * 3600000).toISOString());
+  `);
+  await app("return autoKopiaJesliPora();");
+  sprawdz('wyłączona kopia automatyczna nic nie wysyła',
+    app("return window.__wyslane.length;") === 2);
+  sprawdz('przełącznik zapamiętuje wyłączenie', app("return autoKopiaWlaczona();") === false);
+  app("ustawAutoKopie(true);");
+
+  // brak adresu Dysku = nie próbujemy
+  app(`
+    localStorage.removeItem('apiUrl');
+    localStorage.setItem('ostatniaKopiaDysk', new Date(Date.now() - 48 * 3600000).toISOString());
+  `);
+  await app("return autoKopiaJesliPora();");
+  sprawdz('bez ustawionego Dysku kopia nie jest wysyłana',
+    app("return window.__wyslane.length;") === 2);
+  app("localStorage.setItem('apiUrl', 'https://example.org/exec');");
+
+  // brak internetu = odkładamy na później, bez komunikatów
+  app(`
+    Object.defineProperty(window.navigator, 'onLine', { value: false, configurable: true });
+    localStorage.setItem('ostatniaKopiaDysk', new Date(Date.now() - 48 * 3600000).toISOString());
+  `);
+  await app("return autoKopiaJesliPora();");
+  sprawdz('bez internetu kopia nie jest wysyłana',
+    app("return window.__wyslane.length;") === 2);
+  app("Object.defineProperty(window.navigator, 'onLine', { value: true, configurable: true });");
+
+  // pasek stanu na pulpicie
+  app("renderBackupStatus();");
+  const pasek = d.getElementById('backupStatus').innerHTML;
+  sprawdz('pulpit pokazuje datę ostatniej kopii', pasek.includes('Kopia na Dysku'), pasek.slice(0, 80));
+  sprawdz('pulpit ma przycisk ręcznej wysyłki', pasek.includes('wyslijKopieNaDysk'));
+  sprawdz('pulpit ma przełącznik automatu', pasek.includes('autoKopiaSwitch'));
+
+  // stara kopia = ostrzeżenie na czerwono
+  app(`
+    localStorage.setItem('ostatniaKopiaDysk', new Date(Date.now() - 5 * 86400000).toISOString());
+    renderBackupStatus();
+  `);
+  sprawdz('kopia sprzed 5 dni jest zaznaczona na czerwono',
+    d.getElementById('backupStatus').innerHTML.includes('text-danger'));
+
+  // brak kopii w ogóle też
+  app("localStorage.removeItem('ostatniaKopiaDysk'); renderBackupStatus();");
+  sprawdz('brak kopii jest zaznaczony na czerwono',
+    d.getElementById('backupStatus').innerHTML.includes('text-danger') &&
+    d.getElementById('backupStatus').innerHTML.includes('jeszcze nie było'));
+
+  app("localStorage.removeItem('auditsDB'); localStorage.removeItem('przegrodySzablony'); localStorage.removeItem('apiUrl');");
+}
+
+function podsumowanie() {
+  console.log('');
+  if (bledy.length) {
+    console.log('BŁĘDY (' + bledy.length + '):');
+    bledy.forEach(b => console.log('  ✗ ' + b));
+    console.log('\nPrzeszło: ' + ok + ', nie przeszło: ' + bledy.length);
+    dom.window.close();
+    process.exit(1);
+  } else {
+    console.log('✓ Wszystkie testy przeszły (' + ok + ' sprawdzeń).');
+    dom.window.close();
+  }
+}
+
+testyKopii().then(podsumowanie).catch(e => {
+  console.log('BŁĄD w testach kopii:', e.message);
   dom.window.close();
   process.exit(1);
-} else {
-  console.log('✓ Wszystkie testy przeszły (' + ok + ' sprawdzeń).');
-  dom.window.close();
-}
+});

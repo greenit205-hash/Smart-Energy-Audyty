@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 04.09.2026 · wersja aplikacji `smart-energy-v51`
+**Stan na:** 05.09.2026 · wersja aplikacji `smart-energy-v54`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -42,7 +42,10 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 ## Szkicownik
 
 - **📏 Ściana** — rysowanie; linie prawie proste same się prostują, końce przyciągają się do istniejących. Podczas ciągnięcia widać **przybliżoną długość** (`~4.00 m` — tylko pomoc, nie pomiar)
-- **Odległość od narożnika** — najazd na narysowaną ścianę pokazuje odległość od bliższego rogu
+- **Odległość od narożnika** — najazd na ścianę pokazuje odległość od rogu. **v54: róg odniesienia ustala się przy pierwszym dotknięciu ściany i trzyma aż do zejścia z niej.** Wcześniej program przeskakiwał na drugi róg po minięciu połowy, przez co nie dało się wyznaczyć punktu na dalszej połowie. Żeby mierzyć od drugiej strony, schodzi się ze ściany i najeżdża przy przeciwnym rogu
+- **v54 — zdjęcia z wizji lokalnej.** Trzymane w **IndexedDB** (nie w localStorage — tam jest ok. 5 MB na wszystko), skalowane przy dodawaniu do 1600 px / JPEG 0,72. Po zdjęciu można rysować: linia z wymiarem, strzałka, tekst, ołówek — warstwa wektorowa, więc da się poprawić i cofnąć. Każde zdjęcie ma opis, przypisanie do pomieszczenia lub przegrody i przełącznik „w raporcie"
+- **v54 — sumowanie pomiarów z dalmierza.** Przełącznik w oknie dalmierza: kolejne odczyty dodają się (1 + 1 + 1 = 3) i dopiero „Zatwierdź sumę" wpisuje wynik do pola. Bez tego długiej ściany mierzonej na raty nie dało się wprowadzić
+- **v54 — otwory.** Nowy typ **OB — otwór budowlany (przejście)**: rysowany jako przerwa w ścianie, nie wymaga wysokości. Wszystkie otwory mają opcjonalne pole **odległości od narożnika** z wyborem strony — otwór ustawia się dokładnie tam, gdzie go zmierzyłeś. Na szkicu przy każdym otworze widać teraz **numer i wymiary** (szer.×wys.), a podpisy odsuwają się, gdy nachodzą na siebie
 - **🏠 Pomieszcz.** — klikam w środku, program **sam rozpoznaje obrys** (analiza grafu płaskiego). Numeracja osobna dla każdego szkicu
 - **v43 — obrys a zmiany ścian.** Pomieszczenie pamięta obrys z chwili założenia. Gdy później dorysuję wnękę albo skasuję ścianę, rysunek się zmienia, a zapisany obrys nie — i powierzchnia zostawała stara, bez żadnego sygnału. Teraz program to wykrywa: wiersz w tabeli robi się żółty z napisem „obrys nieaktualny" i przyciskiem **🔄**, a nad tabelą jest **🔄 Przelicz obrysy** dla wszystkich naraz. Numer, typ, ogrzewanie i klimatyzacja zostają — zmienia się wyłącznie kształt. Gdy obszar nie jest zamknięty, program mówi o tym wprost i **nie rusza** starego obrysu
 - Typy pomieszczeń: v43 dokłada **Piwnica**, **Garaż** i **Strych / poddasze nieużytkowe**
@@ -52,6 +55,9 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 - **💬 Komentarz** (v51) — chmurka z tekstem i strzałką wskazującą opisywane miejsce. Dotknięcie rysunku stawia grot, chmurka pojawia się obok. Chmurkę przeciągasz palcem, grot osobno; krótkie dotknięcie chmurki otwiera ją do poprawki, gumka kasuje. Komentarze są wielolinijkowe i zapisują się razem ze szkicem
 - **📐 Skos** — skosy poddasza z wymiarami (osobny rodzaj szkicu)
 - **abc Txt** — v48: pole **wielolinijkowe** z wyborem wielkości liter i ramki. Kliknięcie w istniejące pole otwiera je do poprawki; wyczyszczenie treści kasuje pole. Podpowiedź z listy (SZ1, Dach…) **dopisuje się** do tekstu, zamiast go zastępować
+- **▨ Przeszkoda** (v53) — obszar zakreskowany z własnym opisem i **kolorem do wyboru** (5 barw). Kliknięcie w istniejący obszar zmienia opis i kolor, puste pole kasuje. Uwaga: kod kreskowania istniał wcześniej, ale **nie był podpięty do żadnego przycisku** — od v53 jest
+- **Kolor ściany** (v53) — paleta 5 kolorów przy narzędziu 📏 Ściana; kolor zapisuje się przy linii. Ściany bez zapisanego koloru rysują się jak dotąd
+- **Czytelność opisów** (v53) — długie teksty na szkicu są **łamane na linie** (do ~260 px), a ramka opisu **odsuwa się**, jeśli wpadłaby na wymiar albo inny opis; gdy odjedzie, prowadzi do niej cienka kreska. W raporcie i karcie obiektu tabele mają `table-layout: fixed` i zawijanie, więc długie opisy nie są już ucinane
 - **▨ obszary kreskowane**, **📐 Miarka**, **✏️ Ołówek**, **abc Txt**, **🧽 Usuń**, **🩺 Diagnostyka**
 - **📐 Szablony szkiców** — gotowe rzuty, przekroje, ściany
 - **🔤 Ozn. ścian** — etykiety 1a, 1b… (na ekranie na żądanie, w raporcie zawsze)
@@ -131,6 +137,7 @@ Panel pod szkicem, liczony lokalnie (bez AI, offline). Trzy poziomy: **⛔ sprze
 
 - **v42 — pasek zapełnienia pamięci.** Wszystkie audyty siedzą w `localStorage` (ok. 5 MB). Od 70% zapełnienia na pulpicie pojawia się ostrzeżenie z przyciskiem kopii zapasowej, od 85% zmienia się w czerwony alarm i raz na uruchomienie wyskakuje komunikat. Wcześniej dowiadywałeś się dopiero wtedy, gdy zapis się nie udał — w połowie audytu
 - **v42 — kolory pomieszczeń w Dokumencie Google.** Nieogrzewane na czerwono, klimatyzowane na niebiesko były tylko w karcie obiektu i w PDF; w edytowalnym Dokumencie tabela była szara
+- **v52 — automatyczna kopia na Dysk.** Backend ma nową akcję `backup`: zapisuje plik `kopia-RRRR-MM-DD HH.mm.json` do folderu `KOPIE ZAPASOWE` i trzyma **20 ostatnich wersji** (`BACKUP_KEEP`), starsze idą do kosza. Aplikacja próbuje wysłać przy uruchomieniu, po zapisaniu audytu i po powrocie internetu — jeśli od ostatniej kopii minęło ponad **6 godzin** (`BACKUP_ODSTEP_H`). Wszystko w tle, błędy po cichu, żeby nic nie przeszkadzało u klienta. Na pulpicie pasek z datą ostatniej kopii (czerwony po 3 dniach lub gdy jeszcze nie było), przycisk **Wyślij teraz** i przełącznik automatu. Wdrożenie krok po kroku: `docs/KOPIA-AUTOMATYCZNA.md`
 - **v49 — szablony przegród w kopii zapasowej.** Kopia zapisuje teraz audyty **i** szablony przegród (nowy format: obiekt z polami `audyty` i `szablonyPrzegrod`). Stare kopie — sama tablica audytów — nadal się wczytują. Szablony dokładają się po nazwie, bez dublowania
 - **💾 Pobierz Kopię Zapasową** / **📂 Wczytaj Kopię** — pamięć jest przypisana do adresu, więc przy zmianie hostingu trzeba przenieść raporty tą drogą. Ponowne wczytanie nie dubluje
 
@@ -189,7 +196,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v51), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v54), żeby tablety pobrały nową wersję.
 
 ---
 

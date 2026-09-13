@@ -28,10 +28,50 @@ const ENVELOPES = [
 // Folder na paczki wymieniane miedzy tabletami (audytor <-> pomocnik)
 const EXCHANGE_FOLDER_NAME = 'WYMIANA (tablety)';
 
+// Folder na automatyczne kopie zapasowe calej bazy z tabletu
+const BACKUP_FOLDER_NAME = 'KOPIE ZAPASOWE';
+// Ile kopii trzymamy. Jedna nadpisywana kopia nie chroni przed niczym -
+// wystarczylby jeden uszkodzony zapis, zeby zamazac te dobra.
+const BACKUP_KEEP = 20;
+
 function getExchangeFolder() {
   const parent = DriveApp.getFolderById(PARENT_FOLDER_ID);
   const it = parent.getFoldersByName(EXCHANGE_FOLDER_NAME);
   return it.hasNext() ? it.next() : parent.createFolder(EXCHANGE_FOLDER_NAME);
+}
+
+function getBackupFolder() {
+  const parent = DriveApp.getFolderById(PARENT_FOLDER_ID);
+  const it = parent.getFoldersByName(BACKUP_FOLDER_NAME);
+  return it.hasNext() ? it.next() : parent.createFolder(BACKUP_FOLDER_NAME);
+}
+
+// Automatyczna kopia zapasowa bazy z tabletu.
+// data.payload = tresc pliku (JSON w postaci tekstu), data.rola = 'audytor'/'pomocnik'
+function zapiszKopie(data) {
+  const tresc = String(data.payload || '');
+  if (!tresc) return 'ERROR|Pusta kopia';
+  const folder = getBackupFolder();
+  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH.mm');
+  const rola = String(data.rola || '').trim();
+  const nazwa = 'kopia-' + stamp + (rola ? '-' + sanitizeName(rola) : '') + '.json';
+  folder.createFile(nazwa, tresc, MimeType.PLAIN_TEXT);
+  sprzatnijStareKopie(folder);
+  return 'SUCCESS|' + nazwa;
+}
+
+// Zostawiamy BACKUP_KEEP najnowszych plikow, reszte przenosimy do kosza.
+function sprzatnijStareKopie(folder) {
+  const pliki = [];
+  const it = folder.getFiles();
+  while (it.hasNext()) {
+    const f = it.next();
+    if (f.getName().indexOf('kopia-') === 0) pliki.push(f);
+  }
+  pliki.sort(function (a, b) { return b.getDateCreated() - a.getDateCreated(); });
+  for (let i = BACKUP_KEEP; i < pliki.length; i++) {
+    try { pliki[i].setTrashed(true); } catch (e) {}
+  }
 }
 
 function doGet(e) {
@@ -100,6 +140,7 @@ function doPost(e) {
     // Wymiana danych miedzy tabletami - obsluga przed zwyklym eksportem raportu
     if (data.action === 'pushPart') return textOut(pushPart(data));
     if (data.action === 'ackParts') return textOut(ackParts(data));
+    if (data.action === 'backup') return textOut(zapiszKopie(data));
 
     // 0. ZABEZPIECZENIE PRZED DUPLIKATAMI
     // Aplikacja przy problemie z odczytem odpowiedzi ponawia wysylke "w ciemno"
