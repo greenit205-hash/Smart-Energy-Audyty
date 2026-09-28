@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 05.09.2026 · wersja aplikacji `smart-energy-v54`
+**Stan na:** 28.09.2026 · wersja aplikacji `smart-energy-v56`
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -57,6 +57,8 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 - **abc Txt** — v48: pole **wielolinijkowe** z wyborem wielkości liter i ramki. Kliknięcie w istniejące pole otwiera je do poprawki; wyczyszczenie treści kasuje pole. Podpowiedź z listy (SZ1, Dach…) **dopisuje się** do tekstu, zamiast go zastępować
 - **▨ Przeszkoda** (v53) — obszar zakreskowany z własnym opisem i **kolorem do wyboru** (5 barw). Kliknięcie w istniejący obszar zmienia opis i kolor, puste pole kasuje. Uwaga: kod kreskowania istniał wcześniej, ale **nie był podpięty do żadnego przycisku** — od v53 jest
 - **Kolor ściany** (v53) — paleta 5 kolorów przy narzędziu 📏 Ściana; kolor zapisuje się przy linii. Ściany bez zapisanego koloru rysują się jak dotąd
+- **v56 — blokada kąta prostego.** Ściana przestaje „ustawiać się pod kątem”. Nowy przycisk **⟂ Kąt prosty** w pasku szkicu (domyślnie **WŁ**, ustawienie zapamiętane w tablecie): przy włączonej blokadzie końcowy punkt ściany zawsze ląduje dokładnie w poziomie albo w pionie — bez żadnej tolerancji kąta. Przy okazji dwie usterki, które i tak przekrzywiały już wyprostowaną linię: (1) dołączenie końca do istniejącej ściany brało **cały** punkt z `findSnapPoint`, leżący nawet 30 px od osi — teraz bierze wyłącznie współrzędną wzdłuż osi rysowania; (2) prowadnica wyrównująca (`checkAlignmentGuides`) mogła ruszyć tę współrzędną, która trzyma linię prosto — teraz dostaje informację o zablokowanej osi. W trybie **🖱️ Wybierz** przeciągnięcie narożnika wprost na istniejący węzeł ma pierwszeństwo przed blokadą
+- **v55 — naprawa po v53.** Zawijanie wprowadzone w v53 używało `overflow-wrap: anywhere`, co łamało nazwy materiałów **litera po literze** — opis warstw w karcie obiektu robił się pionowym paskiem. Teraz `break-word` (całe słowa), `table-layout: auto`, tabela przegród ma `<colgroup>` z ustalonymi szerokościami, grubości warstw mają `white-space: nowrap`, a kolumna z tabelą dostała więcej miejsca niż rysunek
 - **Czytelność opisów** (v53) — długie teksty na szkicu są **łamane na linie** (do ~260 px), a ramka opisu **odsuwa się**, jeśli wpadłaby na wymiar albo inny opis; gdy odjedzie, prowadzi do niej cienka kreska. W raporcie i karcie obiektu tabele mają `table-layout: fixed` i zawijanie, więc długie opisy nie są już ucinane
 - **▨ obszary kreskowane**, **📐 Miarka**, **✏️ Ołówek**, **abc Txt**, **🧽 Usuń**, **🩺 Diagnostyka**
 - **📐 Szablony szkiców** — gotowe rzuty, przekroje, ściany
@@ -196,7 +198,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v54), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v56), żeby tablety pobrały nową wersję.
 
 ---
 

@@ -479,11 +479,14 @@ nowySzkic();
     Math.abs(domkniete.pt.x - (200 + 5 * 50)) < 0.001 && Math.abs(domkniete.pt.y - 200) < 0.001,
     JSON.stringify(domkniete.pt));
 
-  // wyraźny skos ma zostać skosem
+  // wyraźny skos ma zostać skosem - ale tylko przy wyłączonej blokadzie kąta prostego
   const skos = app(`
     const P = PIXELS_PER_METER, O = 200;
     objects.lines = [];
-    return koniecSciany({ x:O, y:O }, { x:O+3*P, y:O+3*P });
+    ortoLock = false;
+    const w = koniecSciany({ x:O, y:O }, { x:O+3*P, y:O+3*P });
+    ortoLock = true;
+    return w;
   `);
   sprawdz('wyraźny skos nie jest prostowany', skos.prosto === false, JSON.stringify(skos));
   sprawdz('skos zachowuje kierunek', Math.abs(skos.pt.x - 350) < 1 && Math.abs(skos.pt.y - 350) < 1,
@@ -759,11 +762,30 @@ console.log('--- długie opisy w raporcie ---');
   const dlugi = 'Bardzo długi opis przegrody, który wcześniej był ucinany w tabeli raportu i nie dawało się go przeczytać do końca.';
   const raport = app(`return buildReportHtml({ fullName:'X', auditorNotes:${JSON.stringify(dlugi)} }, [], []);`);
   sprawdz('raport zawiera cały długi opis', raport.includes('nie dawało się go przeczytać do końca'));
-  sprawdz('tabele raportu zawijają tekst', raport.includes('overflow-wrap: anywhere'));
-  sprawdz('tabele raportu mają stałą szerokość kolumn', raport.includes('table-layout: fixed'));
+  sprawdz('tabele raportu zawijają tekst', raport.includes('overflow-wrap: break-word'));
+  // Kluczowe: NIE wolno łamać słów w środku - nazwy materiałów muszą zostać całe
+  sprawdz('raport nie łamie słów litera po literze', !raport.includes('overflow-wrap: anywhere'));
+  sprawdz('kolumny raportu dopasowują się do treści', raport.includes('table-layout: auto'));
 
   const karta = app(`return buildObjectCardHtml({ fullName:'X', preferences:${JSON.stringify(dlugi)} }, [], []);`);
-  sprawdz('karta obiektu też zawija tekst', karta.includes('overflow-wrap:anywhere'));
+  sprawdz('karta obiektu też zawija tekst', karta.includes('overflow-wrap:break-word'));
+  sprawdz('karta nie łamie słów litera po literze', !karta.includes('overflow-wrap:anywhere'));
+  sprawdz('grubości warstw zostają w jednej linii', karta.includes('table.warstwy td.num'));
+  // tabela przegród obok rysunku pojawia się tylko przy oznaczonych przegrodach
+  const kartaZPrzegroda = app(`
+    sketches = [{ id:1, name:'przekrój', kind:'przekroj', panX:0, panY:0, zoomLevel:1, showDimensions:true,
+      objects: { lines:[], freehand:[], labels:[], rooms:[], openings:[], customDims:{},
+                 envTags:{ a:{cat:'SZ',num:1} }, noteLines:[], apexDims:{}, hatches:[], slopes:[], callouts:[] } }];
+    currentSketchIndex = 0; objects = sketches[0].objects;
+    const audit = { fullName:'X', preferences:'-',
+      sketchesJSON: JSON.stringify(sketches),
+      SZ1_layers: JSON.stringify([{ mat:'Mur z betonu komórkowego na zaprawie cementowo-wapiennej', gr:'24.0' }]),
+      SZ1_przegroda: JSON.stringify({ typ:'SC_ZEW' }) };
+    return buildObjectCardHtml(audit, [{ sketchIndex:0, dataUrl:'data:,' }], true);
+  `);
+  sprawdz('tabela przegród ma ustalone szerokości kolumn', kartaZPrzegroda.includes('<colgroup>'));
+  sprawdz('długa nazwa materiału trafia do tabeli w całości',
+    kartaZPrzegroda.includes('Mur z betonu komórkowego na zaprawie cementowo-wapiennej'));
 }
 
 
@@ -1041,6 +1063,81 @@ async function testyKopii() {
     d.getElementById('backupStatus').innerHTML.includes('jeszcze nie było'));
 
   app("localStorage.removeItem('auditsDB'); localStorage.removeItem('przegrodySzablony'); localStorage.removeItem('apiUrl');");
+}
+
+
+// ===================== BLOKADA KATA PROSTEGO =====================
+// "chce narysowac linie pod katem prostym a aplikacja caly czas ustawia ja pod katem"
+console.log('--- kąt prosty przy rysowaniu ściany ---');
+{
+  sprawdz('pasek narzędzi ma przełącznik kąta prostego',
+    !!doc.getElementById('btnOrto'));
+
+  // domyślnie włączony
+  app("ortoLock = true; guideLines = []; zoomLevel = 1;");
+
+  // 1. Palec poszedł skośnie (30 st.) - ściana i tak ma być pozioma
+  nowySzkic();
+  let r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:400,y:315});");
+  sprawdz('ruch pod 30° daje ścianę dokładnie poziomą', r.pt.y === 200, JSON.stringify(r.pt));
+  sprawdz('długość idzie za palcem w poziomie', r.pt.x === 400, JSON.stringify(r.pt));
+
+  // 2. Przewaga pionu - ściana pionowa
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:290,y:500});");
+  sprawdz('ruch bardziej w pionie daje ścianę dokładnie pionową', r.pt.x === 200, JSON.stringify(r.pt));
+
+  // 3. Kiedyś psuło: istniejąca ściana w pobliżu końca (połączenie T).
+  //    findSnapPoint zwracał punkt leżący nawet 30 px od osi i linia znów była ukośna.
+  nowySzkic();
+  app("objects.lines.push({x1:420, y1:100, x2:420, y2:600});");   // pionowa ściana
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:405,y:210});");
+  sprawdz('koniec na istniejącej ścianie nie łamie poziomu', r.pt.y === 200, JSON.stringify(r.pt));
+  sprawdz('koniec dociąga się do tej ściany', r.pt.x === 420, JSON.stringify(r.pt));
+
+  // 3b. Ukośna ściana obok - nie wolno jej pociągnąć końca ze osi
+  nowySzkic();
+  app("objects.lines.push({x1:380, y1:120, x2:460, y2:280});");
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:410,y:203});");
+  sprawdz('ukośna ściana obok nie przekrzywia rysowanej', r.pt.y === 200, JSON.stringify(r.pt));
+
+  // 4. Kiedyś psuło: prowadnica wyrównująca przesuwała TĘ współrzędną,
+  //    która trzyma linię prosto.
+  nowySzkic();
+  app("objects.lines.push({x1:600, y1:195, x2:700, y2:195});");   // węzeł o y=195, 5 px od osi
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:450,y:206});");
+  sprawdz('prowadnica nie rusza osi ściany poziomej', r.pt.y === 200, JSON.stringify(r.pt));
+
+  // 5. Domykanie narożnika nadal działa
+  nowySzkic();
+  app("objects.lines.push({x1:450, y1:203, x2:450, y2:400});");
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:447,y:201});");
+  sprawdz('narożnik domyka się do istniejącego węzła',
+    Math.hypot(r.pt.x - 450, r.pt.y - 203) < 1 || (r.pt.x === 450 && r.pt.y === 200),
+    JSON.stringify(r.pt));
+
+  // 6. Wyłączona blokada = dawne zachowanie, ukos zostaje ukosem
+  nowySzkic();
+  app("ortoLock = false;");
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:400,y:400});");
+  sprawdz('po wyłączeniu blokady ukos 45° zostaje ukosem',
+    r.pt.x === 400 && r.pt.y === 400, JSON.stringify(r.pt));
+  r = app("guideLines=[]; return koniecSciany({x:200,y:200}, {x:400,y:205});");
+  sprawdz('po wyłączeniu blokady mały odchył nadal się prostuje', r.pt.y === 200, JSON.stringify(r.pt));
+
+  // 7. Przełącznik zapamiętuje ustawienie
+  app("ortoLock = true; localStorage.removeItem('se_orto'); toggleOrto();");
+  sprawdz('wyłączenie zapisuje się w pamięci urządzenia',
+    dom.window.localStorage.getItem('se_orto') === '0');
+  sprawdz('etykieta przycisku pokazuje WYŁ',
+    doc.getElementById('btnOrto').textContent.includes('WYŁ'),
+    doc.getElementById('btnOrto').textContent);
+  app("toggleOrto();");
+  sprawdz('ponowne włączenie zapisuje się w pamięci urządzenia',
+    dom.window.localStorage.getItem('se_orto') === '1');
+  sprawdz('etykieta przycisku wraca na WŁ',
+    doc.getElementById('btnOrto').textContent.includes('WŁ'));
+
+  app("ortoLock = true; localStorage.removeItem('se_orto');");
 }
 
 function podsumowanie() {

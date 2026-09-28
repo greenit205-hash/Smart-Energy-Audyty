@@ -329,6 +329,7 @@
             <div class="btn-group flex-wrap shadow-sm">
               <button type="button" id="btnModeSelect" class="btn btn-outline-dark btn-sm fw-bold" onclick="setMode('select')">🖱️ Wybierz</button>
               <button type="button" id="btnModeLine" class="btn btn-primary btn-sm fw-bold" onclick="setMode('line')">📏 Ściana</button>
+              <button type="button" id="btnOrto" class="btn btn-success btn-sm fw-bold" onclick="toggleOrto()" title="Gdy WŁ – każda ściana rysuje się dokładnie w pionie albo w poziomie. Wyłącz tylko gdy chcesz ścianę ukośną.">⟂ Kąt prosty: WŁ</button>
               <button type="button" id="btnModeMeasure" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('measure')">✍️ Wymiaruj</button>
               <button type="button" id="btnModeHideDim" class="btn btn-outline-warning btn-sm fw-bold text-dark" onclick="setMode('hide_dim')">🫥 Ukryj</button>
               <button type="button" id="btnModeOpening" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('opening')">🚪 Otwór</button>
@@ -3415,14 +3416,14 @@
       h2 { color: #2c3e50; font-size: 13pt; margin-top: 18pt; border-left: 5px solid #d4af37; padding-left: 8px; }
       h3 { color: #6c757d; font-size: 12pt; margin-top: 12pt; }
       table { border-collapse: collapse; width: 100%; margin-bottom: 10pt; }
-      /* Długie opisy muszą się zawijać, a nie uciekać poza kolumnę.
-         table-layout: fixed pilnuje, żeby jedna długa komórka nie rozpychała
-         całej tabeli poza szerokość strony. */
-      table { table-layout: fixed; }
+      /* Długie opisy zawijamy CAŁYMI SŁOWAMI. Wcześniejsze "anywhere" łamało
+         nazwy materiałów litera po literze - tabela robiła się nieczytelna.
+         table-layout: auto pozwala kolumnom dopasować się do treści. */
+      table { table-layout: auto; }
       th, td { border: 1px solid #adb5bd; padding: 4pt 6pt; text-align: left; font-size: 10pt;
-               vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
+               vertical-align: top; white-space: normal; overflow-wrap: break-word; word-break: normal; }
       th { background: #eceff1; }
-      .box { white-space: pre-wrap; overflow-wrap: anywhere; }
+      .box { white-space: pre-wrap; overflow-wrap: break-word; }
       .sub { color: #6c757d; font-size: 9pt; }
       .box { border: 1px solid #adb5bd; padding: 8pt; }
       table.hdr, table.hdr td { border: none; }
@@ -3512,7 +3513,9 @@
             const envs = envelopesForSketch(sk, audit);
             const side = [];
             if (envs.length) {
-              let e = '<h4 style="margin-top:0">Przegrody oznaczone na rysunku</h4><table><thead><tr><th>Ozn.</th><th>Rodzaj</th><th>Budowa</th><th class="num">U</th></tr></thead><tbody>';
+              let e = '<h4 style="margin-top:0">Przegrody oznaczone na rysunku</h4>' +
+                '<table class="env"><colgroup><col style="width:3.2rem"><col style="width:6.5rem"><col><col style="width:3.5rem"></colgroup>' +
+                '<thead><tr><th>Ozn.</th><th>Rodzaj</th><th>Budowa</th><th class="num">U</th></tr></thead><tbody>';
               envs.forEach(v => {
                 let budowa;
                 if (v.warstwy && v.warstwy.length) {
@@ -3575,9 +3578,11 @@
   .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:18px; box-shadow:0 3px 10px rgba(0,0,0,.06); }
   .card h2, .card h3 { margin:0 0 12px; color:var(--dark); border-left:5px solid var(--gold); padding-left:10px; font-size:1.1rem; }
   .card h4 { margin:18px 0 8px; color:#6c757d; font-size:.95rem; }
-  table { width:100%; border-collapse:collapse; font-size:.88rem; table-layout:fixed; }
+  table { width:100%; border-collapse:collapse; font-size:.88rem; table-layout:auto; }
+  /* Zawijamy CAŁYMI SŁOWAMI. "anywhere" łamało nazwy materiałów litera po
+     literze i tabela robiła się nieczytelnym paskiem. */
   th, td { border-bottom:1px solid #e9ecef; padding:7px 9px; text-align:left;
-           white-space:pre-wrap; overflow-wrap:anywhere; vertical-align:top; }
+           white-space:normal; overflow-wrap:break-word; word-break:normal; vertical-align:top; }
   th { background:#f5f7f9; color:var(--dark); font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; }
   td.num, th.num { text-align:right; }
   .kv { display:grid; grid-template-columns:190px 1fr; gap:6px 14px; font-size:.92rem; }
@@ -3589,11 +3594,18 @@
      od razu widać, co wypada poza bryłą ogrzewaną. */
   tr.r-nieogrz td { background:#fdecea !important; color:#a4262c !important; font-weight:600; }
   tr.r-klima  td { background:#e8f1fb !important; color:#0b4a8f !important; font-weight:600; }
-  table.warstwy { width:100%; margin:0; font-size:.78rem; }
-  table.warstwy td { border:none; border-bottom:1px dotted #ccc; padding:1px 0; }
+  table.warstwy { width:100%; margin:0; font-size:.78rem; table-layout:auto; }
+  table.warstwy td { border:none; border-bottom:1px dotted #ccc; padding:1px 0;
+                     white-space:normal; overflow-wrap:break-word; }
+  table.warstwy td:first-child { width:auto; }
+  /* grubość zawsze w jednej linii - "24.0 cm" nie ma się prawa rozpaść */
+  table.warstwy td.num { white-space:nowrap; text-align:right; padding-left:8px; width:1%; }
   table.warstwy tr.suma td { border-bottom:none; border-top:1px solid #888; font-weight:700; }
-  .sketch-col { flex:1 1 380px; min-width:280px; }
-  .rooms-col { flex:1 1 300px; min-width:260px; }
+  .sketch-col { flex:1 1 340px; min-width:260px; }
+  .rooms-col { flex:1 1 380px; min-width:320px; }
+  /* Opis warstw potrzebuje szerokości - inaczej każda nazwa materiału
+     rozjeżdża się na kilkanaście linii. */
+  table.env td, table.env th { padding:5px 6px; font-size:.82rem; }
   @media print { .sketch-row { flex-wrap:nowrap; } }
   @media (max-width:700px) { .sketch-row { display:block; } }
   .sketch img { max-width:100%; height:auto; }
@@ -7204,8 +7216,30 @@ ${sketchBlocks}
   // blisko juz WYPROSTOWANEJ linii - czyli w praktyce w narozniku, o ktory chodzi.
   const ORTHO_NODE_TOL = 12;   // px
 
+  // Blokada kata prostego. Gdy wlaczona (domyslnie), sciana ZAWSZE laduje
+  // dokladnie w pionie albo w poziomie - nie ma znaczenia jak krzywo poszedl palec.
+  // Wylaczenie pozwala rysowac sciany ukosne (dawne zachowanie z tolerancja 10 st.).
+  let ortoLock = (localStorage.getItem('se_orto') !== '0');
+  function odswiezPrzyciskOrto() {
+    const b = document.getElementById('btnOrto');
+    if (!b) return;
+    b.textContent = ortoLock ? '\u27c2 K\u0105t prosty: W\u0141' : '\u27c2 K\u0105t prosty: WY\u0141';
+    b.className = 'btn btn-sm fw-bold ' + (ortoLock ? 'btn-success' : 'btn-outline-secondary');
+  }
+  function toggleOrto() {
+    ortoLock = !ortoLock;
+    try { localStorage.setItem('se_orto', ortoLock ? '1' : '0'); } catch(e) {}
+    odswiezPrzyciskOrto();
+  }
+
   function kierunekProsty(od, doo) {
-    const kat = Math.atan2(doo.y - od.y, doo.x - od.x) * 180 / Math.PI;
+    const dx = doo.x - od.x, dy = doo.y - od.y;
+    if (ortoLock) {
+      // blokada wlaczona - zawsze wybieramy blizsza os, bez zadnej tolerancji
+      if (dx === 0 && dy === 0) return null;
+      return (Math.abs(dx) >= Math.abs(dy)) ? 'poziom' : 'pion';
+    }
+    const kat = Math.atan2(dy, dx) * 180 / Math.PI;
     if (Math.abs(kat) <= ORTHO_ANGLE_TOLERANCE || Math.abs(kat) >= 180 - ORTHO_ANGLE_TOLERANCE) return 'poziom';
     if (Math.abs(kat - 90) <= ORTHO_ANGLE_TOLERANCE || Math.abs(kat + 90) <= ORTHO_ANGLE_TOLERANCE) return 'pion';
     return null;
@@ -7221,8 +7255,17 @@ ${sketchBlocks}
       if (przy.type === 'node' && Math.hypot(przy.pt.x - cel.x, przy.pt.y - cel.y) <= ORTHO_NODE_TOL / zoomLevel) {
         return { pt: przy.pt, prosto: true };
       }
-      if (przy.type === 'line') return { pt: przy.pt, prosto: true };
-      checkAlignmentGuides(cel, od);
+      // Koniec na istniejacej scianie (polaczenie T). WCZESNIEJ brano tu caly
+      // punkt z findSnapPoint - a ten lezy nawet 30 px od osi, wiec wyprostowana
+      // przed chwila linia znow stawala sie ukosna. Teraz bierzemy WYLACZNIE
+      // wspolrzedna wzdluz osi rysowania; druga zostaje nietknieta.
+      if (przy.type === 'line') {
+        const zejscie = (prosto === 'poziom') ? Math.abs(przy.pt.y - cel.y) : Math.abs(przy.pt.x - cel.x);
+        if (zejscie <= ORTHO_NODE_TOL / zoomLevel) {
+          return { pt: (prosto === 'poziom') ? { x: przy.pt.x, y: cel.y } : { x: cel.x, y: przy.pt.y }, prosto: true };
+        }
+      }
+      checkAlignmentGuides(cel, od, prosto);
       return { pt: cel, prosto: true };
     }
     // kierunek wyraznie ukosny - przyciaganie dziala jak dotad
@@ -7232,7 +7275,9 @@ ${sketchBlocks}
     return { pt: { x: raw.x, y: raw.y }, prosto: false };
   }
 
-  function checkAlignmentGuides(target, basePos) {
+  // `os` = 'poziom' | 'pion' | undefined. Gdy podana, prowadnica NIE MOZE ruszyc
+  // wspolrzednej, ktora trzyma linie prosto (dla 'poziom' jest to y, dla 'pion' x).
+  function checkAlignmentGuides(target, basePos, os) {
     let bestDx = 20 / zoomLevel; let bestDy = 20 / zoomLevel; let alignX = null, alignY = null;
     objects.lines.forEach(l => {
         let pts = [{x: l.x1, y: l.y1}, {x: l.x2, y: l.y2}, {x: (l.x1+l.x2)/2, y: (l.y1+l.y2)/2}];
@@ -7243,8 +7288,8 @@ ${sketchBlocks}
             }
         });
     });
-    if (alignX !== null) { target.x = alignX; guideLines.push({x1: alignX, y1: -5000, x2: alignX, y2: 5000}); }
-    if (alignY !== null) { target.y = alignY; guideLines.push({x1: -5000, y1: alignY, x2: 5000, y2: alignY}); }
+    if (alignX !== null && os !== 'pion')   { target.x = alignX; guideLines.push({x1: alignX, y1: -5000, x2: alignX, y2: 5000}); }
+    if (alignY !== null && os !== 'poziom') { target.y = alignY; guideLines.push({x1: -5000, y1: alignY, x2: 5000, y2: alignY}); }
   }
 
   function isPointInPolygon(point, vs) {
@@ -8083,7 +8128,14 @@ ${sketchBlocks}
       let otherEnd = draggingNode.isP1 ? {x: objects.lines[draggingNode.index].x2, y: objects.lines[draggingNode.index].y2} : {x: objects.lines[draggingNode.index].x1, y: objects.lines[draggingNode.index].y1};
       let tempLines = objects.lines; objects.lines = objects.lines.filter((_, i) => i !== draggingNode.index);
       guideLines = [];
-      targetPos = koniecSciany(otherEnd, rawPos).pt;
+      // Przy poprawianiu szkicu czesto trzeba dociagnac naroznik do konkretnego,
+      // istniejacego punktu - takie trafienie ma pierwszenstwo przed blokada kata.
+      const trafiony = findSnapPoint(rawPos);
+      if (trafiony.type === 'node' && Math.hypot(trafiony.pt.x - rawPos.x, trafiony.pt.y - rawPos.y) <= (SNAP_RADIUS / 2) / zoomLevel) {
+        targetPos = trafiony.pt;
+      } else {
+        targetPos = koniecSciany(otherEnd, rawPos).pt;
+      }
       objects.lines = tempLines;
       currentPos = { x: snapTo1cm(targetPos.x), y: snapTo1cm(targetPos.y) };
       draggedLines.forEach(item => { if(item.isP1) { item.line.x1 = currentPos.x; item.line.y1 = currentPos.y; } else { item.line.x2 = currentPos.x; item.line.y2 = currentPos.y; } });
@@ -8396,7 +8448,7 @@ ${sketchBlocks}
       objects = sketches[0].objects;
     }
     fillTemplateOptions();
-    renderDashboard(); renderTabs(); setMode('line'); resetView(); saveStateToHistory(); renderCanvasNow();
+    renderDashboard(); renderTabs(); setMode('line'); odswiezPrzyciskOrto(); resetView(); saveStateToHistory(); renderCanvasNow();
     fillZrodlaOptions();
     fillMaterialOptions();
     fillNosnikOptions();
