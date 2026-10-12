@@ -1384,6 +1384,12 @@
 
   // Wysyła kopię. `cicho` = próba automatyczna: żadnych komunikatów przy błędzie,
   // bo u klienta liczy się to, żeby nic nie przeszkadzało.
+  // Wersja Kod.gs, ktorej spodziewa sie ta wersja aplikacji.
+  const WYMAGANA_WERSJA_BACKENDU = '5.1';
+  const BACKUP_BLAD_KEY = 'ostatniBladKopii';
+  function zapiszBladKopii(t) { try { t ? localStorage.setItem(BACKUP_BLAD_KEY, t) : localStorage.removeItem(BACKUP_BLAD_KEY); } catch (e) {} }
+  function ostatniBladKopii() { try { return localStorage.getItem(BACKUP_BLAD_KEY) || ''; } catch (e) { return ''; } }
+
   async function wyslijKopieNaDysk(cicho) {
     const url = getApiUrl();
     if (!url) {
@@ -1402,7 +1408,19 @@
     }
     try {
       const body = JSON.stringify({ action: 'backup', rola: getAppRole(), payload: trescKopii() });
-      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, redirect: 'follow' });
+      // Odpowiedz TRZEBA przeczytac. Wczesniej leciala w prozne i nie bylo wiadomo,
+      // ze starszy Kod.gs w Apps Script nie zna akcji 'backup' - taka kopia ladowala
+      // w eksporcie raportu i zakladala na Dysku pusty folder "Klient bez nazwy".
+      let odp = '';
+      try { odp = (await res.text()).trim(); } catch (e) { odp = ''; }
+      if (odp.indexOf('ERROR') === 0) {
+        zapiszBladKopii(odp.replace(/^ERROR\|?/, ''));
+        renderBackupStatus();
+        if (!cicho) alert('Dysk Google odrzucił kopię:\n\n' + odp.replace(/^ERROR\|?/, ''));
+        return false;
+      }
+      zapiszBladKopii('');
       try { localStorage.setItem(BACKUP_KEY, new Date().toISOString()); } catch (e) {}
       renderBackupStatus();
       if (!cicho) alert('Kopia zapisana na Dysku, w folderze „KOPIE ZAPASOWE".');
@@ -1427,6 +1445,7 @@
     if (!box) return;
     const ost = ostatniaKopia();
     const wl = autoKopiaWlaczona();
+    const blad = ostatniBladKopii();
     let opis, kolor;
     if (!ost) {
       opis = 'Kopia na Dysku: <b>jeszcze nie było</b>';
@@ -1438,6 +1457,9 @@
       opis = 'Kopia na Dysku: <b>' + (dni === 0 ? 'dziś ' + kiedy.split(' ')[1] : kiedy) + '</b>';
       kolor = (dni >= BACKUP_OSTRZEZENIE_DNI) ? 'text-danger' : 'text-success';
     }
+    const pasekBledu = blad
+      ? `<div class="alert alert-danger py-1 px-2 small mb-0 w-100">⚠️ Ostatnia kopia nie przeszła: ${esc(blad)}</div>`
+      : '';
     box.innerHTML = `<div class="d-flex flex-wrap align-items-center gap-2 small">
       <span class="${kolor} fw-bold">☁️ ${opis}</span>
       <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="wyslijKopieNaDysk(false)">Wyślij teraz</button>
@@ -1446,6 +1468,7 @@
                onchange="ustawAutoKopie(this.checked)">
         <label class="form-check-label small text-muted" for="autoKopiaSwitch">automatycznie co ${BACKUP_ODSTEP_H} h</label>
       </div>
+      ${pasekBledu}
     </div>`;
   }
 
@@ -1491,7 +1514,15 @@
       const r = await fetch(url, { method: 'GET', redirect: 'follow' });
       const txt = (await r.text()).trim();
       if (txt.indexOf('Smart Energy API dziala') === 0) {
-        res.innerHTML = '<span class="text-success fw-bold">✅ Połączenie działa.</span> ' + txt;
+        const m = txt.match(/Wersja\s+([0-9]+(?:\.[0-9]+)+)/);
+        const wer = m ? m[1] : '';
+        const stary = !wer || parseFloat(wer) < parseFloat(WYMAGANA_WERSJA_BACKENDU);
+        res.innerHTML = stary
+          ? '<span class="text-warning fw-bold">⚠️ Połączenie działa, ale Kod.gs jest nieaktualny</span> (na Dysku: ' +
+            (wer || 'brak numeru') + ', potrzebna: ' + WYMAGANA_WERSJA_BACKENDU + ').<br>' +
+            'Stary Kod.gs nie zna automatycznej kopii zapasowej i przy każdej próbie zakłada na Dysku pusty folder ' +
+            '<b>„Klient bez nazwy”</b>. Wklej aktualny Kod.gs w Apps Script i zrób <b>nowe wdrożenie</b>.'
+          : '<span class="text-success fw-bold">✅ Połączenie działa.</span> ' + txt;
       } else if (txt.toLowerCase().indexOf('<html') > -1 || txt.toLowerCase().indexOf('logowanie') > -1 || txt.toLowerCase().indexOf('sign in') > -1) {
         res.innerHTML = '<span class="text-danger fw-bold">❌ Google prosi o logowanie.</span> We wdrożeniu ustaw <b>Kto ma dostęp: Wszyscy</b>, a potem wdróż nową wersję.';
       } else {
@@ -3026,6 +3057,9 @@
     // Ten sam identyfikator w obu próbach wysyłki - dzięki temu ewentualne
     // ponowienie "w ciemno" NIE utworzy drugiego folderu klienta na Dysku.
     payload.exportId = 'exp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    // Jawna akcja. Backend od wersji 5.1 odrzuca pakiety z nieznana akcja zamiast
+    // zakladac z nich folder "Klient bez nazwy"; starszy backend to pole zignoruje.
+    payload.action = 'export';
 
     const body = JSON.stringify(payload);
     const sizeMB = body.length / (1024 * 1024);

@@ -1,0 +1,15 @@
+# kopie zapasowe i pliki robocze
+*.bak
+*.tmp
+*~
+
+# systemowe
+.DS_Store
+Thumbs.db
+
+# NIGDY nie wrzucaj tu adresu wdrozenia /exec ani danych klientow
+sekrety.txt
+dane-audytu*.json
+
+# zaleznosci testow
+node_modules/

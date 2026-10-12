@@ -1,6 +1,6 @@
 // =====================================================================
 // SMART ENERGY - AUDYTY | Backend Google Apps Script
-// Wersja 4.0
+// Wersja 4.1
 // W folderze klienta powstaja:
 //   1. Raport w Dokumentach Google (edytowalny, z logo i podpisem)
 //   2. Ten sam raport jako PDF (wersja dla klienta)
@@ -9,6 +9,10 @@
 //   5. dane-audytu.json (kopia surowych danych)
 // Dodatkowo: sformatowany wiersz w arkuszu-rejestrze z linkami do plikow.
 // =====================================================================
+
+// Numer wersji backendu. Aplikacja go sprawdza i ostrzega, gdy w Apps Script
+// siedzi starszy Kod.gs niz ten, ktorego spodziewa sie tablet.
+const BACKEND_VERSION = '5.1';
 
 const SHEET_ID = 'TU_WKLEJ_ID_ARKUSZA';
 const PARENT_FOLDER_ID = 'TU_WKLEJ_ID_FOLDERU';
@@ -74,10 +78,29 @@ function sprzatnijStareKopie(folder) {
   }
 }
 
+// Jednorazowe sprzatanie po starym bledzie: puste foldery "Klient bez nazwy (...)".
+// Uruchom recznie w edytorze Apps Script. Do kosza ida TYLKO foldery, w ktorych
+// nie ma zadnego pliku ani podfolderu - folder z prawdziwym audytem zostaje.
+function sprzatnijPusteFolderyBezNazwy() {
+  const parent = DriveApp.getFolderById(PARENT_FOLDER_ID);
+  const it = parent.getFolders();
+  let dokosza = 0, pominiete = 0;
+  while (it.hasNext()) {
+    const f = it.next();
+    if (f.getName().indexOf('Klient bez nazwy') !== 0) continue;
+    if (f.getFiles().hasNext() || f.getFolders().hasNext()) { pominiete++; continue; }
+    f.setTrashed(true);
+    dokosza++;
+  }
+  const info = 'Do kosza: ' + dokosza + ', pominiete (niepuste): ' + pominiete;
+  Logger.log(info);
+  return info;
+}
+
 function doGet(e) {
   const p = (e && e.parameter) ? e.parameter : {};
   if (p.action === 'pull') return textOut(JSON.stringify(pullParts(p.code)));
-  return textOut('Smart Energy API dziala. Wersja 5.0. Uzyj metody POST z aplikacji.');
+  return textOut('Smart Energy API dziala. Wersja ' + BACKEND_VERSION + '. Uzyj metody POST z aplikacji.');
 }
 
 // Pomocnik wysyla swoja czesc inwentaryzacji pod wspolnym kodem zlecenia
@@ -141,6 +164,27 @@ function doPost(e) {
     if (data.action === 'pushPart') return textOut(pushPart(data));
     if (data.action === 'ackParts') return textOut(ackParts(data));
     if (data.action === 'backup') return textOut(zapiszKopie(data));
+    if (data.action === 'ping') return textOut('SUCCESS|' + BACKEND_VERSION);
+
+    // 0a. BRAMKA: tylko eksport raportu moze isc dalej.
+    // Dotad kazdy pakiet BEZ rozpoznanej akcji spadal do eksportu i zakladal na
+    // Dysku folder "Klient bez nazwy (data)". Tak wlasnie konczyla kazda
+    // automatyczna kopia zapasowa wyslana do backendu starszego niz wersja 5.0 -
+    // tamten nie znal akcji 'backup', wiec traktowal kopie jak audyt bez klienta.
+    const akcja = str(data.action).trim();
+    if (akcja && akcja !== 'export') {
+      return textOut('ERROR|Ten backend nie zna akcji "' + akcja + '". W Apps Script wklej aktualny ' +
+                     'Kod.gs i zrob nowe wdrozenie (Wdroz > Zarzadzaj wdrozeniami > Edytuj > Nowa wersja).');
+    }
+
+    // 0b. BRAMKA: pakiet bez zadnego sladu audytu nie zaklada folderu klienta.
+    const maTrescAudytu = !!(str(data.fullName).trim() || str(data.address).trim() ||
+                             str(data.phone).trim() || str(data.email).trim() ||
+                             (data.sketchImages && data.sketchImages.length) ||
+                             data.cardHtml || data.sketchesJSON);
+    if (!maTrescAudytu) {
+      return textOut('ERROR|Pusty pakiet - folder klienta NIE zostal utworzony.');
+    }
 
     // 0. ZABEZPIECZENIE PRZED DUPLIKATAMI
     // Aplikacja przy problemie z odczytem odpowiedzi ponawia wysylke "w ciemno"

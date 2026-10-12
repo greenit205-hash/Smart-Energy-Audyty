@@ -1,6 +1,6 @@
 # Smart Energy Audyty — przekazanie projektu
 
-**Stan na:** 28.09.2026 · wersja aplikacji `smart-energy-v56`
+**Stan na:** 12.10.2026 · wersja aplikacji `smart-energy-v57`, backend `Kod.gs` 5.1
 
 Ten dokument zawiera wszystko, co potrzebne, żeby kontynuować pracę w nowym czacie. Wgraj go razem z plikami wymienionymi na końcu.
 
@@ -57,6 +57,7 @@ Jestem audytorem energetycznym (Smart Energy). Aplikacja służy do **inwentaryz
 - **abc Txt** — v48: pole **wielolinijkowe** z wyborem wielkości liter i ramki. Kliknięcie w istniejące pole otwiera je do poprawki; wyczyszczenie treści kasuje pole. Podpowiedź z listy (SZ1, Dach…) **dopisuje się** do tekstu, zamiast go zastępować
 - **▨ Przeszkoda** (v53) — obszar zakreskowany z własnym opisem i **kolorem do wyboru** (5 barw). Kliknięcie w istniejący obszar zmienia opis i kolor, puste pole kasuje. Uwaga: kod kreskowania istniał wcześniej, ale **nie był podpięty do żadnego przycisku** — od v53 jest
 - **Kolor ściany** (v53) — paleta 5 kolorów przy narzędziu 📏 Ściana; kolor zapisuje się przy linii. Ściany bez zapisanego koloru rysują się jak dotąd
+- **v57 — koniec z pustymi folderami „Klient bez nazwy” na Dysku.** Przyczyna: `doPost` w `Kod.gs` traktował **każdy** pakiet bez rozpoznanej akcji jak eksport audytu. Jeśli we wdrożeniu siedział `Kod.gs` starszy niż 5.0 (bez obsługi `action: 'backup'`), to każda automatyczna kopia zapasowa — a leci ona przy starcie aplikacji i zaraz po zapisaniu audytu — zakładała na Dysku pusty folder klienta. Aplikacja nic nie zauważała, bo wysyłka kopii w ogóle nie czytała odpowiedzi serwera. Poprawki: (1) backend ma `BACKEND_VERSION` i **odrzuca** pakiet z nieznaną akcją zamiast zakładać z niego folder; (2) pakiet bez żadnego śladu audytu (nazwisko, adres, telefon, e-mail, szkice, karta) też jest odrzucany; (3) eksport wysyła jawne `action: 'export'`; (4) wysyłka kopii czyta odpowiedź, a odrzucona kopia **nie** liczy się jako udana — powód widać na pulpicie na czerwono; (5) **Sprawdź połączenie** porównuje wersję `Kod.gs` z tą, której oczekuje aplikacja, i mówi wprost, co zrobić; (6) w `Kod.gs` jest funkcja `sprzatnijPusteFolderyBezNazwy()` — uruchamiana ręcznie, wyrzuca do kosza **puste** foldery „Klient bez nazwy” i nie rusza tych z plikami. Nowy zestaw testów `tests/test-backend.js` uruchamia prawdziwy `Kod.gs` na podstawionych usługach Google
 - **v56 — blokada kąta prostego.** Ściana przestaje „ustawiać się pod kątem”. Nowy przycisk **⟂ Kąt prosty** w pasku szkicu (domyślnie **WŁ**, ustawienie zapamiętane w tablecie): przy włączonej blokadzie końcowy punkt ściany zawsze ląduje dokładnie w poziomie albo w pionie — bez żadnej tolerancji kąta. Przy okazji dwie usterki, które i tak przekrzywiały już wyprostowaną linię: (1) dołączenie końca do istniejącej ściany brało **cały** punkt z `findSnapPoint`, leżący nawet 30 px od osi — teraz bierze wyłącznie współrzędną wzdłuż osi rysowania; (2) prowadnica wyrównująca (`checkAlignmentGuides`) mogła ruszyć tę współrzędną, która trzyma linię prosto — teraz dostaje informację o zablokowanej osi. W trybie **🖱️ Wybierz** przeciągnięcie narożnika wprost na istniejący węzeł ma pierwszeństwo przed blokadą
 - **v55 — naprawa po v53.** Zawijanie wprowadzone w v53 używało `overflow-wrap: anywhere`, co łamało nazwy materiałów **litera po literze** — opis warstw w karcie obiektu robił się pionowym paskiem. Teraz `break-word` (całe słowa), `table-layout: auto`, tabela przegród ma `<colgroup>` z ustalonymi szerokościami, grubości warstw mają `white-space: nowrap`, a kolumna z tabelą dostała więcej miejsca niż rysunek
 - **Czytelność opisów** (v53) — długie teksty na szkicu są **łamane na linie** (do ~260 px), a ramka opisu **odsuwa się**, jeśli wpadłaby na wymiar albo inny opis; gdy odjedzie, prowadzi do niej cienka kreska. W raporcie i karcie obiektu tabele mają `table-layout: fixed` i zawijanie, więc długie opisy nie są już ucinane
@@ -198,7 +199,7 @@ Wszystkie mają w bazie flagę `dodane: true`, a w `materialy.json` pole `_do_we
   - `test-rzuty.js` — dwa prawdziwe układy z audytów: obrys L z 7 pomieszczeniami i 9 pomieszczeń w trzech pasach. Ściany rysowane przez prawdziwe przyciąganie, wymiary wpisywane odcinek po odcinku. Powierzchnie porównywane z polem liczonym niezależnie wzorem Gaussa, nie z liczbami odczytanymi z rysunku (10 sprawdzeń)
   - **Do odbudowania:** eksport raportu, wymiana między tabletami, dalmierz.
 - Po każdej zmianie przygotuj **gotową paczkę na GitHub** (bez adresu `/exec` i identyfikatorów) oraz `Kod.gs`, jeśli zmieniał się backend.
-- **Podbijaj numer wersji w `sw.js`** (teraz v56), żeby tablety pobrały nową wersję.
+- **Podbijaj numer wersji w `sw.js`** (teraz v57), żeby tablety pobrały nową wersję.
 
 ---
 
