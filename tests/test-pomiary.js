@@ -488,6 +488,144 @@ console.log('--- ostrzeganie o zapełnionej pamięci ---');
   app("localStorage.removeItem('auditsDB');");
 }
 
+// ===================== TRYB RĘCZNY (Auto-długość WYŁ) =====================
+// "w praktyce nie wychodzi to dobrze" - doliczona z rysunku długość ostatniej
+// ściany bywa inna niż zmierzona w terenie. Przy wyłączonej Auto-długości
+// program nie dolicza NICZEGO i pyta o każdą ścianę obrysu.
+console.log('--- tryb ręczny wymiarowania ---');
+{
+  const reczny = () => app("trybWymiarowania = 'reczny';");
+  const auto   = () => app("trybWymiarowania = 'auto';");
+
+  sprawdz('pasek narzędzi ma przełącznik Auto-długości',
+    !!dom.window.document.getElementById('btnAutoWymiar'));
+  sprawdz('domyślnie Auto-długość jest włączona', app("return dopasowanieAuto();") === true);
+
+  // 1. Te same dwa pomiary, które w trybie auto wystarczały
+  reczny();
+  reset();
+  {
+    const r = prostokat(5, 5, { top: 5.00, right: 5.00 });
+    sprawdz('w trybie ręcznym dwa pomiary NIE wystarczą', r.needsDim === true, r.area);
+    const brak = app("return objects.rooms[0]._missingKeys.length;");
+    sprawdz('program prosi o pozostałe dwie ściany', brak === 2, String(brak));
+    const liczone = app("return objects.rooms[0]._autoKeys.size;");
+    sprawdz('nic nie jest doliczane z rysunku', liczone === 0, String(liczone));
+  }
+
+  // 2. Wszystkie cztery ściany zmierzone - powierzchnia policzona
+  reset();
+  {
+    const r = prostokat(5, 5, { top: 5.00, right: 5.00, bottom: 5.00, left: 5.00 });
+    sprawdz('cztery pomiary dają 25,00 m²', r.area === '25.00', r.area);
+    sprawdz('po czterech pomiarach nie prosi o więcej', r.needsDim === false);
+  }
+
+  // 3. Krzywy szkic: liczą się WPISANE długości, nie rysunek.
+  //    Ta sama ściana doliczona z zamknięcia wyszłaby inna.
+  reset();
+  {
+    const r = prostokat(5, 4, { top: 5.00, right: 4.00, bottom: 4.80, left: 4.00 }, 0);
+    const pole = parseFloat(r.area);
+    sprawdz('ręczne wymiary liczą się nawet gdy obrys się nie domyka',
+      pole > 19.0 && pole < 20.1, r.area);
+  }
+
+  // 4. Litera L (6 ścian) - w trybie auto 4 pomiary, w ręcznym wszystkie 6
+  const litL = (wym) => app((`
+    const P = PIXELS_PER_METER, O = 100;
+    const p = [{x:O,y:O},{x:O+6*P,y:O},{x:O+6*P,y:O+3*P},{x:O+3*P,y:O+3*P},
+               {x:O+3*P,y:O+6*P},{x:O,y:O+6*P}];
+    objects.lines = p.map((a,i) => { const b = p[(i+1)%p.length]; return {x1:a.x,y1:a.y,x2:b.x,y2:b.y}; });
+    const kl = p.map((a,i) => { const b = p[(i+1)%p.length]; return getSegKey(a.x,a.y,b.x,b.y); });
+    const wym = WYMIARY;
+    Object.keys(wym).forEach(i => { objects.customDims[kl[i]] = { val: String(wym[i]) }; });
+    objects.rooms = [{ id:1, num:'1', name:'Pokój', heated:'Tak', ac:'Nie', polygon:p }];
+    recalculateRooms();
+    return { area: objects.rooms[0].area, brak: objects.rooms[0]._missingKeys.length };
+  `).replace('WYMIARY', JSON.stringify(wym)));
+
+  auto(); reset();
+  const lAuto = litL({ 0: 6.00, 1: 3.00, 2: 3.00, 3: 3.00 });
+  sprawdz('auto: litera L z czterech pomiarów wychodzi', lAuto.area === '27.00', lAuto.area);
+
+  reczny(); reset();
+  const lRecz = litL({ 0: 6.00, 1: 3.00, 2: 3.00, 3: 3.00 });
+  sprawdz('ręcznie: te same cztery pomiary nie wystarczą', lRecz.brak === 2, String(lRecz.brak));
+  reset();
+  const lPelny = litL({ 0: 6.00, 1: 3.00, 2: 3.00, 3: 3.00, 4: 3.00, 5: 6.00 });
+  sprawdz('ręcznie: sześć pomiarów daje 27,00 m²', lPelny.area === '27.00', lPelny.area);
+
+  // 5. Przełącznik zapamiętuje ustawienie i przelicza pomieszczenia
+  auto(); reset();
+  prostokat(5, 5, { top: 5.00, right: 5.00 });
+  app("localStorage.removeItem('se_wymiary'); toggleAutoWymiar();");
+  sprawdz('wyłączenie zapisuje się w pamięci urządzenia',
+    dom.window.localStorage.getItem('se_wymiary') === 'reczny');
+  sprawdz('po wyłączeniu pomieszczenie od razu prosi o pomiary',
+    app("return objects.rooms[0].needsDim;") === true);
+  sprawdz('etykieta przycisku pokazuje WYŁ',
+    dom.window.document.getElementById('btnAutoWymiar').textContent.includes('WYŁ'),
+    dom.window.document.getElementById('btnAutoWymiar').textContent);
+  app("toggleAutoWymiar();");
+  sprawdz('ponowne włączenie przelicza powierzchnię',
+    app("return objects.rooms[0].area;") === '25.00', app("return objects.rooms[0].area;"));
+  sprawdz('włączenie zapisuje się w pamięci urządzenia',
+    dom.window.localStorage.getItem('se_wymiary') === 'auto');
+
+  // 6. Zestawienie ścian: "obliczone" tylko dla naprawdę doliczonych
+  auto(); reset();
+  {
+    prostokat(5, 5, { top: 5.00, right: 5.00 });
+    const zrodla = app(`
+      return buildWallInventory().map(r => r.source);
+    `);
+    sprawdz('auto: dwie ściany zmierzone, dwie obliczone',
+      zrodla.filter(x => x === 'manual').length === 2 && zrodla.filter(x => x === 'auto').length === 2,
+      zrodla.join(', '));
+  }
+  reczny(); reset();
+  {
+    prostokat(5, 5, { top: 5.00, right: 5.00, bottom: 5.00, left: 5.00 });
+    const zrodla = app("return buildWallInventory().map(r => r.source);");
+    sprawdz('ręcznie: żadna ściana nie jest podpisana "obliczone"',
+      zrodla.every(x => x === 'manual'), zrodla.join(', '));
+    sprawdz('opis źródła dla pomiaru brzmi "zmierzone"',
+      app("return wallSourceLabel('manual', false);") === 'zmierzone');
+    sprawdz('opis źródła dla sumy odcinków jest rozpoznawalny',
+      app("return wallSourceLabel('suma', false);") === 'zmierzone (suma)');
+  }
+
+  // 7. Skos ze WPISANYM pomiarem nie moze byc podpisany "obliczone".
+  //    Wartosci reczne tez siedza w _realLen, wiec dawny warunek
+  //    (typ === 'D' && jest wartosc) oznaczal kazdy skos jako wyliczony.
+  const trapez = () => app(`
+    const P = PIXELS_PER_METER, O = 100;
+    const p = [{x:O,y:O},{x:O+5*P,y:O},{x:O+4*P,y:O+3*P},{x:O,y:O+3*P}];
+    objects.lines = p.map((a,i) => { const b = p[(i+1)%p.length]; return {x1:a.x,y1:a.y,x2:b.x,y2:b.y}; });
+    const kl = p.map((a,i) => { const b = p[(i+1)%p.length]; return getSegKey(a.x,a.y,b.x,b.y); });
+    objects.customDims[kl[0]] = { val: '5.00' };   // góra
+    objects.customDims[kl[1]] = { val: '3.16' };   // skos
+    objects.customDims[kl[2]] = { val: '4.00' };   // dół
+    objects.customDims[kl[3]] = { val: '3.00' };   // lewa
+    objects.rooms = [{ id:1, num:'1', name:'Pokój', heated:'Tak', ac:'Nie', polygon:p }];
+    recalculateRooms();
+    return buildWallInventory().map(r => ({ typ: r.typeLabel, src: r.source }));
+  `);
+  reczny(); reset();
+  {
+    const w = trapez();
+    const skos = w.find(r => r.typ === 'skos');
+    sprawdz('ręcznie: zmierzony skos jest podpisany "zmierzone"',
+      skos && skos.src === 'manual', JSON.stringify(w));
+    sprawdz('ręcznie: żadna ściana trapezu nie jest "obliczona"',
+      w.every(r => r.src === 'manual'), JSON.stringify(w));
+  }
+
+  auto();
+  app("localStorage.removeItem('se_wymiary');");
+}
+
 // ===================== PODSUMOWANIE =====================
 console.log('');
 if (bledy.length) {

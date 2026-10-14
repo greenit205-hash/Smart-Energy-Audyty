@@ -330,6 +330,7 @@
               <button type="button" id="btnModeSelect" class="btn btn-outline-dark btn-sm fw-bold" onclick="setMode('select')">🖱️ Wybierz</button>
               <button type="button" id="btnModeLine" class="btn btn-primary btn-sm fw-bold" onclick="setMode('line')">📏 Ściana</button>
               <button type="button" id="btnOrto" class="btn btn-success btn-sm fw-bold" onclick="toggleOrto()" title="Gdy WŁ – każda ściana rysuje się dokładnie w pionie albo w poziomie. Wyłącz tylko gdy chcesz ścianę ukośną.">⟂ Kąt prosty: WŁ</button>
+              <button type="button" id="btnAutoWymiar" class="btn btn-info text-white btn-sm fw-bold" onclick="toggleAutoWymiar()">🧮 Auto-długość: WŁ</button>
               <button type="button" id="btnModeMeasure" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('measure')">✍️ Wymiaruj</button>
               <button type="button" id="btnModeHideDim" class="btn btn-outline-warning btn-sm fw-bold text-dark" onclick="setMode('hide_dim')">🫥 Ukryj</button>
               <button type="button" id="btnModeOpening" class="btn btn-outline-primary btn-sm fw-bold" onclick="setMode('opening')">🚪 Otwór</button>
@@ -3999,6 +4000,39 @@ ${sketchBlocks}
     return known;
   }
 
+  // ================= TRYB WYMIAROWANIA =================
+  // 'auto'   - ostatnia nieznana dlugosc na osi dolicza sie z zamkniecia figury
+  //            (prostokat = 2 pomiary zamiast 4). Tak bylo od poczatku.
+  // 'reczny' - nic nie wynika z rysunku: program pyta o KAZDA sciane obrysu.
+  //            Odreczny szkic bywa na tyle krzywy, ze doliczona dlugosc wychodzi
+  //            inna niz w terenie - wtedy lepiej zmierzyc wszystko.
+  let trybWymiarowania = 'auto';
+  try { if (localStorage.getItem('se_wymiary') === 'reczny') trybWymiarowania = 'reczny'; } catch (e) {}
+  function dopasowanieAuto() { return trybWymiarowania !== 'reczny'; }
+
+  function odswiezPrzyciskWymiarow() {
+    const b = document.getElementById('btnAutoWymiar');
+    if (!b) return;
+    const a = dopasowanieAuto();
+    b.textContent = a ? '🧮 Auto-długość: WŁ' : '🧮 Auto-długość: WYŁ';
+    b.className = 'btn btn-sm fw-bold ' + (a ? 'btn-info text-white' : 'btn-outline-secondary');
+    b.title = a
+      ? 'Ostatnia nieznana ściana na każdej osi dolicza się z zamknięcia obrysu - prostokąt to 2 pomiary. Wyłącz, jeśli wyliczone długości nie zgadzają się z terenem.'
+      : 'Program pyta o KAŻDĄ ścianę obrysu i nic nie dolicza z rysunku.';
+  }
+
+  function toggleAutoWymiar() {
+    trybWymiarowania = dopasowanieAuto() ? 'reczny' : 'auto';
+    try { localStorage.setItem('se_wymiary', trybWymiarowania); } catch (e) {}
+    odswiezPrzyciskWymiarow();
+    if (typeof objects !== 'undefined' && objects && objects.rooms) {
+      recalculateRooms();
+      if (typeof renderTablesPerSketch === 'function') renderTablesPerSketch();
+      renderCanvas();
+    }
+    if (typeof renderGuided === 'function' && guidedRoomIndex > -1) renderGuided();
+  }
+
   // Rozwiązuje 1 lub 2 nieznane długości z zamknięcia wektorowego figury
   // (suma wektorów krawędzi = 0), korzystając z pozostałych JUŻ znanych
   // długości. Zwraca true, jeśli udało się policzyć (i zapisuje wynik do `known`).
@@ -4104,7 +4138,31 @@ ${sketchBlocks}
 
     const hasDiagonal = edges.some(e => e.type === 'D');
 
-    if (!hasDiagonal) {
+    if (!dopasowanieAuto()) {
+      // TRYB RECZNY: zadna dlugosc nie bierze sie z zamkniecia figury.
+      // Jedyny wyjatek to szczyt dachu podany jako wysokosc + odleglosc pozioma -
+      // to tez sa dwie liczby zmierzone w terenie, a nie kat odczytany ze szkicu.
+      const ap = hasDiagonal ? findApexCase(edges) : null;
+      const apDims = (ap && typeof objects !== 'undefined' && objects && objects.apexDims)
+        ? objects.apexDims[apexKeyOf(ap)] : null;
+      const brakProstych = edges.filter(e => e.type !== 'D' && known[e.key] === undefined);
+      if (ap && apDims && brakProstych.length === 0) {
+        const res = solveApex(edges, ap, known, apDims);
+        if (res) {
+          known[ap.keys[0]] = res.lenPrev; known[ap.keys[1]] = res.lenNext;
+          autoKeys.add(ap.keys[0]); autoKeys.add(ap.keys[1]);
+          return { solved: true, area: res.area, realLen: known, autoKeys,
+                   missingKeys: [], overridden, spans: edges, apex: ap, apexKey: apexKeyOf(ap) };
+        }
+      }
+      missingKeys = edges.filter(e => known[e.key] === undefined).map(e => e.key);
+      if (missingKeys.length > 0) {
+        return { solved: false, missingKeys, missingCount: missingKeys.length, realLen: known,
+                 autoKeys, overridden, spans: edges,
+                 apex: ap, apexKey: ap ? apexKeyOf(ap) : null };
+      }
+      // wszystkie sciany zmierzone - powierzchnia z rekonstrukcji na dole
+    } else if (!hasDiagonal) {
       ['H', 'V'].forEach(axis => {
         const group = edges.filter(e => e.type === axis);
         const missing = group.filter(e => known[e.key] === undefined);
@@ -4345,14 +4403,23 @@ ${sketchBlocks}
         const manual = cd && cd.val;
         const autoVal = objects._realLen ? segLookup(objects._realLen, e.key) : undefined;
         const missing = room._missingKeys && room._missingKeys.includes(e.key);
-        const preferAuto = e.type === 'D' && autoVal !== undefined;
+        // "obliczone" nalezy sie TYLKO dlugosciom, ktore program sam doliczyl.
+        // Wczesniej kazdy skos z wpisanym pomiarem byl podpisany "obliczone",
+        // bo wartosci reczne tez siedza w _realLen.
+        const liczoneKlucze = room._autoKeys || new Set();
+        const doliczone = autoVal !== undefined && liczoneKlucze.has(e.key);
+        // ciag bez wlasnego pomiaru, ale ze zmierzonymi wszystkimi odcinkami
+        const suma = !manual && !doliczone && autoVal !== undefined &&
+                     e.parts && e.parts.length > 1 &&
+                     e.parts.every(pt => { const c = segLookup(objects.customDims || {}, pt.key); return c && c.val; });
+        const preferAuto = doliczone;
         rows.push({
           roomNum: room.num, idx: i + 1, key: e.key,
           label: String(room.num) + wallLetter(i),
           position: wallPositionLabel(e, c),
           typeLabel: e.type === 'D' ? 'skos' : (e.type === 'H' ? 'pozioma' : 'pionowa'),
           value: preferAuto ? autoVal : (manual ? parseFloat(cd.val) : autoVal),
-          source: preferAuto ? 'auto' : (manual ? 'manual' : (autoVal !== undefined ? 'auto' : 'missing')),
+          source: preferAuto ? 'auto' : (manual ? 'manual' : (suma ? 'suma' : (autoVal !== undefined ? 'auto' : 'missing'))),
           missing, midX: (e.p1.x + e.p2.x) / 2, midY: (e.p1.y + e.p2.y) / 2
         });
       });
@@ -4363,8 +4430,9 @@ ${sketchBlocks}
   // ================= PROWADZONY POMIAR =================
   // Klikasz pomieszczenie, a program sam mowi, ktore sciany musi znac,
   // podswietla je po kolei na rysunku i po kazdym odczycie przechodzi dalej.
-  // Pyta wylacznie o ciagi scian (patrz buildSpans) i tylko o te, ktorych
-  // nie da sie policzyc z zamkniecia figury.
+  // Pyta wylacznie o ciagi scian (patrz buildSpans). Przy wlaczonej
+  // Auto-dlugosci pomija te, ktore wynikaja z zamkniecia figury; przy
+  // wylaczonej pyta o kazda sciane obrysu.
   let guidedRoomIndex = -1;
   let guidedSpanKey = null;
 
@@ -4440,7 +4508,8 @@ ${sketchBlocks}
     if (next) {
       const idx = spans.indexOf(next);
       box.className = 'alert alert-primary py-2 mb-2 text-center fw-bold';
-      box.innerHTML = `Do policzenia powierzchni brakuje jeszcze <b>${missing.size}</b> ${missing.size === 1 ? 'pomiaru' : 'pomiarów'}`;
+      box.innerHTML = `Do policzenia powierzchni brakuje jeszcze <b>${missing.size}</b> ${missing.size === 1 ? 'pomiaru' : 'pomiarów'}` +
+        (dopasowanieAuto() ? '' : '<div class="small fw-normal mt-1">tryb ręczny – pytam o każdą ścianę</div>');
       curBox.style.display = 'block';
       document.getElementById('guidedPrompt').innerHTML = `<span class="text-primary">▶</span> ${guidedSpanLabel(next, idx)} — <b class="text-primary">niebieska ściana z napisem „MIERZ TĘ ŚCIANĘ"</b>`;
       document.getElementById('guidedInput').value = '';
@@ -4746,6 +4815,7 @@ ${sketchBlocks}
   function wallSourceLabel(src, missing) {
     if (missing) return 'do pomiaru';
     if (src === 'manual') return 'zmierzone';
+    if (src === 'suma') return 'zmierzone (suma)';
     if (src === 'auto') return 'obliczone';
     return '—';
   }
@@ -8482,7 +8552,7 @@ ${sketchBlocks}
       objects = sketches[0].objects;
     }
     fillTemplateOptions();
-    renderDashboard(); renderTabs(); setMode('line'); odswiezPrzyciskOrto(); resetView(); saveStateToHistory(); renderCanvasNow();
+    renderDashboard(); renderTabs(); setMode('line'); odswiezPrzyciskOrto(); odswiezPrzyciskWymiarow(); resetView(); saveStateToHistory(); renderCanvasNow();
     fillZrodlaOptions();
     fillMaterialOptions();
     fillNosnikOptions();
