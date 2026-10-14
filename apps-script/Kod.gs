@@ -305,7 +305,7 @@ function buildGoogleDoc(data, folder, imageBlobs, clientName, stamp, kartaHtml) 
     ['Klient', data.fullName], ['Telefon', data.phone], ['E-mail', data.email],
     ['Adres inwestycji', data.address], ['Rok budowy', data.year],
     ['Liczba mieszkancow', data.residents], ['Moc instalacji PV [kW]', data.pv],
-    ['Wentylacja', data.ventilation]
+    ['Wentylacja', data.ventilation], ['Dochody', data.dochody]
   ]);
 
   head(body, '2. Instalacje');

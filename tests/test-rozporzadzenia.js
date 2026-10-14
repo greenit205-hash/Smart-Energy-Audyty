@@ -207,6 +207,54 @@ console.log('--- raport wykazuje dane z rozporządzeń ---');
 
 
 // ===================== UWAGI AUDYTORA =====================
+console.log('--- dochody klienta ---');
+{
+  sprawdz('jest pole na dochody', !!pole('dochody'));
+  sprawdz('dochody to zwykłe pole tekstowe (można wpisać cokolwiek)',
+    pole('dochody') && pole('dochody').tagName === 'INPUT' && pole('dochody').type === 'text',
+    pole('dochody') ? pole('dochody').tagName + '/' + pole('dochody').type : 'brak');
+
+  const wpis = '2 800 zł/os. – próg 70%';
+
+  // zapis razem z resztą formularza
+  app(`const d = document.querySelector('[name="dochody"]');
+       document.querySelector('[name="fullName"]').value = 'Jan Kowalski';
+       document.querySelector('[name="address"]').value = 'Dębno 205';
+       if (d) d.value = ${JSON.stringify(wpis)};`);
+  const zebrane = app("return collectFormObject().dochody;");
+  sprawdz('dochody są zapisywane razem z audytem', zebrane === wpis, String(zebrane));
+
+  // wraca po ponownym otwarciu audytu do edycji
+  app(`document.getElementById('auditForm').reset();
+       loadAuditIntoEditor({ fullName:'Jan Kowalski', address:'Dębno 205', dochody:${JSON.stringify(wpis)} }, '', 'Edycja');`);
+  sprawdz('dochody wracają po ponownym otwarciu audytu',
+    !!pole('dochody') && pole('dochody').value === wpis,
+    pole('dochody') ? pole('dochody').value : 'brak pola');
+
+  // trafiają na wydruki
+  const raport = app(`return buildReportHtml({ fullName:'X', dochody:${JSON.stringify(wpis)} }, [], []);`);
+  sprawdz('raport drukuje dochody', raport.includes('Dochody') && raport.includes('próg 70%'));
+
+  const karta = app(`return buildObjectCardHtml({ fullName:'X', dochody:${JSON.stringify(wpis)} }, null, true);`);
+  sprawdz('karta obiektu pokazuje dochody', karta.includes('Dochody') && karta.includes('próg 70%'));
+
+  // wiersz jest widoczny takze bez wpisu - inaczej nie bylo by gdzie zajrzec,
+  // ze pozycja czeka na uzupelnienie (tak samo zachowuja sie Rok budowy i Wentylacja)
+  const kartaPusta = app("return buildObjectCardHtml({ fullName:'X' }, null, true);");
+  sprawdz('bez wpisu karta obiektu nadal pokazuje pozycję Dochody',
+    kartaPusta.includes('Dochody'), 'brak pozycji');
+  const raportPusty = app("return buildReportHtml({ fullName:'X' }, [], []);");
+  sprawdz('bez wpisu raport nadal pokazuje pozycję Dochody',
+    raportPusty.includes('Dochody'), 'brak pozycji');
+
+  // backend wypisuje je w sekcji 1 dokumentu Google
+  const kod = fs.readFileSync(path.join(ROOT, 'apps-script', 'Kod.gs'), 'utf8');
+  sprawdz('Kod.gs wypisuje dochody w sekcji 1 raportu',
+    /\['Dochody',\s*data\.dochody\]/.test(kod));
+
+  app("document.getElementById('auditForm').reset(); localStorage.removeItem('auditsDB');");
+}
+
 console.log('--- uwagi audytora ---');
 {
   sprawdz('jest pole na uwagi audytora', !!pole('auditorNotes'));

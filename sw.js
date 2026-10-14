@@ -1,4 +1,5 @@
 // Smart Energy Audyty - Service Worker
+// v59: pozycja Dochody w danych ogolnych (formularz, karta obiektu, raport, dokument Google)
 // v58: przelacznik Auto-dlugosc - mozna wylaczyc doliczanie dlugosci scian z zamkniecia obrysu
 // v57: backend odrzuca pakiety, ktorych nie rozumie (koniec z pustymi folderami "Klient bez nazwy")
 // v56: blokada kata prostego przy rysowaniu scian (przycisk ⟂ Kat prosty)
@@ -21,7 +22,7 @@
 // v39: dopisano 4 materialy (zuzel paleniskowy, papa, plyta pilsniowa miekka, eternit)
 // v3: naprawiono blokowanie zapytan POST (wysylka na Dysk Google) + dziala offline od pierwszego uruchomienia
 
-const CACHE_NAME = 'smart-energy-v58';
+const CACHE_NAME = 'smart-energy-v59';
 
 const APP_SHELL = [
   './',

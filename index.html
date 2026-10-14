@@ -147,6 +147,12 @@
             </select>
           </div>
         </div>
+        <div class="row mb-3">
+          <div class="col-md-12"><label class="form-label">Dochody
+              <span class="text-muted small">— wpisz dowolnie, np. kwotę na osobę, próg dofinansowania albo samą notatkę</span></label>
+            <input type="text" class="form-control" name="dochody"
+                   placeholder="np. 2 800 zł/os. – próg 70%  /  do zweryfikowania zaświadczeniem"></div>
+        </div>
 
         <!-- Pola wymagane przez kartę audytu energetycznego (Dz.U. 2022 poz. 2816)
              i wzór świadectwa (Dz.U. 2023 poz. 697). Wszystkie opcjonalne w terenie. -->
@@ -3226,6 +3232,7 @@
       <tr><th>Adres inwestycji</th><td>${esc(audit.address)}</td></tr>
       <tr><th>Rok budowy</th><td>${esc(audit.year)}</td></tr>
       <tr><th>Liczba mieszkańców</th><td>${esc(audit.residents)}</td></tr>
+      <tr><th>Dochody</th><td>${esc(audit.dochody)}</td></tr>
       <tr><th>Moc instalacji PV [kW]</th><td>${esc(audit.pv)}</td></tr>
       <tr><th>Wentylacja</th><td>${esc(audit.ventilation)}${audit.wentylacjaOpis ? ' — ' + esc(audit.wentylacjaOpis) : ''}</td></tr>
       ${audit.kondygnacje ? `<tr><th>Liczba kondygnacji</th><td>${esc(audit.kondygnacje)}</td></tr>` : ''}
@@ -3680,6 +3687,7 @@ ${st.needsDim ? `<div class="card" style="border-left:5px solid #dc3545"><b styl
     <dt>Adres inwestycji</dt><dd>${esc(audit.address)}</dd>
     <dt>Rok budowy</dt><dd>${esc(audit.year) || '–'}</dd>
     <dt>Liczba mieszkańców</dt><dd>${esc(audit.residents) || '–'}</dd>
+    <dt>Dochody</dt><dd>${esc(audit.dochody) || '–'}</dd>
     <dt>Moc PV</dt><dd>${esc(audit.pv) ? esc(audit.pv) + ' kW' : '–'}</dd>
     <dt>Wentylacja</dt><dd>${esc(audit.ventilation) || '–'}</dd>
     <dt>Źródło ciepła C.O.</dt><dd>${esc(audit.heating) || '–'}</dd>
